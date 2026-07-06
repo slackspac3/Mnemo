@@ -59,9 +59,16 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
 
+        #if os(iOS)
+        let audioSession = AVAudioSession.sharedInstance()
+        try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        #endif
+
         let inputNode = audioEngine.inputNode
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else {
-            throw CaptureError.transcriptionFailed("Could not create audio format")
+        let format = inputNode.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            throw CaptureError.transcriptionFailed("Audio input format unavailable")
         }
 
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
