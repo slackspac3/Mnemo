@@ -103,12 +103,17 @@ struct CaptureTextSheet: View {
             tags: result.tags
         )
 
-        modelContext.insert(record)
-        do {
-            try modelContext.save()
-            dismiss()
-        } catch {
-            errorMessage = "Could not save memory. Try again."
+        Task {
+            do {
+                try await MemoryCRUD.insertAndIndex(record, into: modelContext)
+                await MainActor.run {
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Could not save memory. Try again."
+                }
+            }
         }
     }
 }

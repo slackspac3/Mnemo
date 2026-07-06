@@ -84,6 +84,7 @@ public final class RestoreManager: Sendable {
         }
 
         try context.save()
+        try await MemoryCRUD.rebuildIndex(in: context)
     }
 
     private func decrypt(_ data: Data, using key: SymmetricKey) throws -> Data {

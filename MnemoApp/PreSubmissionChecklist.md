@@ -29,7 +29,7 @@ Complete every item before submitting to App Store Review.
 - [ ] Build succeeds with zero errors in Xcode 26
 - [ ] No warnings in release build (treat warnings as errors for submission)
 - [ ] Tested on physical iPhone (iOS 18+)
-- [ ] Tested on iPhone 17 Pro Max (Tier 1 - full Foundation Models)
+- [ ] Tested on iPhone 17 Pro Max physical device
 - [ ] Voice capture tested on physical device (simulator cannot test microphone)
 - [ ] Image capture tested on physical device (simulator has no camera)
 - [ ] iCloud backup tested (requires signed-in iCloud account)

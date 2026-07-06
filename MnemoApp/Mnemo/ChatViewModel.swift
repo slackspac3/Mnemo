@@ -280,6 +280,13 @@ final class ChatViewModel {
     }
 
     private func responseText(for matches: [RankedMemory], query: String) -> String {
+        if isRecentMemoryQuery(query), let match = matches.first {
+            return """
+            You most recently saved:
+            "\(summaryLine(for: match.memory))"
+            """
+        }
+
         if let answer = directAnswer(for: query, using: matches) {
             return answer
         }
@@ -482,7 +489,12 @@ final class ChatViewModel {
         if lowercasedQuery.contains("where"),
            let memory = matches.first?.memory,
            let location = extractLocation(from: searchableText(for: memory)) {
-            return "It was in \(location)."
+            return """
+            It was in \(location).
+
+            I found that in:
+            "\(summaryLine(for: memory))"
+            """
         }
 
         if isSizeQuery(query),
@@ -512,10 +524,18 @@ final class ChatViewModel {
             return """
             I found a couple of saved sizes.
             The most recent one says your \(subject) is \(chosen.displaySize).
+
+            I found that in:
+            "\(summaryLine(for: chosen.memory))"
             """
         }
 
-        return "Your \(subject) is \(chosen.displaySize)."
+        return """
+        Your \(subject) is \(chosen.displaySize).
+
+        I found that in:
+        "\(summaryLine(for: chosen.memory))"
+        """
     }
 
     private func sizeSubject(item: String, location: String?) -> String {

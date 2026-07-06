@@ -126,15 +126,9 @@ struct CaptureImageSheet: View {
                     tags: result.tags
                 )
 
+                try await MemoryCRUD.insertAndIndex(record, into: modelContext)
                 await MainActor.run {
-                    modelContext.insert(record)
-                    do {
-                        try modelContext.save()
-                        dismiss()
-                    } catch {
-                        errorMessage = "Could not save memory. Try again."
-                        isProcessing = false
-                    }
+                    dismiss()
                 }
             } catch {
                 await MainActor.run {

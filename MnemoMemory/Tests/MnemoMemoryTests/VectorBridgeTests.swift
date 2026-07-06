@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import SwiftData
 @testable import MnemoMemory
 import MnemoCore
 
@@ -69,5 +70,33 @@ struct VectorBridgeTests {
         let simScore = cosine(base, similar)
         let dissimScore = cosine(base, dissimilar)
         #expect(simScore > dissimScore)
+    }
+
+    @Test("MemoryCRUD insertAndIndex makes a saved memory searchable")
+    @MainActor
+    func insertAndIndexSearchable() async throws {
+        let container = try MemoryStore.makeTestContainer()
+        let context = ModelContext(container)
+        let summary = "Waterfall I loved in Guam"
+        let record = MemoryRecord(
+            rawInput: summary,
+            summary: summary,
+            memoryType: .preference,
+            inputSource: .image,
+            processingTier: .onDevice,
+            modalityThresholdUsed: 0.90,
+            confidence: 0.95
+        )
+
+        try await MemoryCRUD.insertAndIndex(record, into: context)
+
+        let queryEmbedding = EmbeddingHelper().embed("waterfall guam")
+        let results = try await VectorBridge.shared.search(
+            queryEmbedding: queryEmbedding,
+            limit: 5
+        )
+        #expect(results.contains(record.id))
+
+        try await VectorBridge.shared.delete(id: record.id)
     }
 }

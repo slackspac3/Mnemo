@@ -10,31 +10,25 @@ This is a native **iOS application** built with **Swift 6.1+** and **SwiftUI**. 
 
 ## Project Structure
 
-The project follows a **workspace + SPM package** architecture:
+The project follows a **workspace + local SPM package** architecture:
 
 ```
-YourApp/
-├── Config/                         # XCConfig build settings
-│   ├── Debug.xcconfig
-│   ├── Release.xcconfig
-│   ├── Shared.xcconfig
-│   └── Tests.xcconfig
-├── YourApp.xcworkspace/            # Workspace container
-├── YourApp.xcodeproj/              # App shell (minimal wrapper)
-├── YourApp/                        # App target - just the entry point
-│   ├── Assets.xcassets/
-│   ├── YourAppApp.swift           # @main entry point only
-│   └── YourApp.xctestplan
-├── YourAppPackage/                 # All features and business logic
-│   ├── Package.swift
-│   ├── Sources/
-│   │   └── YourAppFeature/        # Feature modules
-│   └── Tests/
-│       └── YourAppFeatureTests/   # Swift Testing tests
-└── YourAppUITests/                 # UI automation tests
+Mnemo/
+├── MnemoApp/                       # Xcode workspace, app target, app UI
+│   ├── Mnemo.xcworkspace           # Required build entrypoint
+│   ├── Mnemo.xcodeproj             # App target
+│   ├── Mnemo/                      # SwiftUI screens and app lifecycle
+│   └── Config/                     # XCConfig build settings
+├── MnemoCore/                      # Shared enums, DTOs, protocols
+├── MnemoMemory/                    # SwiftData models, CRUD, vector bridge
+├── MnemoCapture/                   # Text, voice, and image capture handlers
+├── MnemoIntelligence/              # Extraction, routing, scoring, learning
+├── MnemoSecurity/                  # Keychain, biometrics, file protection
+├── MnemoSync/                      # Backup and restore
+└── MnemoUI/                        # Design system and reusable UI
 ```
 
-**Important:** All development work should be done in the **YourAppPackage** Swift Package, not in the app project. The app project is merely a thin wrapper that imports and launches the package features.
+**Important:** Keep business logic in the local packages where possible. App-specific SwiftUI screens and lightweight UI state objects live in `MnemoApp/Mnemo`.
 
 # Code Quality & Style Guidelines
 
@@ -619,12 +613,12 @@ get_sim_app_path_name_ws({
 
 # Development Workflow
 
-1. **Make changes in the Package**: All feature development happens in YourAppPackage/Sources/
-2. **Write tests**: Add Swift Testing tests in YourAppPackage/Tests/
-3. **Build and test**: Use XcodeBuildMCP tools to build and run tests
-4. **Run on simulator**: Deploy to simulator for manual testing
-5. **UI automation**: Use describe_ui and automation tools for UI testing
-6. **Device testing**: Deploy to physical device when needed
+1. **Keep scope local**: Put shared business logic in the relevant Mnemo package; keep app-only UI flow in `MnemoApp/Mnemo`.
+2. **Write tests**: Add Swift Testing tests in the touched package's `Tests/` target.
+3. **Build and test packages**: Run `swift build` and `swift test` in the affected packages.
+4. **Build the app workspace**: Use `MnemoApp/Mnemo.xcworkspace` with the `Mnemo` scheme.
+5. **Run on simulator**: Deploy to simulator for manual testing.
+6. **Device testing**: Validate microphone, camera, file protection, biometrics, and iCloud on a physical device.
 
 # Best Practices
 

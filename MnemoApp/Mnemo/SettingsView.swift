@@ -51,7 +51,7 @@ struct SettingsView: View {
                                     Image(systemName: "info.circle")
                                         .font(DS.Typography.subheadline)
                                         .foregroundStyle(DS.Colours.accent)
-                                    Text("Ambiguous captures may use secure cloud processing. Your raw input never leaves your device.")
+                                    Text("Cloud Assist is not connected in this build. Mnemo keeps capture and recall local until a provider is configured and you opt in.")
                                         .font(DS.Typography.footnote)
                                         .foregroundStyle(DS.Colours.textSecondary)
                                 }
@@ -154,7 +154,9 @@ struct SettingsView: View {
                             titleVisibility: .visible
                         ) {
                             Button("Delete Everything", role: .destructive) {
-                                deleteAllData()
+                                Task {
+                                    await deleteAllData()
+                                }
                             }
                             Button("Cancel", role: .cancel) {}
                         } message: {
@@ -180,13 +182,15 @@ struct SettingsView: View {
         }
     }
 
-    private func deleteAllData() {
+    @MainActor
+    private func deleteAllData() async {
         try? modelContext.delete(model: MemoryRecord.self)
         try? modelContext.delete(model: MemoryThread.self)
         try? modelContext.delete(model: UserModel.self)
         try? modelContext.delete(model: ConflictRecord.self)
         try? modelContext.delete(model: PersonSubject.self)
         try? modelContext.save()
+        try? await VectorBridge.shared.wipe()
         appState.onboardingComplete = false
     }
 }
@@ -225,13 +229,13 @@ struct DeviceTierRow: View {
     var tierLabel: String {
         switch capability.tier {
         case .full:
-            return "Full - Apple Intelligence + Mnemo AI"
+            return "Local Processing Ready"
         case .standard:
-            return "Standard - Apple Intelligence + Mnemo AI"
+            return "Local Processing Ready"
         case .mlxOnly:
-            return "On-Device - Mnemo AI only"
+            return "Local Processing Ready"
         case .cloudPrimary:
-            return "Cloud-Assisted"
+            return "Local Only in This Build"
         case .unsupported:
             return "Limited"
         }
@@ -259,7 +263,7 @@ struct DeviceTierRow: View {
                 Text(tierLabel)
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.textPrimary)
-                Text("Your memories are processed privately on this device")
+                Text("This build stores memories on device and uses local deterministic recall.")
                     .font(DS.Typography.caption1)
                     .foregroundStyle(DS.Colours.textSecondary)
             }

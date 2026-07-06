@@ -52,7 +52,7 @@ Run package tests where available:
 (cd MnemoIntelligence && swift test)
 ```
 
-Build and run the app from `MnemoApp/Mnemo.xcodeproj` with the `Mnemo` scheme.
+Build and run the app from `MnemoApp/Mnemo.xcworkspace` with the `Mnemo` scheme. The workspace is required because it includes the local Swift packages used by the app target.
 
 ## Development Notes
 

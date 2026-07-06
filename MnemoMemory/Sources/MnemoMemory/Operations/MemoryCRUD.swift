@@ -14,6 +14,7 @@ public struct MemoryCRUD {
 
     /// Insert a MemoryRecord and index it in the VectorBridge for semantic search.
     /// Call this instead of insert(_:into:) for all new captures in production.
+    @MainActor
     public static func insertAndIndex(
         _ record: MemoryRecord,
         into context: ModelContext
@@ -23,6 +24,15 @@ public struct MemoryCRUD {
 
         let helper = EmbeddingHelper()
         try await helper.index(id: record.id, summary: record.summary)
+    }
+
+    /// Rebuild the VectorBridge index from the current non-archived SwiftData store.
+    /// Use after restore or data repair so vector search matches the canonical store.
+    @MainActor
+    public static func rebuildIndex(in context: ModelContext) async throws {
+        try await VectorBridge.shared.wipe()
+        let snapshots = try fetchSnapshots(in: context)
+        try await EmbeddingHelper().reindex(snapshots: snapshots)
     }
 
     // MARK: - Read

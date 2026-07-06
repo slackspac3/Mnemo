@@ -194,20 +194,19 @@ struct CaptureVoiceSheet: View {
                     threshold: 0.90
                 )
 
-                try await MainActor.run {
-                    let record = MemoryRecord(
-                        rawInput: transcript,
-                        summary: result.summary,
-                        memoryType: result.memoryType,
-                        persistenceScore: result.persistenceScore,
-                        inputSource: .voice,
-                        processingTier: result.processingTier,
-                        modalityThresholdUsed: result.modalityThresholdUsed,
-                        confidence: result.confidence,
-                        tags: result.tags
-                    )
-                    modelContext.insert(record)
-                    try modelContext.save()
+                let record = MemoryRecord(
+                    rawInput: transcript,
+                    summary: result.summary,
+                    memoryType: result.memoryType,
+                    persistenceScore: result.persistenceScore,
+                    inputSource: .voice,
+                    processingTier: result.processingTier,
+                    modalityThresholdUsed: result.modalityThresholdUsed,
+                    confidence: result.confidence,
+                    tags: result.tags
+                )
+                try await MemoryCRUD.insertAndIndex(record, into: modelContext)
+                await MainActor.run {
                     dismiss()
                 }
             } catch {
