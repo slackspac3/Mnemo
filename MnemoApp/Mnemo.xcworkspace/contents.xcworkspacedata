@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:../MnemoCore">
+   </FileRef>
+   <FileRef
+      location = "group:../MnemoSecurity">
+   </FileRef>
+   <FileRef
+      location = "group:../MnemoMemory">
+   </FileRef>
+   <FileRef
+      location = "group:../MnemoIntelligence">
+   </FileRef>
+   <FileRef
+      location = "group:../MnemoCapture">
+   </FileRef>
+   <FileRef
+      location = "group:../MnemoUI">
+   </FileRef>
+   <FileRef
+      location = "container:Mnemo.xcodeproj">
+   </FileRef>
+</Workspace>
