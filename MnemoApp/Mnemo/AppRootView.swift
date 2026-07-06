@@ -17,6 +17,6 @@ struct AppRootView: View {
                 PlaceholderMainView()
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: appState.isInitialised)
+        .animation(DS.Animation.standard, value: appState.isInitialised)
     }
 }

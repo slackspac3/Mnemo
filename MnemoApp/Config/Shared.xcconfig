@@ -26,6 +26,8 @@ TARGETED_DEVICE_FAMILY = 1,2
 GENERATE_INFOPLIST_FILE = YES
 INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationLandscapeRight UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait
 INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationLandscapeRight UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
+INFOPLIST_KEY_NSMicrophoneUsageDescription = Mnemo uses microphone access for voice capture.
+INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = Mnemo uses speech recognition to turn voice captures into text.
 
 // ==========================================
 // Entitlements
