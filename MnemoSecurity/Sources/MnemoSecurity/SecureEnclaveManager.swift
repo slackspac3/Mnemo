@@ -32,10 +32,8 @@ public final class SecureEnclaveManager: Sendable {
             ],
         ]
 
-        var publicKey, privateKey: SecKey?
-        let status = SecKeyGeneratePair(attributes as CFDictionary, &publicKey, &privateKey)
-        guard status == errSecSuccess else {
-            throw MnemoError.securityError("Secure Enclave key generation failed: \(status)")
+        guard SecKeyCreateRandomKey(attributes as CFDictionary, &error) != nil else {
+            throw MnemoError.securityError("Secure Enclave key generation failed")
         }
     }
 

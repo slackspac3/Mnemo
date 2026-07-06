@@ -60,7 +60,9 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         request.shouldReportPartialResults = true
 
         let inputNode = audioEngine.inputNode
-        let format = inputNode.outputFormat(forBus: 0)
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else {
+            throw CaptureError.transcriptionFailed("Could not create audio format")
+        }
 
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             self?.recognitionRequest?.append(buffer)
