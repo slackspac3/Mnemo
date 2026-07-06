@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import MnemoUI
 import MnemoCore
+import MnemoMemory
 
 /// Primary chat interface: the main surface for recall queries.
 struct ChatView: View {
@@ -9,6 +10,8 @@ struct ChatView: View {
     @State private var viewModel = ChatViewModel()
     @Environment(NavigationCoordinator.self) private var coordinator
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \MemoryRecord.createdAt, order: .reverse) private var records: [MemoryRecord]
+    @State private var selectedSourceMemory: ChatSelectedMemory?
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -22,7 +25,12 @@ struct ChatView: View {
                         ScrollView {
                             LazyVStack(spacing: DS.Spacing.md) {
                                 ForEach(viewModel.messages) { message in
-                                    MessageBubble(message: message)
+                                    MessageBubble(
+                                        message: message,
+                                        onSourceTap: { id in
+                                            selectedSourceMemory = ChatSelectedMemory(id: id)
+                                        }
+                                    )
                                         .id(message.id)
                                 }
 
@@ -85,6 +93,13 @@ struct ChatView: View {
                     }
                 }
             }
+            .sheet(item: $selectedSourceMemory) { selected in
+                if let record = records.first(where: { $0.id == selected.id }) {
+                    MemoryDetailView(record: record)
+                } else {
+                    MissingSourceView()
+                }
+            }
         }
     }
 }
@@ -92,6 +107,7 @@ struct ChatView: View {
 struct MessageBubble: View {
 
     let message: ChatViewModel.Message
+    let onSourceTap: (UUID) -> Void
 
     private var isUser: Bool {
         message.role == .user
@@ -120,7 +136,11 @@ struct MessageBubble: View {
                     )
 
                 if !isUser && !message.citedMemoryIds.isEmpty {
-                    CitationPill(count: message.citedMemoryIds.count)
+                    CitationSection(
+                        citations: message.citations,
+                        fallbackCount: message.citedMemoryIds.count,
+                        onSourceTap: onSourceTap
+                    )
                 }
 
                 Text(message.timestamp.formatted(.dateTime.hour().minute()))
@@ -135,22 +155,88 @@ struct MessageBubble: View {
     }
 }
 
-struct CitationPill: View {
+private struct ChatSelectedMemory: Identifiable {
+    let id: UUID
+}
 
-    let count: Int
+struct CitationSection: View {
 
-    private var label: String {
-        count == 1 ? "Saved memory" : "\(count) saved memories"
-    }
+    let citations: [ChatViewModel.Message.Citation]
+    let fallbackCount: Int
+    let onSourceTap: (UUID) -> Void
 
     var body: some View {
-        Label(label, systemImage: "bookmark.fill")
-            .font(DS.Typography.caption1)
-            .foregroundStyle(DS.Colours.accent)
-            .padding(.horizontal, DS.Spacing.sm)
-            .padding(.vertical, DS.Spacing.xs)
-            .background(DS.Colours.surfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.full))
+        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+            Label(title, systemImage: "bookmark.fill")
+                .font(DS.Typography.caption1)
+                .foregroundStyle(DS.Colours.accent)
+
+            if citations.isEmpty {
+                Text(fallbackCount == 1 ? "Source memory is saved locally." : "\(fallbackCount) source memories are saved locally.")
+                    .font(DS.Typography.caption1)
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .padding(DS.Spacing.sm)
+                    .background(DS.Colours.surfaceSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+            } else {
+                ForEach(citations.prefix(3)) { citation in
+                    Button {
+                        onSourceTap(citation.id)
+                    } label: {
+                        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                            HStack(spacing: DS.Spacing.xs) {
+                                Text(citation.source)
+                                    .font(DS.Typography.caption2)
+                                    .foregroundStyle(DS.Colours.textTertiary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(DS.Typography.caption2)
+                                    .foregroundStyle(DS.Colours.textTertiary)
+                            }
+
+                            Text("\"\(citation.summary)\"")
+                                .font(DS.Typography.caption1)
+                                .foregroundStyle(DS.Colours.textSecondary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .padding(DS.Spacing.sm)
+                        .background(DS.Colours.surfaceSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .frame(maxWidth: 280.0, alignment: .leading)
+    }
+
+    private var title: String {
+        fallbackCount == 1 ? "Memory used" : "Sources"
+    }
+}
+
+struct MissingSourceView: View {
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: DS.Spacing.md) {
+                Image(systemName: "exclamationmark.magnifyingglass")
+                    .font(DS.Typography.largeTitle)
+                    .foregroundStyle(DS.Colours.textTertiary)
+
+                Text("Memory not found")
+                    .font(DS.Typography.headline)
+                    .foregroundStyle(DS.Colours.textPrimary)
+
+                Text("This source may have been deleted.")
+                    .font(DS.Typography.body)
+                    .foregroundStyle(DS.Colours.textSecondary)
+            }
+            .padding(DS.Spacing.xl)
+            .navigationTitle("Source")
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
 

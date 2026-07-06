@@ -101,11 +101,20 @@ public struct MemoryCRUD {
         try context.save()
     }
 
-    // MARK: - Delete (soft only)
+    // MARK: - Delete
 
-    /// Mnemo never hard-deletes memories — only archives them.
-    /// Use SecureDeletionManager for the Delete All Data flow.
+    /// Archive a memory without permanently deleting it.
     public static func softDelete(id: UUID, in context: ModelContext) throws {
         try archive(id: id, in: context)
+    }
+
+    /// Permanently delete one memory and remove its vector index row.
+    /// This is the individual-memory privacy delete path.
+    @MainActor
+    public static func deletePermanently(id: UUID, in context: ModelContext) async throws {
+        guard let record = try fetch(id: id, in: context) else { return }
+        context.delete(record)
+        try context.save()
+        try await VectorBridge.shared.delete(id: id)
     }
 }

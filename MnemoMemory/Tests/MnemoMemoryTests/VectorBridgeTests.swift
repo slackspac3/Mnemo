@@ -4,7 +4,7 @@ import SwiftData
 @testable import MnemoMemory
 import MnemoCore
 
-@Suite("VectorBridge - Live")
+@Suite("VectorBridge - Live", .serialized)
 struct VectorBridgeTests {
 
     @Test("VectorBridge opens without error")
@@ -98,5 +98,84 @@ struct VectorBridgeTests {
         #expect(results.contains(record.id))
 
         try await VectorBridge.shared.delete(id: record.id)
+    }
+
+    @Test("MemoryCRUD deletePermanently removes SwiftData record and vector row")
+    @MainActor
+    func deletePermanentlyRemovesRecordAndIndex() async throws {
+        let container = try MemoryStore.makeTestContainer()
+        let context = ModelContext(container)
+        let summary = "Mum wears size 38 shoes"
+        let record = MemoryRecord(
+            rawInput: summary,
+            summary: summary,
+            memoryType: .fact,
+            inputSource: .text,
+            processingTier: .onDevice,
+            modalityThresholdUsed: 0.90,
+            confidence: 0.95
+        )
+
+        try await MemoryCRUD.insertAndIndex(record, into: context)
+        let queryEmbedding = EmbeddingHelper().embed("mum size shoes")
+        let beforeDelete = try await VectorBridge.shared.search(
+            queryEmbedding: queryEmbedding,
+            limit: 5
+        )
+        #expect(beforeDelete.contains(record.id))
+
+        try await MemoryCRUD.deletePermanently(id: record.id, in: context)
+
+        let fetched = try MemoryCRUD.fetch(id: record.id, in: context)
+        let afterDelete = try await VectorBridge.shared.search(
+            queryEmbedding: queryEmbedding,
+            limit: 5
+        )
+        #expect(fetched == nil)
+        #expect(!afterDelete.contains(record.id))
+    }
+
+    @Test("MemoryCRUD rebuildIndex makes existing SwiftData memories searchable")
+    @MainActor
+    func rebuildIndexSearchable() async throws {
+        let container = try MemoryStore.makeTestContainer()
+        let context = ModelContext(container)
+        let first = MemoryRecord(
+            rawInput: "The Guam waterfall I liked was Tarzan Falls",
+            summary: "The Guam waterfall I liked was Tarzan Falls",
+            memoryType: .preference,
+            inputSource: .image,
+            processingTier: .onDevice,
+            modalityThresholdUsed: 0.90,
+            confidence: 0.90
+        )
+        let second = MemoryRecord(
+            rawInput: "Ahmed prefers quiet restaurants",
+            summary: "Ahmed prefers quiet restaurants",
+            memoryType: .preference,
+            inputSource: .text,
+            processingTier: .onDevice,
+            modalityThresholdUsed: 0.90,
+            confidence: 0.90
+        )
+
+        try MemoryCRUD.insert(first, into: context)
+        try MemoryCRUD.insert(second, into: context)
+        try await MemoryCRUD.rebuildIndex(in: context)
+
+        let waterfallResults = try await VectorBridge.shared.search(
+            queryEmbedding: EmbeddingHelper().embed("waterfall guam"),
+            limit: 5
+        )
+        let restaurantResults = try await VectorBridge.shared.search(
+            queryEmbedding: EmbeddingHelper().embed("ahmed quiet restaurants"),
+            limit: 5
+        )
+
+        #expect(waterfallResults.contains(first.id))
+        #expect(restaurantResults.contains(second.id))
+
+        try await MemoryCRUD.deletePermanently(id: first.id, in: context)
+        try await MemoryCRUD.deletePermanently(id: second.id, in: context)
     }
 }

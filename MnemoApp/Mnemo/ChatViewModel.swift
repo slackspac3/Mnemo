@@ -15,10 +15,17 @@ final class ChatViewModel {
         let content: String
         let timestamp: Date
         let citedMemoryIds: [UUID]
+        let citations: [Citation]
 
         enum Role {
             case user
             case assistant
+        }
+
+        struct Citation: Identifiable, Hashable {
+            let id: UUID
+            let summary: String
+            let source: String
         }
 
         init(
@@ -26,13 +33,15 @@ final class ChatViewModel {
             role: Role,
             content: String,
             timestamp: Date = Date(),
-            citedMemoryIds: [UUID] = []
+            citedMemoryIds: [UUID] = [],
+            citations: [Citation] = []
         ) {
             self.id = id
             self.role = role
             self.content = content
             self.timestamp = timestamp
             self.citedMemoryIds = citedMemoryIds
+            self.citations = citations
         }
     }
 
@@ -72,7 +81,8 @@ final class ChatViewModel {
             messages.append(Message(
                 role: .assistant,
                 content: response.text,
-                citedMemoryIds: response.citedMemoryIds
+                citedMemoryIds: response.citedMemoryIds,
+                citations: response.citations
             ))
         } catch {
             errorMessage = "Something went wrong. Try again."
@@ -111,7 +121,8 @@ final class ChatViewModel {
         guard let correction = genericCorrection(from: query) else {
             return RecallResponse(
                 text: "I can update that memory, but I need the correction in a clearer form. Try: \"Update it to ...\" or \"Change ... to ...\".",
-                citedMemoryIds: citedIds
+                citedMemoryIds: citedIds,
+                citations: citations(for: citedMemories)
             )
         }
 
@@ -134,7 +145,8 @@ final class ChatViewModel {
         guard !sizeMemories.isEmpty else {
             return RecallResponse(
                 text: "I found the memory you were referring to, but I could not find a size in it to update.",
-                citedMemoryIds: citedMemories.map(\.id)
+                citedMemoryIds: citedMemories.map(\.id),
+                citations: citations(for: citedMemories)
             )
         }
 
@@ -157,7 +169,8 @@ final class ChatViewModel {
 
         return RecallResponse(
             text: "Updated. Your \(subject) is now \(displaySize).",
-            citedMemoryIds: sizeMemories.map(\.id)
+            citedMemoryIds: sizeMemories.map(\.id),
+            citations: citations(for: sizeMemories)
         )
     }
 
@@ -180,7 +193,8 @@ final class ChatViewModel {
         guard !memoriesToUpdate.isEmpty else {
             return RecallResponse(
                 text: "I found the memory you were referring to, but I could not find the text you wanted changed.",
-                citedMemoryIds: citedMemories.map(\.id)
+                citedMemoryIds: citedMemories.map(\.id),
+                citations: citations(for: citedMemories)
             )
         }
 
@@ -211,7 +225,8 @@ final class ChatViewModel {
         let updatedSummary = summaryLine(for: memoriesToUpdate[0])
         return RecallResponse(
             text: "Updated that memory to: \"\(updatedSummary)\"",
-            citedMemoryIds: memoriesToUpdate.map(\.id)
+            citedMemoryIds: memoriesToUpdate.map(\.id),
+            citations: citations(for: memoriesToUpdate)
         )
     }
 
@@ -251,7 +266,8 @@ final class ChatViewModel {
 
         return RecallResponse(
             text: responseText(for: topMatches, query: query),
-            citedMemoryIds: topMatches.map { $0.memory.id }
+            citedMemoryIds: topMatches.map { $0.memory.id },
+            citations: citations(for: topMatches.map(\.memory))
         )
     }
 
@@ -343,8 +359,8 @@ final class ChatViewModel {
         else { return nil }
 
         let patterns = [
-            #"\b(?:update|change|set|make)\b.*\b(?:to|as)\s+(xxs|xs|s|m|l|xl|xxl|small|medium|large)\b"#,
-            #"\bnow\s+(?:it\s+)?(?:is|=)\s*(xxs|xs|s|m|l|xl|xxl|small|medium|large)\b"#,
+            #"\b(?:update|change|set|make)\b.*\b(?:to|as)\s+(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b"#,
+            #"\bnow\s+(?:it\s+)?(?:is|=)\s*(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b"#,
         ]
 
         for pattern in patterns {
@@ -449,7 +465,7 @@ final class ChatViewModel {
     }
 
     private func replacingSize(in text: String, with displaySize: String) -> String {
-        let pattern = #"\b(?:xxs|xs|s|m|l|xl|xxl|small|medium|large)\b"#
+        let pattern = #"\b(?:xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b"#
         guard let regex = try? NSRegularExpression(
             pattern: pattern,
             options: [.caseInsensitive]
@@ -480,6 +496,16 @@ final class ChatViewModel {
             try? await EmbeddingHelper.shared.index(
                 id: memory.id,
                 summary: memory.summary
+            )
+        }
+    }
+
+    private func citations(for memories: [MemoryRecord]) -> [Message.Citation] {
+        memories.map { memory in
+            Message.Citation(
+                id: memory.id,
+                summary: summaryLine(for: memory),
+                source: memory.inputSource.capitalized
             )
         }
     }
@@ -518,7 +544,12 @@ final class ChatViewModel {
 
         let item = itemLabel(for: query)
         let location = chosen.location ?? extractLocation(from: query)
-        let subject = sizeSubject(item: item, location: location)
+        let subject = sizeSubject(
+            item: item,
+            location: location,
+            query: query,
+            memoryText: searchableText(for: chosen.memory)
+        )
 
         if uniqueSizes.count > 1 {
             return """
@@ -539,6 +570,25 @@ final class ChatViewModel {
     }
 
     private func sizeSubject(item: String, location: String?) -> String {
+        sizeSubject(item: item, location: location, query: "", memoryText: "")
+    }
+
+    private func sizeSubject(
+        item: String,
+        location: String?,
+        query: String,
+        memoryText: String
+    ) -> String {
+        let combinedText = "\(query) \(memoryText)".lowercased()
+        if combinedText.contains("mum") ||
+            combinedText.contains("mom") ||
+            combinedText.contains("mother") {
+            if combinedText.contains("shoe") {
+                return "Mum's shoe size"
+            }
+            return "Mum's size"
+        }
+
         if let location, item == "size" {
             return "\(location) size"
         } else if let location {
@@ -552,8 +602,9 @@ final class ChatViewModel {
 
     private func extractSizeFact(from text: String, memory: MemoryRecord) -> SizeFact? {
         let patterns: [(pattern: String, sizeGroup: Int, locationGroup: Int?)] = [
-            (#"\b(?:size\s+)?(?:is|=|:)\s*(xxs|xs|s|m|l|xl|xxl|small|medium|large)\b"#, 1, nil),
-            (#"\b(xxs|xs|s|m|l|xl|xxl|small|medium|large)\b\s+(?:in|at|for)\s+([^.,;\n]+)"#, 1, 2),
+            (#"\b(?:size\s+)?(?:is|=|:)\s*(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b"#, 1, nil),
+            (#"\bsize\s+(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b"#, 1, nil),
+            (#"\b(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b\s+(?:in|at|for)\s+([^.,;\n]+)"#, 1, 2),
         ]
 
         for entry in patterns {
@@ -681,7 +732,26 @@ final class ChatViewModel {
         let words = text.lowercased().split { character in
             !character.isLetter && !character.isNumber
         }
-        return Set(words.map(String.init).filter { $0.count > 2 })
+        return Set(words.flatMap { tokenVariants(for: String($0)) }.filter { $0.count > 2 })
+    }
+
+    private func tokenVariants(for token: String) -> Set<String> {
+        var variants: Set<String> = [token]
+
+        if token.count > 4, token.hasSuffix("s") {
+            variants.insert(String(token.dropLast()))
+        }
+
+        if token.count > 4, token.hasSuffix("ed") {
+            variants.insert(String(token.dropLast()))
+            variants.insert(String(token.dropLast(2)))
+        }
+
+        if token.count > 5, token.hasSuffix("ing") {
+            variants.insert(String(token.dropLast(3)))
+        }
+
+        return variants
     }
 
     private func meaningfulTokens(in text: String) -> Set<String> {
@@ -693,7 +763,10 @@ final class ChatViewModel {
         return lowercased.contains("just save") ||
             lowercased.contains("last save") ||
             lowercased.contains("recent memory") ||
-            lowercased.contains("latest memory")
+            lowercased.contains("latest memory") ||
+            lowercased.contains("most recently") ||
+            lowercased.contains("recently save") ||
+            lowercased.contains("recently saved")
     }
 
     private func recencyScore(for memory: MemoryRecord) -> Double {
@@ -715,6 +788,17 @@ final class ChatViewModel {
     private struct RecallResponse {
         let text: String
         let citedMemoryIds: [UUID]
+        let citations: [Message.Citation]
+
+        init(
+            text: String,
+            citedMemoryIds: [UUID],
+            citations: [Message.Citation] = []
+        ) {
+            self.text = text
+            self.citedMemoryIds = citedMemoryIds
+            self.citations = citations
+        }
     }
 
     private struct RankedMemory {

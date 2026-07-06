@@ -12,6 +12,9 @@ struct MemoryDetailView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var showingArchiveConfirm = false
+    @State private var showingDeleteConfirm = false
+    @State private var isDeleting = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -124,16 +127,37 @@ struct MemoryDetailView: View {
                         .background(DS.Colours.surface)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
 
-                        Button {
-                            showingArchiveConfirm = true
-                        } label: {
-                            Text("Archive Memory")
-                                .font(DS.Typography.body)
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(DS.Typography.footnote)
                                 .foregroundStyle(DS.Colours.destructive)
-                                .frame(maxWidth: .infinity)
-                                .padding(DS.Spacing.md)
-                                .background(DS.Colours.destructiveLight)
-                                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                        }
+
+                        VStack(spacing: DS.Spacing.sm) {
+                            Button {
+                                showingArchiveConfirm = true
+                            } label: {
+                                Text("Archive Memory")
+                                    .font(DS.Typography.body)
+                                    .foregroundStyle(DS.Colours.textPrimary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(DS.Spacing.md)
+                                    .background(DS.Colours.surfaceSecondary)
+                                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                            }
+
+                            Button {
+                                showingDeleteConfirm = true
+                            } label: {
+                                Text(isDeleting ? "Deleting..." : "Delete Permanently")
+                                    .font(DS.Typography.body)
+                                    .foregroundStyle(DS.Colours.destructive)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(DS.Spacing.md)
+                                    .background(DS.Colours.destructiveLight)
+                                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                            }
+                            .disabled(isDeleting)
                         }
                         .confirmationDialog(
                             "Archive this memory?",
@@ -141,12 +165,25 @@ struct MemoryDetailView: View {
                             titleVisibility: .visible
                         ) {
                             Button("Archive", role: .destructive) {
-                                record.isArchived = true
-                                record.updatedAt = Date()
-                                try? modelContext.save()
-                                dismiss()
+                                archiveMemory()
                             }
                             Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("Archive hides this memory from Browse and Chat recall, but keeps it in your local store.")
+                        }
+                        .confirmationDialog(
+                            "Delete this memory permanently?",
+                            isPresented: $showingDeleteConfirm,
+                            titleVisibility: .visible
+                        ) {
+                            Button("Delete Permanently", role: .destructive) {
+                                Task {
+                                    await deleteMemory()
+                                }
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("This removes the memory from Mnemo and deletes its local search index entry. This cannot be undone.")
                         }
                     }
                     .padding(DS.Spacing.md)
@@ -164,6 +201,29 @@ struct MemoryDetailView: View {
                     .foregroundStyle(DS.Colours.accent)
                 }
             }
+        }
+    }
+
+    private func archiveMemory() {
+        do {
+            try MemoryCRUD.archive(id: record.id, in: modelContext)
+            dismiss()
+        } catch {
+            errorMessage = "Could not archive this memory. Try again."
+        }
+    }
+
+    @MainActor
+    private func deleteMemory() async {
+        isDeleting = true
+        errorMessage = nil
+
+        do {
+            try await MemoryCRUD.deletePermanently(id: record.id, in: modelContext)
+            dismiss()
+        } catch {
+            errorMessage = "Could not delete this memory. Try again."
+            isDeleting = false
         }
     }
 }
