@@ -3,7 +3,10 @@ import PackageDescription
 
 let package = Package(
     name: "MnemoUI",
-    platforms: [.iOS("18.0")],
+    platforms: [
+        .iOS("18.0"),
+        .macOS("14.0"),
+    ],
     products: [
         .library(name: "MnemoUI", targets: ["MnemoUI"]),
     ],

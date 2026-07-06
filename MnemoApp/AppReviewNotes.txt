@@ -1,42 +1,39 @@
 MNEMO - App Review Notes
 
-Mnemo is an on-device AI memory assistant for iPhone.
+Mnemo is a private memory capture and recall app for iPhone.
 
-ARCHITECTURE SUMMARY
-All AI processing runs locally on the user's device using Apple's Foundation Models framework (iOS 26+) and a bundled on-device model. No user data is sent to any external server by default.
+CURRENT BUILD SUMMARY
+This build captures user-entered text, voice transcripts, and image OCR results, then stores the resulting memories locally on the device using SwiftData. Chat recall searches saved local memories and returns matching memories from the on-device store.
 
-ON-DEVICE PROCESSING
-- Voice transcription: SFSpeechRecognizer (on-device, no network call)
-- Image processing: Apple Vision Framework VNRecognizeTextRequest (on-device)
-- AI extraction: Apple Foundation Models (on-device, iOS 26+)
-- Vector search: SQLite with cosine similarity (on-device)
-- Backup: CloudKit (user's own iCloud - Mnemo has no server access)
+AI AND EXTRACTION STATUS
+- Text capture: processed locally into a structured memory record.
+- Voice capture: uses SFSpeechRecognizer and local audio capture. Simulator speech recognition may be unavailable; physical-device testing is recommended for voice.
+- Image capture: uses Apple Vision VNRecognizeTextRequest for OCR.
+- Recall: searches local saved memories and returns matching stored memories.
+- Vector search: uses local SQLite plus deterministic placeholder embeddings.
 
-CLOUD LLM FALLBACK (opt-in only)
-Cloud processing is an opt-in feature. When enabled:
-- Only an anonymised structured summary is sent - never raw text, audio, or images
-- The user consents explicitly during onboarding on the Processing Mode screen
-- The cloud provider is Anthropic (Claude API)
-- The user can disable this at any time in Settings -> Privacy
+The codebase contains routing hooks for Apple Foundation Models and a future MLX model, but this build does not bundle a production Foundation Models or MLX embedding model. No cloud LLM provider is configured in this build, and no Anthropic or other external LLM request is made by default.
+
+BACKUP
+CloudKit backup uses the user's own iCloud account. Mnemo does not operate a server for backup storage.
 
 PERMISSIONS
 The app does not require microphone, camera, or photo library permissions to function.
 These are requested contextually only when the user first uses each feature:
 - Microphone: when user taps the voice capture button
 - Camera/Photos: when user taps the image capture button
-- Notifications: opt-in during onboarding (Memory Moments feature)
+- Notifications: opt-in during onboarding for Memory Moments
 
 TESTING THE APP
-1. Complete onboarding - tap Continue through each step
-2. On the Processing Mode screen - select either On-Device Only or Cloud Assist
-3. In the main app - tap the + button to capture a memory via text
-4. Type something and tap Save to Memory
-5. In Chat - ask "what did I just save?" to test recall
-6. Browse tab - shows all captured memories
-7. Settings - shows device tier, privacy controls, and personalisation index
+1. Complete onboarding.
+2. In the main app, tap the compose button to capture a memory via text.
+3. Type a memory and tap Save to Memory.
+4. In Chat, ask about what was saved to test local recall.
+5. Browse shows captured memories.
+6. Settings shows privacy controls, backup/restore, and delete-all-data controls.
 
 SANDBOX / TEST ACCOUNT
-No account is required. The app works fully without authentication.
+No account is required. The app works without authentication.
 iCloud backup requires a signed-in iCloud account for testing.
 
 BUNDLE ID: com.thinkact.mnemo

@@ -47,10 +47,14 @@ struct MainTabView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            CaptureButton()
-                .environment(coordinator)
-                .padding(.bottom, DS.Spacing.xxxl + DS.Spacing.xxxl + DS.Spacing.md)
+            if coordinator.activeTab != .chat {
+                CaptureButton()
+                    .environment(coordinator)
+                    .padding(.bottom, DS.Spacing.xxxl + DS.Spacing.xxxl + DS.Spacing.md)
+                    .transition(.scale.combined(with: .opacity))
+            }
         }
+        .animation(DS.Animation.standard, value: coordinator.activeTab)
     }
 }
 

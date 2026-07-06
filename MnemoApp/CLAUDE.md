@@ -3,7 +3,7 @@
 This is a native **iOS application** built with **Swift 6.1+** and **SwiftUI**. The codebase targets **iOS 18.0 and later**, allowing full use of modern Swift and iOS APIs. All concurrency is handled with **Swift Concurrency** (async/await, actors, @MainActor isolation) ensuring thread-safe code.
 
 - **Frameworks & Tech:** SwiftUI for UI, Swift Concurrency with strict mode, Swift Package Manager for modular architecture
-- **Architecture:** Model-View (MV) pattern using pure SwiftUI state management. We avoid MVVM and instead leverage SwiftUI's built-in state mechanisms (@State, @Observable, @Environment, @Binding)
+- **Architecture:** SwiftUI state-first architecture using @State, @Observable, @Environment, and @Binding. Business logic belongs in package services; small @Observable UI state objects are acceptable for multi-screen app flows.
 - **Testing:** Swift Testing framework with modern @Test macros and #expect/#require assertions
 - **Platform:** iOS (Simulator and Device)
 - **Accessibility:** Full accessibility support using SwiftUI's accessibility modifiers
@@ -54,7 +54,7 @@ YourApp/
 
 # Modern SwiftUI Architecture Guidelines (2025)
 
-### No ViewModels - Use Native SwiftUI Data Flow
+### SwiftUI State First - Use Observable UI State Objects Deliberately
 **New features MUST follow these patterns:**
 
 1. **Views as Pure State Expressions**
@@ -88,17 +88,19 @@ YourApp/
    - Use `.task(id:)` and `.onChange(of:)` for side effects
    - Pass state between views using `@Binding`
 
-4. **No ViewModels Required**
+4. **Keep UI State Objects Small**
    - Views should be lightweight and disposable
    - Business logic belongs in services/clients
    - Test services independently, not views
    - Use SwiftUI previews for visual testing
+   - Existing app flows may use small `@Observable` UI state objects such as `ChatViewModel` and `OnboardingViewModel`
+   - Do not put persistence, networking, model routing, or security logic inside UI state objects
 
 5. **When Views Get Complex**
    - Split into smaller subviews
    - Use compound views that compose smaller views
    - Pass state via bindings between views
-   - Never reach for a ViewModel as the solution
+   - Prefer extracted views or package services before adding more UI state object surface area
 
 # iOS 26 Features (Optional)
 
@@ -190,7 +192,7 @@ struct ModernButton: View {
 - **@Environment:** For dependency injection and shared app state
 - **@Binding:** For two-way data flow between parent and child views
 - **@Bindable:** For creating bindings to @Observable objects
-- Avoid ViewModels - put view logic directly in SwiftUI views using these state mechanisms
+- Prefer direct SwiftUI state; use small `@Observable` UI state objects only when a flow needs shared state across multiple views
 - Keep views focused and extract reusable components
 
 Example with @Observable:

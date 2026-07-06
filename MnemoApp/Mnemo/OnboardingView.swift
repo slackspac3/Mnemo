@@ -72,41 +72,6 @@ struct OnboardingNavigationBar: View {
             }
 
             switch viewModel.currentStep {
-            case .capturePreference, .captureList, .captureCredential:
-                HStack(spacing: DS.Spacing.sm) {
-                    Button("Skip") {
-                        viewModel.skipCapture()
-                    }
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: DS.ComponentTokens.SecondaryButton.height)
-                    .background(DS.Colours.surfaceSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-
-                    Button {
-                        Task {
-                            await viewModel.confirmCapture(context: modelContext)
-                        }
-                    } label: {
-                        Group {
-                            if viewModel.isCapturing {
-                                ProgressView()
-                                    .tint(DS.ComponentTokens.PrimaryButton.foreground)
-                            } else {
-                                Text("Save & Continue")
-                                    .font(DS.Typography.headline)
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: DS.ComponentTokens.PrimaryButton.height)
-                    .background(viewModel.captureText.isEmpty ? DS.Colours.textTertiary : DS.Colours.accent)
-                    .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-                    .disabled(viewModel.captureText.isEmpty || viewModel.isCapturing)
-                }
-
             case .done:
                 Button {
                     viewModel.complete(context: modelContext, appState: appState)

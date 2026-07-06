@@ -34,13 +34,13 @@ Complete every item before submitting to App Store Review.
 - [ ] Image capture tested on physical device (simulator has no camera)
 - [ ] iCloud backup tested (requires signed-in iCloud account)
 - [ ] Delete All Data flow tested and confirmed complete wipe
-- [ ] Onboarding AI consent screen confirmed: names Anthropic as cloud provider
+- [ ] Onboarding AI consent screen confirmed: cloud-assist copy matches the configured provider status
 
 ## Security
 - [ ] Secure Enclave key generation tested on physical device
 - [ ] NSFileProtectionComplete verified on physical device (inaccessible when locked)
 - [ ] Biometric app lock tested (Face ID on iPhone 17 Pro Max)
-- [ ] No API keys or secrets in the binary (verified - proxy holds Anthropic key)
+- [ ] No API keys or secrets in the binary
 - [ ] No cleartext HTTP exceptions in Info.plist
 
 ## Compliance

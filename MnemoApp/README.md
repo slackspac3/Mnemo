@@ -1,125 +1,69 @@
-# Mnemo - iOS App
+# Mnemo
 
-A modern iOS application using a **workspace + SPM package** architecture for clean separation between app shell and feature code.
+Mnemo is a native SwiftUI memory capture and recall app for iPhone. The app is built as a thin iOS shell backed by local Swift packages for memory storage, capture, intelligence, sync, security, and shared UI.
 
-## AI Assistant Rules Files
+## Current State
 
-This template includes **opinionated rules files** for popular AI coding assistants. These files establish coding standards, architectural patterns, and best practices for modern iOS development using the latest APIs and Swift features.
+Mnemo currently supports:
 
-### Included Rules Files
-- **Claude Code**: `CLAUDE.md` - Claude Code rules
-- **Cursor**: `.cursor/*.mdc` - Cursor-specific rules
-- **GitHub Copilot**: `.github/copilot-instructions.md` - GitHub Copilot rules
+- Text memory capture into SwiftData.
+- Voice capture with live audio recording and speech-recognition fallback handling.
+- Image OCR capture using Apple Vision.
+- Local memory browsing.
+- Local chat recall over saved memories.
+- Local SQLite-backed placeholder vector indexing.
+- CloudKit backup and restore hooks using the user's own iCloud account.
+- Keychain, Secure Enclave, biometric, file protection, and secure deletion helper layers.
 
-### Customization Options
-These rules files are **starting points** - feel free to:
-- ✅ **Edit them** to match your team's coding standards
-- ✅ **Delete them** if you prefer different approaches
-- ✅ **Add your own** rules for other AI tools
-- ✅ **Update them** as new iOS APIs become available
+Mnemo does not yet ship a production Foundation Models or MLX embedding model. The current vector embedding is deterministic placeholder logic intended to keep the app functional until the model assets are bundled.
 
-### What Makes These Rules Opinionated
-- **No ViewModels**: Embraces pure SwiftUI state management patterns
-- **Swift 6+ Concurrency**: Enforces modern async/await over legacy patterns
-- **Latest APIs**: Recommends iOS 18+ features with optional iOS 26 guidelines
-- **Testing First**: Promotes Swift Testing framework over XCTest
-- **Performance Focus**: Emphasizes @Observable over @Published for better performance
-
-**Note for AI assistants**: You MUST read the relevant rules files before making changes to ensure consistency with project standards.
-
-## Project Architecture
+## Repository Layout
 
 ```
 Mnemo/
-├── Mnemo.xcworkspace/              # Open this file in Xcode
-├── Mnemo.xcodeproj/                # App shell project
-├── Mnemo/                          # App target (minimal)
-│   ├── Assets.xcassets/                # App-level assets (icons, colors)
-│   ├── MnemoApp.swift              # App entry point
-│   └── Mnemo.xctestplan            # Test configuration
-├── MnemoPackage/                   # 🚀 Primary development area
-│   ├── Package.swift                   # Package configuration
-│   ├── Sources/MnemoFeature/       # Your feature code
-│   └── Tests/MnemoFeatureTests/    # Unit tests
-└── MnemoUITests/                   # UI automation tests
+├── MnemoApp/              # Xcode app project and iOS app target
+│   ├── Mnemo/             # SwiftUI app screens and app lifecycle
+│   └── Config/            # XCConfig and entitlements
+├── MnemoCore/             # Shared model enums, DTOs, and error types
+├── MnemoMemory/           # SwiftData models, memory CRUD, vector bridge
+├── MnemoCapture/          # Text, voice, and image capture handlers
+├── MnemoIntelligence/     # Extraction, routing, scoring, learning engines
+├── MnemoSecurity/         # Keychain, Secure Enclave, biometrics, file protection
+├── MnemoSync/             # Backup and restore support
+└── MnemoUI/               # Shared design system and reusable UI components
 ```
 
-## Key Architecture Points
+## Build Commands
 
-### Workspace + SPM Structure
-- **App Shell**: `Mnemo/` contains minimal app lifecycle code
-- **Feature Code**: `MnemoPackage/Sources/MnemoFeature/` is where most development happens
-- **Separation**: Business logic lives in the SPM package, app target just imports and displays it
+Run package checks from the repo root:
 
-### Buildable Folders (Xcode 16)
-- Files added to the filesystem automatically appear in Xcode
-- No need to manually add files to project targets
-- Reduces project file conflicts in teams
+```sh
+for package in MnemoCore MnemoSecurity MnemoMemory MnemoCapture MnemoIntelligence MnemoSync MnemoUI; do
+  (cd "$package" && swift build)
+done
+```
+
+Run package tests where available:
+
+```sh
+(cd MnemoMemory && swift test)
+(cd MnemoCapture && swift test)
+(cd MnemoSecurity && swift test)
+(cd MnemoIntelligence && swift test)
+```
+
+Build and run the app from `MnemoApp/Mnemo.xcodeproj` with the `Mnemo` scheme.
 
 ## Development Notes
 
-### Code Organization
-Most development happens in `MnemoPackage/Sources/MnemoFeature/` - organize your code as you prefer.
+- Prefer small, package-scoped changes with package builds before app builds.
+- App screens can use SwiftUI state directly or `@Observable` UI state objects when state needs to be shared across a multi-screen flow.
+- Business logic belongs in package services and actors, not in large SwiftUI views.
+- Keep privacy and App Review notes factual. Do not claim bundled Foundation Models, MLX embeddings, or cloud LLM processing until those code paths are active and tested.
 
-### Public API Requirements
-Types exposed to the app target need `public` access:
-```swift
-public struct NewView: View {
-    public init() {}
-    
-    public var body: some View {
-        // Your view code
-    }
-}
-```
+## Known Gaps
 
-### Adding Dependencies
-Edit `MnemoPackage/Package.swift` to add SPM dependencies:
-```swift
-dependencies: [
-    .package(url: "https://github.com/example/SomePackage", from: "1.0.0")
-],
-targets: [
-    .target(
-        name: "MnemoFeature",
-        dependencies: ["SomePackage"]
-    ),
-]
-```
-
-### Test Structure
-- **Unit Tests**: `MnemoPackage/Tests/MnemoFeatureTests/` (Swift Testing framework)
-- **UI Tests**: `MnemoUITests/` (XCUITest framework)
-- **Test Plan**: `Mnemo.xctestplan` coordinates all tests
-
-## Configuration
-
-### XCConfig Build Settings
-Build settings are managed through **XCConfig files** in `Config/`:
-- `Config/Shared.xcconfig` - Common settings (bundle ID, versions, deployment target)
-- `Config/Debug.xcconfig` - Debug-specific settings  
-- `Config/Release.xcconfig` - Release-specific settings
-- `Config/Tests.xcconfig` - Test-specific settings
-
-### Entitlements Management
-App capabilities are managed through a **declarative entitlements file**:
-- `Config/Mnemo.entitlements` - All app entitlements and capabilities
-- AI agents can safely edit this XML file to add HealthKit, CloudKit, Push Notifications, etc.
-- No need to modify complex Xcode project files
-
-### Asset Management
-- **App-Level Assets**: `Mnemo/Assets.xcassets/` (app icon, accent color)
-- **Feature Assets**: Add `Resources/` folder to SPM package if needed
-
-### SPM Package Resources
-To include assets in your feature package:
-```swift
-.target(
-    name: "MnemoFeature",
-    dependencies: [],
-    resources: [.process("Resources")]
-)
-```
-
-### Generated with XcodeBuildMCP
-This project was scaffolded using [XcodeBuildMCP](https://github.com/cameroncooke/XcodeBuildMCP), which provides tools for AI-assisted iOS development workflows.
+- Recall is local and deterministic; production semantic recall still needs a real embedding model or hybrid keyword/vector search.
+- Foundation Models and MLX routes are present as architecture hooks, not production model execution paths.
+- Voice recognition in Simulator can receive microphone audio while Apple Speech fails to initialise. Validate voice capture on a physical iPhone before submission.
+- App Store metadata, screenshots, privacy policy URL, support URL, and legal/account setup remain manual pre-submission work.

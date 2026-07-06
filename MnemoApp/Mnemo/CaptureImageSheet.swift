@@ -1,13 +1,18 @@
 import SwiftUI
+import SwiftData
 import UIKit
 import PhotosUI
 import MnemoUI
+import MnemoCore
 import MnemoCapture
+import MnemoIntelligence
+import MnemoMemory
 
 /// Image capture sheet with OCR and clarifying question flow.
 struct CaptureImageSheet: View {
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var payload: ClarifyingQuestionPayload?
@@ -16,6 +21,7 @@ struct CaptureImageSheet: View {
     @State private var errorMessage: String?
 
     private let handler = ImageCaptureHandler()
+    private let engine = ExtractionEngine()
 
     var body: some View {
         NavigationStack {
@@ -27,6 +33,7 @@ struct CaptureImageSheet: View {
                         ClarifyingQuestionView(
                             payload: payload,
                             answer: $clarifyingAnswer,
+                            isSaving: isProcessing,
                             onSave: { saveCapture(payload: payload) },
                             onDiscard: { dismiss() }
                         )
@@ -88,8 +95,54 @@ struct CaptureImageSheet: View {
     }
 
     private func saveCapture(payload: ClarifyingQuestionPayload) {
-        _ = handler.finalise(payload: payload, userContext: clarifyingAnswer)
-        dismiss()
+        let userContext = clarifyingAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
+        let extractedText = payload.extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !userContext.isEmpty || !extractedText.isEmpty else {
+            errorMessage = "Add a note about this image before saving."
+            return
+        }
+
+        isProcessing = true
+        errorMessage = nil
+
+        Task {
+            do {
+                let capture = handler.finalise(payload: payload, userContext: userContext)
+                let result = try await engine.extract(
+                    rawText: capture.text,
+                    source: .image,
+                    userContext: capture.userContext,
+                    threshold: 0.90
+                )
+                let record = MemoryRecord(
+                    rawInput: capture.text,
+                    summary: result.summary,
+                    memoryType: result.memoryType,
+                    persistenceScore: result.persistenceScore,
+                    inputSource: .image,
+                    processingTier: result.processingTier,
+                    modalityThresholdUsed: result.modalityThresholdUsed,
+                    confidence: result.confidence,
+                    tags: result.tags
+                )
+
+                await MainActor.run {
+                    modelContext.insert(record)
+                    do {
+                        try modelContext.save()
+                        dismiss()
+                    } catch {
+                        errorMessage = "Could not save memory. Try again."
+                        isProcessing = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Could not save memory. Try again."
+                    isProcessing = false
+                }
+            }
+        }
     }
 }
 
@@ -133,6 +186,7 @@ struct ImageSelectionView: View {
 struct ClarifyingQuestionView: View {
     let payload: ClarifyingQuestionPayload
     @Binding var answer: String
+    let isSaving: Bool
     let onSave: () -> Void
     let onDiscard: () -> Void
 
@@ -167,14 +221,22 @@ struct ClarifyingQuestionView: View {
             }
 
             Button(action: onSave) {
-                Text("Save Memory")
-                    .font(DS.Typography.headline)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: DS.ComponentTokens.PrimaryButton.height)
-                    .background(DS.Colours.accent)
-                    .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                HStack {
+                    if isSaving {
+                        ProgressView()
+                            .tint(DS.ComponentTokens.PrimaryButton.foreground)
+                    } else {
+                        Text("Save Memory")
+                            .font(DS.Typography.headline)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: DS.ComponentTokens.PrimaryButton.height)
+                .background(DS.Colours.accent)
+                .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
+            .disabled(isSaving)
 
             Button(action: onDiscard) {
                 Text("Discard")

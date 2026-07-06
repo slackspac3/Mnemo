@@ -1,6 +1,5 @@
 import SwiftUI
 import MnemoUI
-import MnemoCore
 
 /// Renders the correct content for each onboarding step.
 struct OnboardingStepView: View {
@@ -45,11 +44,6 @@ struct OnboardingStepView: View {
         switch step {
         case .welcome:
             WelcomeStepContent()
-        case .capturePreference, .captureList, .captureCredential:
-            CaptureStepContent(
-                placeholder: capturePlaceholder,
-                viewModel: viewModel
-            )
         case .processingMode:
             ProcessingModeStepContent(viewModel: viewModel)
         case .notifications:
@@ -65,27 +59,12 @@ struct OnboardingStepView: View {
         switch step {
         case .welcome:
             return DS.Colours.primary
-        case .capturePreference, .notifications:
+        case .notifications:
             return DS.Colours.sense
-        case .captureList, .done:
+        case .done:
             return DS.Colours.success
-        case .captureCredential:
-            return DS.Colours.warning
         case .processingMode, .backup:
             return DS.Colours.accent
-        }
-    }
-
-    private var capturePlaceholder: String {
-        switch step {
-        case .capturePreference:
-            return "e.g. I wear a medium at Zara"
-        case .captureList:
-            return "e.g. oat milk, parmesan, bin bags"
-        case .captureCredential:
-            return "e.g. My Boots card number is 1234"
-        default:
-            return "Tell Mnemo something..."
         }
     }
 }
@@ -140,36 +119,6 @@ struct FeatureRow: View {
     }
 }
 
-struct CaptureStepContent: View {
-    let placeholder: String
-    let viewModel: OnboardingViewModel
-
-    var body: some View {
-        @Bindable var viewModel = viewModel
-
-        VStack(spacing: DS.Spacing.sm) {
-            TextField(placeholder, text: $viewModel.captureText, axis: .vertical)
-                .font(DS.Typography.body)
-                .foregroundStyle(DS.Colours.textPrimary)
-                .lineLimit(3...6)
-                .padding(DS.Spacing.md)
-                .background(DS.Colours.surfaceSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-
-            if viewModel.captureConfirmed {
-                HStack(spacing: DS.Spacing.sm) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(DS.Typography.subheadline)
-                        .foregroundStyle(DS.Colours.success)
-                    Text("Saved to memory")
-                        .font(DS.Typography.footnote)
-                        .foregroundStyle(DS.Colours.success)
-                }
-            }
-        }
-    }
-}
-
 struct ProcessingModeStepContent: View {
     let viewModel: OnboardingViewModel
 
@@ -188,7 +137,7 @@ struct ProcessingModeStepContent: View {
             ProcessingOptionCard(
                 icon: "cloud.fill",
                 title: "On-Device + Cloud Assist",
-                description: "Uses Anthropic's Claude only when you allow cloud assist for ambiguous captures. Raw input, recordings, and images never leave your device.",
+                description: "Cloud Assist is a future opt-in route for ambiguous captures. In this build, captures stay on this device.",
                 isSelected: !viewModel.onDeviceOnly,
                 color: DS.Colours.textSecondary
             ) {
@@ -208,7 +157,7 @@ struct AICloudConsentNotice: View {
             Image(systemName: "info.circle")
                 .font(DS.Typography.caption1)
                 .foregroundStyle(DS.Colours.accent)
-            Text("Cloud processing uses Anthropic's Claude. Only anonymised structured data is transmitted. Your actual words, recordings, images, and raw captures stay on this device. You can change this in Settings at any time.")
+            Text("Cloud Assist is not connected to an external provider in this build. Future cloud processing will require explicit consent and can be changed in Settings.")
                 .font(DS.Typography.caption1)
                 .foregroundStyle(DS.Colours.textSecondary)
         }
@@ -357,35 +306,6 @@ struct DoneStepContent: View {
 
     var body: some View {
         VStack(spacing: DS.Spacing.md) {
-            if !viewModel.seededMemories.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                    Text("Memories saved:")
-                        .font(DS.Typography.subheadline)
-                        .foregroundStyle(DS.Colours.textSecondary)
-
-                    ForEach(viewModel.seededMemories, id: \.self) { memory in
-                        HStack(spacing: DS.Spacing.sm) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(DS.Typography.caption1)
-                                .foregroundStyle(DS.Colours.success)
-                            Text(memory)
-                                .font(DS.Typography.body)
-                                .foregroundStyle(DS.Colours.textPrimary)
-                                .lineLimit(2)
-                        }
-                    }
-                }
-                .padding(DS.Spacing.md)
-                .background(DS.Colours.surface)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-                .shadow(
-                    color: DS.Shadows.subtle.color,
-                    radius: DS.Shadows.subtle.radius,
-                    x: DS.Shadows.subtle.x,
-                    y: DS.Shadows.subtle.y
-                )
-            }
-
             Text("The more you tell Mnemo, the more useful it becomes. Start capturing anything you want to remember.")
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textSecondary)

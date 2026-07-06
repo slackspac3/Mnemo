@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import MnemoUI
 import MnemoCore
 
@@ -7,6 +8,7 @@ struct ChatView: View {
 
     @State private var viewModel = ChatViewModel()
     @Environment(NavigationCoordinator.self) private var coordinator
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -18,7 +20,7 @@ struct ChatView: View {
                 VStack(spacing: DS.Spacing.xs) {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            LazyVStack(spacing: DS.Spacing.sm) {
+                            LazyVStack(spacing: DS.Spacing.md) {
                                 ForEach(viewModel.messages) { message in
                                     MessageBubble(message: message)
                                         .id(message.id)
@@ -30,8 +32,9 @@ struct ChatView: View {
                             }
                             .padding(.horizontal, DS.Spacing.md)
                             .padding(.top, DS.Spacing.md)
-                            .padding(.bottom, DS.Spacing.xxl)
+                            .padding(.bottom, DS.Spacing.xl)
                         }
+                        .scrollDismissesKeyboard(.interactively)
                         .onChange(of: viewModel.messages.count) {
                             if let last = viewModel.messages.last {
                                 withAnimation(DS.Animation.standard) {
@@ -44,8 +47,14 @@ struct ChatView: View {
                     ChatInputBar(
                         text: $viewModel.inputText,
                         isProcessing: viewModel.isProcessing,
+                        onText: {
+                            coordinator.present(.captureText)
+                        },
+                        onPhoto: {
+                            coordinator.present(.captureImage)
+                        },
                         onSend: {
-                            Task { await viewModel.send() }
+                            Task { await viewModel.send(context: modelContext) }
                         },
                         onVoice: {
                             coordinator.present(.captureVoice)
@@ -89,7 +98,7 @@ struct MessageBubble: View {
     }
 
     var body: some View {
-        HStack {
+        HStack(alignment: .bottom) {
             if isUser {
                 Spacer(minLength: DS.Spacing.xxxl)
             }
@@ -98,8 +107,9 @@ struct MessageBubble: View {
                 Text(message.content)
                     .font(DS.Typography.body)
                     .foregroundStyle(isUser ? DS.ComponentTokens.PrimaryButton.foreground : DS.Colours.textPrimary)
+                    .multilineTextAlignment(isUser ? .trailing : .leading)
                     .padding(.horizontal, DS.Spacing.md)
-                    .padding(.vertical, DS.Spacing.sm)
+                    .padding(.vertical, DS.Spacing.md)
                     .background(isUser ? DS.Colours.accent : DS.Colours.surface)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                     .shadow(
@@ -108,6 +118,10 @@ struct MessageBubble: View {
                         x: DS.Shadows.subtle.x,
                         y: DS.Shadows.subtle.y
                     )
+
+                if !isUser && !message.citedMemoryIds.isEmpty {
+                    CitationPill(count: message.citedMemoryIds.count)
+                }
 
                 Text(message.timestamp.formatted(.dateTime.hour().minute()))
                     .font(DS.Typography.caption2)
@@ -121,16 +135,39 @@ struct MessageBubble: View {
     }
 }
 
+struct CitationPill: View {
+
+    let count: Int
+
+    private var label: String {
+        count == 1 ? "Saved memory" : "\(count) saved memories"
+    }
+
+    var body: some View {
+        Label(label, systemImage: "bookmark.fill")
+            .font(DS.Typography.caption1)
+            .foregroundStyle(DS.Colours.accent)
+            .padding(.horizontal, DS.Spacing.sm)
+            .padding(.vertical, DS.Spacing.xs)
+            .background(DS.Colours.surfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.full))
+    }
+}
+
 struct TypingIndicator: View {
     var body: some View {
         HStack {
-            Text("Thinking...")
-                .font(DS.Typography.footnote)
-                .foregroundStyle(DS.Colours.textSecondary)
-                .padding(.horizontal, DS.Spacing.md)
-                .padding(.vertical, DS.Spacing.sm)
-                .background(DS.Colours.surface)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
+            HStack(spacing: DS.Spacing.xs) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Looking through memories")
+                    .font(DS.Typography.footnote)
+                    .foregroundStyle(DS.Colours.textSecondary)
+            }
+            .padding(.horizontal, DS.Spacing.md)
+            .padding(.vertical, DS.Spacing.sm)
+            .background(DS.Colours.surface)
+            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                 .shadow(
                     color: DS.Shadows.subtle.color,
                     radius: DS.Shadows.subtle.radius,
@@ -146,20 +183,39 @@ struct ChatInputBar: View {
 
     @Binding var text: String
     let isProcessing: Bool
+    let onText: () -> Void
+    let onPhoto: () -> Void
     let onSend: () -> Void
     let onVoice: () -> Void
 
     var body: some View {
-        HStack(spacing: DS.Spacing.sm) {
+        HStack(spacing: DS.Spacing.xs) {
+            Menu {
+                Button(action: onPhoto) {
+                    Label("Photo", systemImage: "photo")
+                }
+
+                Button(action: onText) {
+                    Label("Text", systemImage: "square.and.pencil")
+                }
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24.0, weight: .semibold))
+                    .foregroundStyle(DS.Colours.accent)
+                    .frame(width: 40.0, height: 44.0)
+            }
+            .buttonStyle(.plain)
+
             Button(action: onVoice) {
                 Image(systemName: "mic.fill")
-                    .font(DS.Typography.title2)
+                    .font(.system(size: 24.0, weight: .semibold))
                     .foregroundStyle(DS.Colours.accent)
                     .frame(
-                        width: DS.ComponentTokens.InputField.height,
-                        height: DS.ComponentTokens.InputField.height
+                        width: 40.0,
+                        height: 44.0
                     )
             }
+            .buttonStyle(.plain)
 
             TextField("Ask or tell Mnemo anything...", text: $text, axis: .vertical)
                 .font(DS.Typography.body)
@@ -175,10 +231,12 @@ struct ChatInputBar: View {
 
             Button(action: onSend) {
                 Image(systemName: isProcessing ? "ellipsis" : "arrow.up.circle.fill")
-                    .font(DS.Typography.title1)
+                    .font(.system(size: 32.0, weight: .semibold))
                     .foregroundStyle(text.isEmpty || isProcessing ? DS.Colours.textTertiary : DS.Colours.accent)
+                    .frame(width: 44.0, height: 44.0)
             }
             .disabled(text.isEmpty || isProcessing)
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, DS.Spacing.md)
         .padding(.vertical, DS.Spacing.sm)

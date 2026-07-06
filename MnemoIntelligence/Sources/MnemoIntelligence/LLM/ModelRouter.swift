@@ -29,8 +29,7 @@ public final class ModelRouter: ModelRouterProtocol, @unchecked Sendable {
         userContext: String?,
         threshold: Double
     ) async throws -> ExtractionResult {
-        let cloudPermitted = !preferOnDevice &&
-            capability.recommendedProcessingMode != .cloudPrimary
+        let cloudPermitted = !preferOnDevice
         return try await extractionEngine.extract(
             rawText: rawInput,
             source: source,
