@@ -118,17 +118,17 @@ struct SettingsView: View {
                     }
 
                     Section {
-                        HStack(spacing: DS.Spacing.sm) {
-                            Image(systemName: "icloud")
-                                .font(DS.Typography.subheadline)
-                                .foregroundStyle(DS.Colours.accent)
-                            Text("iCloud Backup")
-                                .font(DS.Typography.body)
-                                .foregroundStyle(DS.Colours.textPrimary)
-                            Spacer()
-                            Text("Phase 10")
-                                .font(DS.Typography.caption1)
-                                .foregroundStyle(DS.Colours.textTertiary)
+                        NavigationLink {
+                            BackupRestoreView()
+                        } label: {
+                            HStack(spacing: DS.Spacing.sm) {
+                                Image(systemName: "icloud")
+                                    .font(DS.Typography.subheadline)
+                                    .foregroundStyle(DS.Colours.accent)
+                                Text("iCloud Backup")
+                                    .font(DS.Typography.body)
+                                    .foregroundStyle(DS.Colours.textPrimary)
+                            }
                         }
                     } header: {
                         SettingsSectionHeader("Backup")

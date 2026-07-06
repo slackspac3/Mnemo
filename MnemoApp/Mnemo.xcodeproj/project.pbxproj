@@ -13,6 +13,7 @@
 		8B41F7042DEEF001001A66F9 /* MnemoIntelligence in Frameworks */ = {isa = PBXBuildFile; productRef = 8B41F7242DEEF001001A66F9 /* MnemoIntelligence */; };
 		8B41F7052DEEF001001A66F9 /* MnemoCapture in Frameworks */ = {isa = PBXBuildFile; productRef = 8B41F7252DEEF001001A66F9 /* MnemoCapture */; };
 		8B41F7062DEEF001001A66F9 /* MnemoUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8B41F7262DEEF001001A66F9 /* MnemoUI */; };
+		8B41F7072DEEF001001A66F9 /* MnemoSync in Frameworks */ = {isa = PBXBuildFile; productRef = 8B41F7272DEEF001001A66F9 /* MnemoSync */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -59,6 +60,7 @@
 				8B41F7042DEEF001001A66F9 /* MnemoIntelligence in Frameworks */,
 				8B41F7052DEEF001001A66F9 /* MnemoCapture in Frameworks */,
 				8B41F7062DEEF001001A66F9 /* MnemoUI in Frameworks */,
+				8B41F7072DEEF001001A66F9 /* MnemoSync in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,6 +119,7 @@
 				8B41F7242DEEF001001A66F9 /* MnemoIntelligence */,
 				8B41F7252DEEF001001A66F9 /* MnemoCapture */,
 				8B41F7262DEEF001001A66F9 /* MnemoUI */,
+				8B41F7272DEEF001001A66F9 /* MnemoSync */,
 			);
 			productName = Mnemo;
 			productReference = 8B41F6452DEDD0D5001A66F9 /* Mnemo.app */;
@@ -391,6 +394,10 @@
 		8B41F7262DEEF001001A66F9 /* MnemoUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = MnemoUI;
+		};
+		8B41F7272DEEF001001A66F9 /* MnemoSync */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MnemoSync;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

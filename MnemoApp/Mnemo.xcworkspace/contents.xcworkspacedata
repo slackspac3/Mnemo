@@ -20,6 +20,9 @@
       location = "group:../MnemoUI">
    </FileRef>
    <FileRef
+      location = "group:../MnemoSync">
+   </FileRef>
+   <FileRef
       location = "container:Mnemo.xcodeproj">
    </FileRef>
 </Workspace>
