@@ -17,15 +17,33 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
 
     @Published public var transcript: String = ""
     @Published public var isRecording: Bool = false
+    @Published public var isReceivingAudio: Bool = false
     @Published public var permissionGranted: Bool = false
+    @Published public var recognitionErrorMessage: String?
 
     private var audioEngine: AVAudioEngine?
+    private var audioFile: AVAudioFile?
+    private var recordingURL: URL?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
-    private let speechRecognizer: SFSpeechRecognizer?
+    private let speechRecognizers: [SFSpeechRecognizer]
 
     public override init() {
-        self.speechRecognizer = SFSpeechRecognizer(locale: Locale.current)
+        let currentLocale = Locale.current
+        let englishFallback = Locale(identifier: "en_US")
+        let preferredLocales: [Locale]
+        if currentLocale.identifier.lowercased().hasPrefix("en") {
+            preferredLocales = [englishFallback, currentLocale]
+        } else {
+            preferredLocales = [currentLocale, englishFallback]
+        }
+        self.speechRecognizers = preferredLocales.reduce(into: []) { recognizers, locale in
+            guard
+                !recognizers.contains(where: { $0.locale.identifier == locale.identifier }),
+                let recognizer = SFSpeechRecognizer(locale: locale)
+            else { return }
+            recognizers.append(recognizer)
+        }
         super.init()
     }
 
@@ -51,13 +69,21 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
     // MARK: - Recording
 
     public func startRecording() throws {
-        guard let recognizer = speechRecognizer, recognizer.isAvailable else {
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        transcript = ""
+        isReceivingAudio = false
+        recognitionErrorMessage = nil
+        cleanupRecordingFile()
+
+        guard let recognizer = availableSpeechRecognizer() else {
             throw CaptureError.transcriptionFailed("Speech recogniser unavailable")
         }
 
         let audioEngine = AVAudioEngine()
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
+        request.taskHint = .dictation
 
         #if os(iOS)
         let audioSession = AVAudioSession.sharedInstance()
@@ -66,19 +92,39 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         #endif
 
         let inputNode = audioEngine.inputNode
-        let format = inputNode.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0 else {
-            throw CaptureError.transcriptionFailed("Audio input format unavailable")
+        guard let tapFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else {
+            throw CaptureError.transcriptionFailed("Could not create audio format")
         }
+        let recordingURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mnemo-voice-\(UUID().uuidString).caf")
+        let audioFile = try AVAudioFile(
+            forWriting: recordingURL,
+            settings: tapFormat.settings
+        )
 
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+        self.audioFile = audioFile
+        self.recordingURL = recordingURL
+        self.recognitionRequest = request
+
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: tapFormat) { [weak self] buffer, _ in
             self?.recognitionRequest?.append(buffer)
+            try? self?.audioFile?.write(from: buffer)
+            guard Self.bufferContainsAudio(buffer) else { return }
+            Task { @MainActor in
+                self?.isReceivingAudio = true
+            }
         }
 
-        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, _ in
+        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             if let result {
                 Task { @MainActor in
                     self?.transcript = result.bestTranscription.formattedString
+                }
+            }
+
+            if let error {
+                Task { @MainActor in
+                    self?.recognitionErrorMessage = error.localizedDescription
                 }
             }
         }
@@ -87,7 +133,6 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         try audioEngine.start()
 
         self.audioEngine = audioEngine
-        self.recognitionRequest = request
         self.isRecording = true
     }
 
@@ -95,11 +140,10 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         audioEngine?.stop()
         audioEngine?.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
+        recognitionTask?.finish()
 
         audioEngine = nil
         recognitionRequest = nil
-        recognitionTask = nil
         isRecording = false
 
         let capturedTranscript = transcript
@@ -110,6 +154,48 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
             source: .voice,
             rawAudioTranscript: capturedTranscript
         )
+    }
+
+    public func stopRecordingAndTranscribe() async -> RawCapture? {
+        if let capture = stopRecording() {
+            cleanupRecordingFile()
+            return capture
+        }
+
+        // Give the live recognition task a short chance to deliver its final text.
+        for _ in 0..<10 {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if let capture = currentCapture() {
+                cleanupRecordingFile()
+                return capture
+            }
+        }
+
+        guard isReceivingAudio, let recordingURL else {
+            cleanupRecordingFile()
+            return nil
+        }
+
+        do {
+            let fileTranscript = try await transcribeRecordingFile(at: recordingURL)
+            let trimmed = fileTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                cleanupRecordingFile()
+                return nil
+            }
+
+            transcript = trimmed
+            cleanupRecordingFile()
+            return RawCapture(
+                text: trimmed,
+                source: .voice,
+                rawAudioTranscript: trimmed
+            )
+        } catch {
+            recognitionErrorMessage = error.localizedDescription
+            cleanupRecordingFile()
+            return nil
+        }
     }
 
     // MARK: - User edit produces ThresholdUpdateEvent
@@ -152,5 +238,95 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
             }
         }
         return dp[aChars.count][bChars.count]
+    }
+
+    private func availableSpeechRecognizer() -> SFSpeechRecognizer? {
+        speechRecognizers.first(where: { $0.isAvailable })
+    }
+
+    private func currentCapture() -> RawCapture? {
+        let capturedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !capturedTranscript.isEmpty else { return nil }
+        return RawCapture(
+            text: capturedTranscript,
+            source: .voice,
+            rawAudioTranscript: capturedTranscript
+        )
+    }
+
+    private func transcribeRecordingFile(at url: URL) async throws -> String {
+        guard let recognizer = availableSpeechRecognizer() else {
+            throw CaptureError.transcriptionFailed("Speech recogniser unavailable")
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let lock = NSLock()
+            var didResume = false
+            var bestTranscript = ""
+            var timeoutTask: Task<Void, Never>?
+
+            func finish(_ result: Result<String, Error>) {
+                lock.lock()
+                guard !didResume else {
+                    lock.unlock()
+                    return
+                }
+                didResume = true
+                timeoutTask?.cancel()
+                lock.unlock()
+
+                continuation.resume(with: result)
+            }
+
+            let request = SFSpeechURLRecognitionRequest(url: url)
+            request.shouldReportPartialResults = false
+            request.taskHint = .dictation
+
+            timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                finish(.failure(CaptureError.transcriptionFailed("Speech recognition timed out")))
+            }
+
+            recognitionTask = recognizer.recognitionTask(with: request) { result, error in
+                if let result {
+                    bestTranscript = result.bestTranscription.formattedString
+                    if result.isFinal {
+                        finish(.success(bestTranscript))
+                    }
+                }
+
+                if let error {
+                    if bestTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        finish(.failure(error))
+                    } else {
+                        finish(.success(bestTranscript))
+                    }
+                }
+            }
+        }
+    }
+
+    private func cleanupRecordingFile() {
+        audioFile = nil
+        if let recordingURL {
+            try? FileManager.default.removeItem(at: recordingURL)
+        }
+        recordingURL = nil
+    }
+
+    private nonisolated static func bufferContainsAudio(_ buffer: AVAudioPCMBuffer) -> Bool {
+        guard let channels = buffer.floatChannelData else { return false }
+        let frameLength = Int(buffer.frameLength)
+        guard frameLength > 0 else { return false }
+
+        for channelIndex in 0..<Int(buffer.format.channelCount) {
+            let channel = channels[channelIndex]
+            for frameIndex in 0..<frameLength {
+                if abs(channel[frameIndex]) > 0.01 {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }

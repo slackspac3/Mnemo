@@ -23,7 +23,8 @@ public final class MemoryStore {
         let config = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
-            allowsSave: true
+            allowsSave: true,
+            cloudKitDatabase: .none
         )
         do {
             container = try ModelContainer(for: schema, configurations: [config])

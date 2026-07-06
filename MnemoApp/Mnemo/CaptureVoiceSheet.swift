@@ -1,16 +1,27 @@
 import SwiftUI
 import UIKit
+import SwiftData
 import MnemoUI
+import MnemoCore
 import MnemoCapture
+import MnemoIntelligence
+import MnemoMemory
 
 /// Voice capture sheet with transcript confirm/edit before saving.
 struct CaptureVoiceSheet: View {
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
     @StateObject private var voiceHandler = VoiceCaptureHandler()
     @State private var editedTranscript = ""
     @State private var showingConfirm = false
     @State private var permissionDenied = false
+    @State private var isTranscribing = false
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    private let engine = ExtractionEngine()
 
     var body: some View {
         NavigationStack {
@@ -23,16 +34,21 @@ struct CaptureVoiceSheet: View {
                     } else if showingConfirm {
                         VoiceConfirmView(
                             transcript: $editedTranscript,
+                            isSaving: isSaving,
                             onSave: { saveTranscript() },
                             onRetry: {
                                 showingConfirm = false
                                 editedTranscript = ""
+                                errorMessage = nil
+                                isSaving = false
                             },
                             onDiscard: { dismiss() }
                         )
                     } else {
                         VoiceRecordingView(
                             isRecording: voiceHandler.isRecording,
+                            isReceivingAudio: voiceHandler.isReceivingAudio,
+                            isTranscribing: isTranscribing,
                             transcript: voiceHandler.transcript,
                             onToggle: { toggleRecording() },
                             onDone: {
@@ -40,6 +56,14 @@ struct CaptureVoiceSheet: View {
                                 showingConfirm = true
                             }
                         )
+                    }
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(DS.Typography.footnote)
+                            .foregroundStyle(DS.Colours.destructive)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, DS.Spacing.md)
                     }
                 }
                 .padding(DS.Spacing.xl)
@@ -63,38 +87,166 @@ struct CaptureVoiceSheet: View {
                     permissionDenied = true
                 }
             }
+            .onChange(of: voiceHandler.transcript) { _, transcript in
+                let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard isTranscribing, !trimmed.isEmpty else { return }
+                editedTranscript = trimmed
+                isTranscribing = false
+                showingConfirm = true
+            }
+            .onChange(of: voiceHandler.recognitionErrorMessage) { _, message in
+                guard let message, !message.isEmpty else { return }
+                errorMessage = recognitionFailureMessage(message)
+            }
         }
     }
 
     private func toggleRecording() {
+        errorMessage = nil
+
         if voiceHandler.isRecording {
-            _ = voiceHandler.stopRecording()
+            finishRecording()
         } else {
-            try? voiceHandler.startRecording()
+            isTranscribing = false
+            do {
+                try voiceHandler.startRecording()
+            } catch {
+                errorMessage = "Could not start recording: \(error.localizedDescription)"
+            }
         }
     }
 
+    private func finishRecording() {
+        isTranscribing = true
+
+        Task {
+            if let capture = await voiceHandler.stopRecordingAndTranscribe() {
+                await MainActor.run {
+                    editedTranscript = capture.text
+                    errorMessage = nil
+                    isTranscribing = false
+                    showingConfirm = true
+                }
+            } else {
+                await MainActor.run {
+                    isTranscribing = false
+                    if let message = voiceHandler.recognitionErrorMessage, !message.isEmpty {
+                        showManualTranscriptFallback(message: recognitionFailureMessage(message))
+                    } else {
+                        let message = noSpeechMessage(receivedAudio: voiceHandler.isReceivingAudio)
+                        if voiceHandler.isReceivingAudio {
+                            showManualTranscriptFallback(message: message)
+                        } else {
+                            errorMessage = message
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func noSpeechMessage(receivedAudio: Bool) -> String {
+        if receivedAudio {
+            return "Audio was received, but no words were recognised. Try again and speak clearly until you tap stop."
+        }
+
+        #if targetEnvironment(simulator)
+        return "No microphone input reached the simulator. In Simulator, choose I/O > Audio Input > Mac Microphone, or test on a physical iPhone."
+        #else
+        return "No microphone input reached Mnemo. Check microphone access and try speaking closer to the phone."
+        #endif
+    }
+
+    private func recognitionFailureMessage(_ message: String) -> String {
+        if message.localizedCaseInsensitiveContains("initialize recognizer") {
+            #if targetEnvironment(simulator)
+            return "The simulator is receiving microphone input, but Apple speech recognition failed to initialize. Type what you said below, or retry on a physical iPhone."
+            #else
+            return "Apple speech recognition failed to initialize. Type what you said below, or restart the app and try again."
+            #endif
+        }
+
+        return "Speech recognition failed: \(message)"
+    }
+
+    private func showManualTranscriptFallback(message: String) {
+        editedTranscript = ""
+        isSaving = false
+        errorMessage = message
+        showingConfirm = true
+    }
+
     private func saveTranscript() {
-        guard !editedTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let transcript = editedTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !transcript.isEmpty else {
             dismiss()
             return
         }
 
-        dismiss()
+        isSaving = true
+        errorMessage = nil
+
+        Task {
+            do {
+                let result = try await engine.extract(
+                    rawText: transcript,
+                    source: .voice,
+                    threshold: 0.90
+                )
+
+                try await MainActor.run {
+                    let record = MemoryRecord(
+                        rawInput: transcript,
+                        summary: result.summary,
+                        memoryType: result.memoryType,
+                        persistenceScore: result.persistenceScore,
+                        inputSource: .voice,
+                        processingTier: result.processingTier,
+                        modalityThresholdUsed: result.modalityThresholdUsed,
+                        confidence: result.confidence,
+                        tags: result.tags
+                    )
+                    modelContext.insert(record)
+                    try modelContext.save()
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Could not save voice memory. Try again."
+                    isSaving = false
+                }
+            }
+        }
     }
 }
 
 struct VoiceRecordingView: View {
     let isRecording: Bool
+    let isReceivingAudio: Bool
+    let isTranscribing: Bool
     let transcript: String
     let onToggle: () -> Void
     let onDone: () -> Void
+
+    @State private var pulse = false
 
     var body: some View {
         VStack(spacing: DS.Spacing.xl) {
             Spacer()
 
             ZStack {
+                if isRecording {
+                    Circle()
+                        .stroke(DS.Colours.destructive.opacity(0.28), lineWidth: DS.Spacing.xs / 2)
+                        .frame(
+                            width: DS.Spacing.xxxl + DS.Spacing.xxxl,
+                            height: DS.Spacing.xxxl + DS.Spacing.xxxl
+                        )
+                        .scaleEffect(pulse ? 1.08 : 0.88)
+                        .opacity(pulse ? 0.24 : 0.72)
+                        .animation(DS.Animation.slow.repeatForever(autoreverses: true), value: pulse)
+                }
+
                 Circle()
                     .fill(isRecording ? DS.Colours.destructiveLight : DS.Colours.surfaceSecondary)
                     .frame(
@@ -117,10 +269,25 @@ struct VoiceRecordingView: View {
                         .foregroundStyle(isRecording ? DS.Colours.destructive : DS.Colours.accent)
                 }
             }
+            .onAppear {
+                pulse = isRecording
+            }
+            .onChange(of: isRecording) { _, newValue in
+                pulse = newValue
+            }
 
-            Text(isRecording ? "Tap to stop" : "Tap to record")
+            if isRecording {
+                RecordingWaveform(isAnimating: pulse)
+            }
+
+            Text(statusText)
                 .font(DS.Typography.subheadline)
                 .foregroundStyle(DS.Colours.textSecondary)
+
+            if isTranscribing {
+                ProgressView()
+                    .tint(DS.Colours.accent)
+            }
 
             if !transcript.isEmpty {
                 Text(transcript)
@@ -141,10 +308,54 @@ struct VoiceRecordingView: View {
             Spacer()
         }
     }
+
+    private var statusText: String {
+        if isRecording {
+            return isReceivingAudio ? "Listening... audio detected" : "Listening... waiting for microphone input"
+        }
+        if isTranscribing {
+            return "Finishing transcript..."
+        }
+        return "Tap to record"
+    }
+}
+
+struct RecordingWaveform: View {
+    let isAnimating: Bool
+
+    var body: some View {
+        HStack(spacing: DS.Spacing.xs) {
+            ForEach(0..<5, id: \.self) { index in
+                Capsule()
+                    .fill(DS.Colours.destructive)
+                    .frame(
+                        width: DS.Spacing.xs,
+                        height: height(for: index, isRaised: isAnimating)
+                    )
+                    .animation(DS.Animation.slow.repeatForever(autoreverses: true), value: isAnimating)
+            }
+        }
+        .frame(height: DS.Spacing.lg)
+        .accessibilityHidden(true)
+    }
+
+    private func height(for index: Int, isRaised: Bool) -> CGFloat {
+        let low = DS.Spacing.sm
+        let high = DS.Spacing.lg
+        switch index {
+        case 0, 4:
+            return isRaised ? DS.Spacing.md : low
+        case 1, 3:
+            return isRaised ? high : DS.Spacing.md
+        default:
+            return isRaised ? DS.Spacing.sm : high
+        }
+    }
 }
 
 struct VoiceConfirmView: View {
     @Binding var transcript: String
+    let isSaving: Bool
     let onSave: () -> Void
     let onRetry: () -> Void
     let onDiscard: () -> Void
@@ -159,20 +370,36 @@ struct VoiceConfirmView: View {
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textPrimary)
                 .scrollContentBackground(.hidden)
-                .frame(minHeight: DS.Spacing.xxxl + DS.Spacing.xxl)
                 .padding(DS.Spacing.sm)
+                .frame(minHeight: DS.Spacing.xxxl + DS.Spacing.xxl)
+                .background(alignment: .topLeading) {
+                    if transcript.isEmpty {
+                        Text("Type what you said...")
+                            .font(DS.Typography.body)
+                            .foregroundStyle(DS.Colours.textTertiary)
+                            .padding(DS.Spacing.md)
+                    }
+                }
                 .background(DS.Colours.surfaceSecondary)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
 
             Button(action: onSave) {
-                Text("Save Memory")
-                    .font(DS.Typography.headline)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: DS.ComponentTokens.PrimaryButton.height)
-                    .background(DS.Colours.accent)
-                    .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                HStack {
+                    if isSaving {
+                        ProgressView()
+                            .tint(DS.ComponentTokens.PrimaryButton.foreground)
+                    } else {
+                        Text("Save Memory")
+                            .font(DS.Typography.headline)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: DS.ComponentTokens.PrimaryButton.height)
+                .background(transcript.isEmpty ? DS.Colours.textTertiary : DS.Colours.accent)
+                .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
+            .disabled(transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
 
             Button(action: onRetry) {
                 Text("Record again")

@@ -19,9 +19,6 @@ struct BackupRestoreView: View {
     @State private var showingRestoreConfirm = false
     @State private var selectedManifest: BackupManifest?
 
-    private let backupManager = BackupManager()
-    private let restoreManager = RestoreManager()
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -178,6 +175,7 @@ struct BackupRestoreView: View {
 
         Task {
             do {
+                let backupManager = BackupManager()
                 let manifest = try await backupManager.backup(context: modelContext)
                 await MainActor.run {
                     lastBackupManifest = manifest
@@ -200,6 +198,7 @@ struct BackupRestoreView: View {
 
         Task {
             do {
+                let restoreManager = RestoreManager()
                 try await restoreManager.restore(from: manifest, into: modelContext)
                 await MainActor.run {
                     successMessage = "Restore complete."
@@ -216,6 +215,7 @@ struct BackupRestoreView: View {
 
     private func loadBackups() async {
         do {
+            let backupManager = BackupManager()
             let backups = try await backupManager.availableBackups()
             await MainActor.run {
                 availableBackups = backups

@@ -4,6 +4,14 @@
 <dict>
 	<!-- Base entitlements - add your app's entitlements here -->
 	<!-- AI agents can safely modify this file to add capabilities -->
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array>
+		<string>iCloud.com.thinkact.mnemo</string>
+	</array>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudKit</string>
+	</array>
 	
 	<!-- Example entitlements (commented out by default):
 	
