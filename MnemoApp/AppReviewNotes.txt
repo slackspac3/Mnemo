@@ -1,0 +1,43 @@
+MNEMO - App Review Notes
+
+Mnemo is an on-device AI memory assistant for iPhone.
+
+ARCHITECTURE SUMMARY
+All AI processing runs locally on the user's device using Apple's Foundation Models framework (iOS 26+) and a bundled on-device model. No user data is sent to any external server by default.
+
+ON-DEVICE PROCESSING
+- Voice transcription: SFSpeechRecognizer (on-device, no network call)
+- Image processing: Apple Vision Framework VNRecognizeTextRequest (on-device)
+- AI extraction: Apple Foundation Models (on-device, iOS 26+)
+- Vector search: SQLite with cosine similarity (on-device)
+- Backup: CloudKit (user's own iCloud - Mnemo has no server access)
+
+CLOUD LLM FALLBACK (opt-in only)
+Cloud processing is an opt-in feature. When enabled:
+- Only an anonymised structured summary is sent - never raw text, audio, or images
+- The user consents explicitly during onboarding on the Processing Mode screen
+- The cloud provider is Anthropic (Claude API)
+- The user can disable this at any time in Settings -> Privacy
+
+PERMISSIONS
+The app does not require microphone, camera, or photo library permissions to function.
+These are requested contextually only when the user first uses each feature:
+- Microphone: when user taps the voice capture button
+- Camera/Photos: when user taps the image capture button
+- Notifications: opt-in during onboarding (Memory Moments feature)
+
+TESTING THE APP
+1. Complete onboarding - tap Continue through each step
+2. On the Processing Mode screen - select either On-Device Only or Cloud Assist
+3. In the main app - tap the + button to capture a memory via text
+4. Type something and tap Save to Memory
+5. In Chat - ask "what did I just save?" to test recall
+6. Browse tab - shows all captured memories
+7. Settings - shows device tier, privacy controls, and personalisation index
+
+SANDBOX / TEST ACCOUNT
+No account is required. The app works fully without authentication.
+iCloud backup requires a signed-in iCloud account for testing.
+
+BUNDLE ID: com.thinkact.mnemo
+DEVELOPER: Think Act Management Consulting L.L.C
