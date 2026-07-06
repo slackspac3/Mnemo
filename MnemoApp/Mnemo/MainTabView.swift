@@ -16,13 +16,13 @@ struct MainTabView: View {
                 }
                 .tag(NavigationCoordinator.Tab.chat)
 
-            BrowsePlaceholderView()
+            BrowseView()
                 .tabItem {
                     Label(NavigationCoordinator.Tab.browse.rawValue, systemImage: NavigationCoordinator.Tab.browse.icon)
                 }
                 .tag(NavigationCoordinator.Tab.browse)
 
-            ThreadsPlaceholderView()
+            ThreadsView()
                 .tabItem {
                     Label(NavigationCoordinator.Tab.threads.rawValue, systemImage: NavigationCoordinator.Tab.threads.icon)
                 }
@@ -38,6 +38,8 @@ struct MainTabView: View {
                 CaptureVoiceSheet()
             case .captureImage:
                 CaptureImageSheet()
+            case .settings:
+                SettingsView()
             case .memoryDetail(let id):
                 MemoryDetailPlaceholderView(memoryId: id)
             case .threadProposal(let id):
@@ -48,44 +50,6 @@ struct MainTabView: View {
             CaptureButton()
                 .environment(coordinator)
                 .padding(.bottom, DS.Spacing.xxxl + DS.Spacing.xxxl + DS.Spacing.md)
-        }
-    }
-}
-
-struct BrowsePlaceholderView: View {
-    var body: some View {
-        ZStack {
-            DS.Colours.background.ignoresSafeArea()
-            VStack(spacing: DS.Spacing.md) {
-                Image(systemName: NavigationCoordinator.Tab.browse.icon)
-                    .font(DS.Typography.largeTitle)
-                    .foregroundStyle(DS.Colours.textTertiary)
-                Text(NavigationCoordinator.Tab.browse.rawValue)
-                    .font(DS.Typography.title2)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                Text("Coming in Phase 9")
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.textSecondary)
-            }
-        }
-    }
-}
-
-struct ThreadsPlaceholderView: View {
-    var body: some View {
-        ZStack {
-            DS.Colours.background.ignoresSafeArea()
-            VStack(spacing: DS.Spacing.md) {
-                Image(systemName: NavigationCoordinator.Tab.threads.icon)
-                    .font(DS.Typography.largeTitle)
-                    .foregroundStyle(DS.Colours.textTertiary)
-                Text(NavigationCoordinator.Tab.threads.rawValue)
-                    .font(DS.Typography.title2)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                Text("Coming in Phase 9")
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.textSecondary)
-            }
         }
     }
 }

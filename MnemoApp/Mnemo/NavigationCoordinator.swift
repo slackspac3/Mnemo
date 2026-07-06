@@ -32,6 +32,7 @@ final class NavigationCoordinator {
         case captureText
         case captureVoice
         case captureImage
+        case settings
         case memoryDetail(UUID)
         case threadProposal(UUID)
 
@@ -43,6 +44,8 @@ final class NavigationCoordinator {
                 return "captureVoice"
             case .captureImage:
                 return "captureImage"
+            case .settings:
+                return "settings"
             case .memoryDetail(let id):
                 return "memoryDetail-\(id)"
             case .threadProposal(let id):

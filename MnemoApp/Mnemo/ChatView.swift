@@ -56,6 +56,16 @@ struct ChatView: View {
             .navigationTitle("Mnemo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        coordinator.present(.settings)
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(DS.Typography.headline)
+                            .foregroundStyle(DS.Colours.accent)
+                    }
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         coordinator.present(.captureText)
