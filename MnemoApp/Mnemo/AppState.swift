@@ -16,6 +16,9 @@ final class AppState {
         // Load Foundation Models availability
         await FoundationModelLoader.shared.load()
 
+        // Open the vector store early so semantic search is ready for capture/recall.
+        try? await VectorBridge.shared.open()
+
         // Check onboarding status (read from UserModel when available)
         // Phase 7: default to false until onboarding is built in Phase 11
         onboardingComplete = false

@@ -12,6 +12,19 @@ public struct MemoryCRUD {
         try context.save()
     }
 
+    /// Insert a MemoryRecord and index it in the VectorBridge for semantic search.
+    /// Call this instead of insert(_:into:) for all new captures in production.
+    public static func insertAndIndex(
+        _ record: MemoryRecord,
+        into context: ModelContext
+    ) async throws {
+        context.insert(record)
+        try context.save()
+
+        let helper = EmbeddingHelper()
+        try await helper.index(id: record.id, summary: record.summary)
+    }
+
     // MARK: - Read
 
     public static func fetchAll(
