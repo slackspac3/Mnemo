@@ -22,7 +22,7 @@ The app does not require microphone, camera, or photo library permissions to fun
 These are requested contextually only when the user first uses each feature:
 - Microphone: when user taps the voice capture button
 - Camera/Photos: when user taps the image capture button
-- Notifications: opt-in during onboarding for Memory Moments
+- Notifications: not requested during onboarding in this build. Future Memory Moments reminders are shown as not active.
 
 TESTING THE APP
 1. Complete onboarding.
@@ -30,7 +30,7 @@ TESTING THE APP
 3. Type a memory and tap Save to Memory.
 4. In Chat, ask about what was saved to test local recall.
 5. Browse shows captured memories.
-6. Settings shows privacy controls, backup/restore, and delete-all-data controls.
+6. Settings shows privacy controls, backup/restore, inactive Sense feature labels, and delete-all-data controls.
 
 SANDBOX / TEST ACCOUNT
 No account is required. The app works without authentication.

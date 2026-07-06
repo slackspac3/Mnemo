@@ -112,9 +112,20 @@ public struct MemoryCRUD {
     /// This is the individual-memory privacy delete path.
     @MainActor
     public static func deletePermanently(id: UUID, in context: ModelContext) async throws {
-        guard let record = try fetch(id: id, in: context) else { return }
-        context.delete(record)
-        try context.save()
+        guard let record = try fetch(id: id, in: context) else {
+            try await VectorBridge.shared.delete(id: id)
+            return
+        }
+        let summary = record.summary
+
         try await VectorBridge.shared.delete(id: id)
+
+        do {
+            context.delete(record)
+            try context.save()
+        } catch {
+            try? await EmbeddingHelper().index(id: id, summary: summary)
+            throw error
+        }
     }
 }

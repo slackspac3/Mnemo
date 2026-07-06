@@ -41,11 +41,11 @@ final class OnboardingViewModel {
             case .processingMode:
                 return "Mnemo processes everything on your device by default. Nothing leaves your iPhone unless you say so."
             case .notifications:
-                return "Once a week, Mnemo can surface something you've forgotten about - at the right moment."
+                return "Smart reminders are being prepared. They stay off in this build."
             case .backup:
-                return "Your memories live on your device. Back them up to iCloud so you never lose them."
+                return "Your memories live on your device. Set up iCloud backup from Settings when you are ready."
             case .done:
-                return "Mnemo is ready. The more you tell it, the more useful it becomes."
+                return "Mnemo is ready. Save memories now, then ask for them later."
             }
         }
 

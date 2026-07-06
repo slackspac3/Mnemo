@@ -8,8 +8,8 @@ import MnemoMemory
 struct MemoryDetailView: View {
 
     private let snapshot: MemoryDetailSnapshot
-    private let onArchive: ((UUID) -> Void)?
-    private let onDeletePermanently: ((UUID) -> Void)?
+    private let onArchive: ((UUID) throws -> Void)?
+    private let onDeletePermanently: ((UUID) async throws -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -21,8 +21,8 @@ struct MemoryDetailView: View {
 
     init(
         record: MemoryRecord,
-        onArchive: ((UUID) -> Void)? = nil,
-        onDeletePermanently: ((UUID) -> Void)? = nil
+        onArchive: ((UUID) throws -> Void)? = nil,
+        onDeletePermanently: ((UUID) async throws -> Void)? = nil
     ) {
         self.snapshot = MemoryDetailSnapshot(record: record)
         self.onArchive = onArchive
@@ -218,14 +218,12 @@ struct MemoryDetailView: View {
     }
 
     private func archiveMemory() {
-        if let onArchive {
-            dismiss()
-            onArchive(snapshot.id)
-            return
-        }
-
         do {
-            try MemoryCRUD.archive(id: snapshot.id, in: modelContext)
+            if let onArchive {
+                try onArchive(snapshot.id)
+            } else {
+                try MemoryCRUD.archive(id: snapshot.id, in: modelContext)
+            }
             dismiss()
         } catch {
             errorMessage = "Could not archive this memory. Try again."
@@ -237,17 +235,16 @@ struct MemoryDetailView: View {
         let memoryId = snapshot.id
         isDeleting = true
         errorMessage = nil
-        dismiss()
 
-        if let onDeletePermanently {
-            onDeletePermanently(memoryId)
-            return
-        }
-
-        try? await Task.sleep(nanoseconds: 200_000_000)
         do {
-            try await MemoryCRUD.deletePermanently(id: memoryId, in: modelContext)
+            if let onDeletePermanently {
+                try await onDeletePermanently(memoryId)
+            } else {
+                try await MemoryCRUD.deletePermanently(id: memoryId, in: modelContext)
+            }
+            dismiss()
         } catch {
+            errorMessage = "Could not delete this memory. Try again."
             isDeleting = false
         }
     }

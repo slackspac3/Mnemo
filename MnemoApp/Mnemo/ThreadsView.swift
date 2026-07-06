@@ -102,7 +102,7 @@ struct EmptyThreadsView: View {
             Text("No threads yet")
                 .font(DS.Typography.title3)
                 .foregroundStyle(DS.Colours.textPrimary)
-            Text("As you build memories, Mnemo will suggest threads: connected clusters of related memories.")
+            Text("Automatic thread suggestions are not active in this build. Confirmed threads will appear here when that flow is ready.")
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textSecondary)
                 .multilineTextAlignment(.center)

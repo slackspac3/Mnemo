@@ -171,17 +171,12 @@ struct ChatView: View {
         }
     }
 
-    private func archiveSourceMemory(id: UUID) {
-        selectedSourceMemory = nil
-        try? MemoryCRUD.archive(id: id, in: modelContext)
+    private func archiveSourceMemory(id: UUID) throws {
+        try MemoryCRUD.archive(id: id, in: modelContext)
     }
 
-    private func deleteSourceMemoryPermanently(id: UUID) {
-        selectedSourceMemory = nil
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 200_000_000)
-            try? await MemoryCRUD.deletePermanently(id: id, in: modelContext)
-        }
+    private func deleteSourceMemoryPermanently(id: UUID) async throws {
+        try await MemoryCRUD.deletePermanently(id: id, in: modelContext)
     }
 }
 

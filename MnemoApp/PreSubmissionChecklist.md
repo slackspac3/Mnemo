@@ -20,7 +20,7 @@ Complete every item before submitting to App Store Review.
 - [ ] Support URL entered in App Store Connect
 
 ## Privacy Nutrition Label (App Store Connect -> App Privacy)
-- [ ] User Content declared: typed text, stored locally, not linked to user, app functionality only
+- [ ] User Content declared: typed text, voice transcripts, and image OCR text stored locally, not linked to user, app functionality only
 - [ ] Product Interaction declared: usage patterns, on-device only, not linked to user, app functionality
 - [ ] No other data types collected
 - [ ] If cloud fallback enabled: User Content also declared for cloud processing (not linked to user)
@@ -33,8 +33,10 @@ Complete every item before submitting to App Store Review.
 - [ ] Voice capture tested on physical device (simulator cannot test microphone)
 - [ ] Image capture tested on physical device (simulator has no camera)
 - [ ] iCloud backup tested (requires signed-in iCloud account)
+- [ ] Onboarding backup copy confirmed: setup is deferred to Settings unless a real backup is performed
 - [ ] Delete All Data flow tested and confirmed complete wipe
 - [ ] Onboarding AI consent screen confirmed: cloud-assist copy matches the configured provider status
+- [ ] Memory Moments, Pattern Insights, and Thread Suggestions are hidden, disabled, or clearly marked inactive unless implemented
 
 ## Security
 - [ ] Secure Enclave key generation tested on physical device

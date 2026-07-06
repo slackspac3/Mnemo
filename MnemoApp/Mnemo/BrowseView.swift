@@ -122,17 +122,12 @@ struct BrowseView: View {
         }
     }
 
-    private func archiveMemory(id: UUID) {
-        selectedMemory = nil
-        try? MemoryCRUD.archive(id: id, in: modelContext)
+    private func archiveMemory(id: UUID) throws {
+        try MemoryCRUD.archive(id: id, in: modelContext)
     }
 
-    private func deleteMemoryPermanently(id: UUID) {
-        selectedMemory = nil
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 200_000_000)
-            try? await MemoryCRUD.deletePermanently(id: id, in: modelContext)
-        }
+    private func deleteMemoryPermanently(id: UUID) async throws {
+        try await MemoryCRUD.deletePermanently(id: id, in: modelContext)
     }
 }
 

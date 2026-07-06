@@ -13,6 +13,7 @@ struct SettingsView: View {
     @Query private var userModels: [UserModel]
 
     @State private var showingDeleteAllConfirm = false
+    @State private var destructiveErrorMessage: String?
 
     private var userModel: UserModel? {
         userModels.first
@@ -68,35 +69,17 @@ struct SettingsView: View {
 
                     Section {
                         if let model = userModel {
-                            SenseToggle(
+                            SenseComingSoonRow(
                                 title: "Memory Moments",
-                                isOn: Binding(
-                                    get: { model.memoryMomentsEnabled },
-                                    set: {
-                                        model.memoryMomentsEnabled = $0
-                                        try? modelContext.save()
-                                    }
-                                )
+                                detail: model.memoryMomentsEnabled ? "Off in this build" : "Not active in this build"
                             )
-                            SenseToggle(
+                            SenseComingSoonRow(
                                 title: "Pattern Insights",
-                                isOn: Binding(
-                                    get: { model.patternInsightsEnabled },
-                                    set: {
-                                        model.patternInsightsEnabled = $0
-                                        try? modelContext.save()
-                                    }
-                                )
+                                detail: "Coming soon"
                             )
-                            SenseToggle(
+                            SenseComingSoonRow(
                                 title: "Thread Suggestions",
-                                isOn: Binding(
-                                    get: { model.threadSuggestionsEnabled },
-                                    set: {
-                                        model.threadSuggestionsEnabled = $0
-                                        try? modelContext.save()
-                                    }
-                                )
+                                detail: "Coming soon"
                             )
                         } else {
                             Text("Mnemo Sense settings will appear after onboarding.")
@@ -136,6 +119,12 @@ struct SettingsView: View {
                     .listRowBackground(DS.Colours.surface)
 
                     Section {
+                        if let destructiveErrorMessage {
+                            Text(destructiveErrorMessage)
+                                .font(DS.Typography.footnote)
+                                .foregroundStyle(DS.Colours.destructive)
+                        }
+
                         Button {
                             showingDeleteAllConfirm = true
                         } label: {
@@ -184,14 +173,19 @@ struct SettingsView: View {
 
     @MainActor
     private func deleteAllData() async {
-        try? modelContext.delete(model: MemoryRecord.self)
-        try? modelContext.delete(model: MemoryThread.self)
-        try? modelContext.delete(model: UserModel.self)
-        try? modelContext.delete(model: ConflictRecord.self)
-        try? modelContext.delete(model: PersonSubject.self)
-        try? modelContext.save()
-        try? await VectorBridge.shared.wipe()
-        appState.onboardingComplete = false
+        destructiveErrorMessage = nil
+        do {
+            try await VectorBridge.shared.wipe()
+            try modelContext.delete(model: MemoryRecord.self)
+            try modelContext.delete(model: MemoryThread.self)
+            try modelContext.delete(model: UserModel.self)
+            try modelContext.delete(model: ConflictRecord.self)
+            try modelContext.delete(model: PersonSubject.self)
+            try modelContext.save()
+            appState.onboardingComplete = false
+        } catch {
+            destructiveErrorMessage = "Could not delete all data. Try again before removing the app."
+        }
     }
 }
 
@@ -209,17 +203,21 @@ struct SettingsSectionHeader: View {
     }
 }
 
-struct SenseToggle: View {
+struct SenseComingSoonRow: View {
     let title: String
-    @Binding var isOn: Bool
+    let detail: String
 
     var body: some View {
-        Toggle(isOn: $isOn) {
+        HStack {
             Text(title)
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textPrimary)
+            Spacer()
+            Text(detail)
+                .font(DS.Typography.caption1)
+                .foregroundStyle(DS.Colours.textSecondary)
+                .lineLimit(1)
         }
-        .tint(DS.Colours.sense)
     }
 }
 

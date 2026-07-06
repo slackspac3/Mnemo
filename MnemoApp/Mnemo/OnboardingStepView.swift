@@ -75,17 +75,17 @@ struct WelcomeStepContent: View {
             FeatureRow(
                 icon: "lock.shield.fill",
                 color: DS.Colours.accent,
-                text: "Everything processed privately on your device"
+                text: "Your memories are stored on this iPhone"
             )
             FeatureRow(
-                icon: "brain",
+                icon: "magnifyingglass",
                 color: DS.Colours.sense,
-                text: "Gets smarter the more you tell it"
+                text: "Recall uses your saved memory text"
             )
             FeatureRow(
                 icon: "arrow.uturn.backward",
                 color: DS.Colours.success,
-                text: "Remembers what you said, even months later"
+                text: "Shows the source memory behind each answer"
             )
         }
         .padding(DS.Spacing.md)
@@ -127,7 +127,7 @@ struct ProcessingModeStepContent: View {
             ProcessingOptionCard(
                 icon: "lock.shield.fill",
                 title: "On-Device Only",
-                description: "All AI processing happens on your iPhone. Nothing is ever sent anywhere. Recommended.",
+                description: "Memories are stored locally, and recall uses saved memory text on this iPhone. Recommended.",
                 isSelected: viewModel.onDeviceOnly,
                 color: DS.Colours.accent
             ) {
@@ -220,18 +220,18 @@ struct NotificationsStepContent: View {
         VStack(spacing: DS.Spacing.md) {
             ProcessingOptionCard(
                 icon: "bell.badge.fill",
-                title: "Enable Memory Moments",
-                description: "Once a week, Mnemo will surface a memory that might be useful right now. You can turn this off in Settings.",
-                isSelected: viewModel.memoryMomentsEnabled,
+                title: "Memory Moments are coming soon",
+                description: "Smart reminders are not active in this build. They will stay off unless you explicitly turn them on later.",
+                isSelected: false,
                 color: DS.Colours.sense
             ) {
-                viewModel.requestMemoryMomentsPermission()
+                viewModel.memoryMomentsEnabled = false
             }
 
             ProcessingOptionCard(
                 icon: "bell.slash",
-                title: "Not now",
-                description: "You can enable Memory Moments later in Settings.",
+                title: "Keep reminders off",
+                description: "Mnemo will not request notification permission during this setup.",
                 isSelected: !viewModel.memoryMomentsEnabled,
                 color: DS.Colours.textTertiary
             ) {
@@ -243,7 +243,7 @@ struct NotificationsStepContent: View {
 
 struct BackupStepContent: View {
     let viewModel: OnboardingViewModel
-    @State private var backupStarted = false
+    @State private var setupDeferred = false
 
     var body: some View {
         VStack(spacing: DS.Spacing.md) {
@@ -255,7 +255,7 @@ struct BackupStepContent: View {
                     Text("Without a backup, if you lose your iPhone you lose your memories.")
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(DS.Colours.textPrimary)
-                    Text("Your backup is encrypted on-device before going to iCloud. Mnemo cannot read it.")
+                    Text("The backup screen in Settings performs the real encrypted iCloud backup flow.")
                         .font(DS.Typography.footnote)
                         .foregroundStyle(DS.Colours.textSecondary)
                 }
@@ -264,24 +264,24 @@ struct BackupStepContent: View {
             .background(DS.Colours.warningLight)
             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
 
-            if backupStarted {
+            if setupDeferred {
                 HStack(spacing: DS.Spacing.sm) {
-                    Image(systemName: "checkmark.icloud.fill")
+                    Image(systemName: "checkmark.circle.fill")
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(DS.Colours.success)
-                    Text("iCloud backup enabled")
+                    Text("Backup setup left for Settings")
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(DS.Colours.success)
                 }
             } else {
                 Button {
-                    backupStarted = true
-                    viewModel.backupDeferred = false
+                    setupDeferred = true
+                    viewModel.backupDeferred = true
                 } label: {
                     HStack(spacing: DS.Spacing.sm) {
-                        Image(systemName: "icloud.and.arrow.up")
+                        Image(systemName: "gearshape")
                             .font(DS.Typography.subheadline)
-                        Text("Enable iCloud Backup")
+                        Text("Set Up Backup Later in Settings")
                             .font(DS.Typography.headline)
                     }
                     .frame(maxWidth: .infinity)
@@ -291,7 +291,8 @@ struct BackupStepContent: View {
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
 
-                Button("Remind me later") {
+                Button("Continue without backup") {
+                    setupDeferred = true
                     viewModel.backupDeferred = true
                 }
                 .font(DS.Typography.body)
