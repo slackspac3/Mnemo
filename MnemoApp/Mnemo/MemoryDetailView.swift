@@ -7,7 +7,10 @@ import MnemoMemory
 /// Full memory detail: summary, tags, provenance chain, processing tier badge.
 struct MemoryDetailView: View {
 
-    let record: MemoryRecord
+    private let snapshot: MemoryDetailSnapshot
+    private let onArchive: ((UUID) -> Void)?
+    private let onDeletePermanently: ((UUID) -> Void)?
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
@@ -15,6 +18,16 @@ struct MemoryDetailView: View {
     @State private var showingDeleteConfirm = false
     @State private var isDeleting = false
     @State private var errorMessage: String?
+
+    init(
+        record: MemoryRecord,
+        onArchive: ((UUID) -> Void)? = nil,
+        onDeletePermanently: ((UUID) -> Void)? = nil
+    ) {
+        self.snapshot = MemoryDetailSnapshot(record: record)
+        self.onArchive = onArchive
+        self.onDeletePermanently = onDeletePermanently
+    }
 
     var body: some View {
         NavigationStack {
@@ -24,7 +37,7 @@ struct MemoryDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Spacing.lg) {
                         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                            Text(record.summary)
+                            Text(snapshot.summary)
                                 .font(DS.Typography.body)
                                 .foregroundStyle(DS.Colours.textPrimary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -40,26 +53,26 @@ struct MemoryDetailView: View {
                         )
 
                         VStack(spacing: DS.Spacing.sm) {
-                            MetadataRow(label: "Type", value: record.memoryType.capitalized, icon: "tag")
-                            MetadataRow(label: "Source", value: record.inputSource.capitalized, icon: "arrow.down.circle")
+                            MetadataRow(label: "Type", value: snapshot.memoryType.capitalized, icon: "tag")
+                            MetadataRow(label: "Source", value: snapshot.inputSource.capitalized, icon: "arrow.down.circle")
                             MetadataRow(
                                 label: "Processing",
-                                value: record.processingTier == ProcessingTier.onDevice.rawValue ? "On Device" : "Cloud",
+                                value: snapshot.processingTier == ProcessingTier.onDevice.rawValue ? "On Device" : "Cloud",
                                 icon: "cpu"
                             )
                             MetadataRow(
                                 label: "Persistence",
-                                value: "\(Int(record.persistenceScore * 100))%",
+                                value: "\(Int(snapshot.persistenceScore * 100))%",
                                 icon: "chart.bar"
                             )
                             MetadataRow(
                                 label: "Confidence",
-                                value: "\(Int(record.confidence * 100))%",
+                                value: "\(Int(snapshot.confidence * 100))%",
                                 icon: "checkmark.seal"
                             )
                             MetadataRow(
                                 label: "Captured",
-                                value: record.createdAt.formatted(.dateTime.day().month().year()),
+                                value: snapshot.createdAt.formatted(.dateTime.day().month().year()),
                                 icon: "calendar"
                             )
                         }
@@ -73,7 +86,7 @@ struct MemoryDetailView: View {
                             y: DS.Shadows.subtle.y
                         )
 
-                        if !record.tags.isEmpty {
+                        if !snapshot.tags.isEmpty {
                             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
                                 Text("Tags")
                                     .font(DS.Typography.subheadline)
@@ -81,7 +94,7 @@ struct MemoryDetailView: View {
 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: DS.Spacing.xs) {
-                                        ForEach(record.tags, id: \.self) { tag in
+                                        ForEach(snapshot.tags, id: \.self) { tag in
                                             Text(tag)
                                                 .font(DS.Typography.caption1)
                                                 .foregroundStyle(DS.Colours.accent)
@@ -104,9 +117,9 @@ struct MemoryDetailView: View {
                             )
                         }
 
-                        if !record.corroboratingEvidenceIds.isEmpty {
+                        if snapshot.corroboratingEvidenceCount > 0 {
                             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                                Text("Confirmed by \(record.corroboratingEvidenceIds.count) other source(s)")
+                                Text("Confirmed by \(snapshot.corroboratingEvidenceCount) other source(s)")
                                     .font(DS.Typography.subheadline)
                                     .foregroundStyle(DS.Colours.success)
                             }
@@ -119,7 +132,7 @@ struct MemoryDetailView: View {
                             Text("Original capture")
                                 .font(DS.Typography.subheadline)
                                 .foregroundStyle(DS.Colours.textSecondary)
-                            Text(record.rawInput)
+                            Text(snapshot.rawInput)
                                 .font(DS.Typography.footnote)
                                 .foregroundStyle(DS.Colours.textTertiary)
                         }
@@ -205,8 +218,14 @@ struct MemoryDetailView: View {
     }
 
     private func archiveMemory() {
+        if let onArchive {
+            dismiss()
+            onArchive(snapshot.id)
+            return
+        }
+
         do {
-            try MemoryCRUD.archive(id: record.id, in: modelContext)
+            try MemoryCRUD.archive(id: snapshot.id, in: modelContext)
             dismiss()
         } catch {
             errorMessage = "Could not archive this memory. Try again."
@@ -215,16 +234,50 @@ struct MemoryDetailView: View {
 
     @MainActor
     private func deleteMemory() async {
-        let memoryId = record.id
+        let memoryId = snapshot.id
         isDeleting = true
         errorMessage = nil
         dismiss()
 
+        if let onDeletePermanently {
+            onDeletePermanently(memoryId)
+            return
+        }
+
+        try? await Task.sleep(nanoseconds: 200_000_000)
         do {
             try await MemoryCRUD.deletePermanently(id: memoryId, in: modelContext)
         } catch {
             isDeleting = false
         }
+    }
+}
+
+private struct MemoryDetailSnapshot {
+    let id: UUID
+    let summary: String
+    let memoryType: String
+    let inputSource: String
+    let processingTier: String
+    let persistenceScore: Double
+    let confidence: Double
+    let tags: [String]
+    let corroboratingEvidenceCount: Int
+    let rawInput: String
+    let createdAt: Date
+
+    init(record: MemoryRecord) {
+        self.id = record.id
+        self.summary = record.summary
+        self.memoryType = record.memoryType
+        self.inputSource = record.inputSource
+        self.processingTier = record.processingTier
+        self.persistenceScore = record.persistenceScore
+        self.confidence = record.confidence
+        self.tags = record.tags
+        self.corroboratingEvidenceCount = record.corroboratingEvidenceIds.count
+        self.rawInput = record.rawInput
+        self.createdAt = record.createdAt
     }
 }
 

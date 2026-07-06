@@ -7,6 +7,7 @@ import MnemoMemory
 /// Browsable grid of all memories. Filterable by type, persistence state, source, and date.
 struct BrowseView: View {
 
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \MemoryRecord.createdAt, order: .reverse) private var records: [MemoryRecord]
 
     @State private var searchText = ""
@@ -87,10 +88,14 @@ struct BrowseView: View {
                                 spacing: DS.Spacing.sm
                             ) {
                                 ForEach(filteredRecords, id: \.id) { record in
-                                    MemoryCard(record: record)
-                                        .onTapGesture {
-                                            selectedMemory = SelectedMemory(id: record.id)
-                                        }
+                                    Button {
+                                        selectedMemory = SelectedMemory(id: record.id)
+                                    } label: {
+                                        MemoryCard(record: record)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(record.summary)
+                                    .accessibilityHint("Open memory details")
                                 }
                             }
                             .padding(.horizontal, DS.Spacing.md)
@@ -105,11 +110,28 @@ struct BrowseView: View {
             .searchable(text: $searchText, prompt: "Search memories")
             .sheet(item: $selectedMemory) { selected in
                 if let record = records.first(where: { $0.id == selected.id }) {
-                    MemoryDetailView(record: record)
+                    MemoryDetailView(
+                        record: record,
+                        onArchive: archiveMemory,
+                        onDeletePermanently: deleteMemoryPermanently
+                    )
                 } else {
                     EmptyBrowseView(filter: .all)
                 }
             }
+        }
+    }
+
+    private func archiveMemory(id: UUID) {
+        selectedMemory = nil
+        try? MemoryCRUD.archive(id: id, in: modelContext)
+    }
+
+    private func deleteMemoryPermanently(id: UUID) {
+        selectedMemory = nil
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            try? await MemoryCRUD.deletePermanently(id: id, in: modelContext)
         }
     }
 }

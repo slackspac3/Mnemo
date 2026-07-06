@@ -263,10 +263,11 @@ final class ChatViewModel {
             )
         }
 
+        let draft = responseDraft(for: topMatches, query: query)
         return RecallResponse(
-            text: responseText(for: topMatches, query: query),
-            citedMemoryIds: topMatches.map { $0.memory.id },
-            citations: citations(for: topMatches.map(\.memory))
+            text: draft.text,
+            citedMemoryIds: draft.citedMemories.map(\.id),
+            citations: citations(for: draft.citedMemories)
         )
     }
 
@@ -294,12 +295,15 @@ final class ChatViewModel {
         return (lexicalScore * 0.80) + (embeddingScore * 0.10) + confidenceBoost + persistenceBoost
     }
 
-    private func responseText(for matches: [RankedMemory], query: String) -> String {
+    private func responseDraft(for matches: [RankedMemory], query: String) -> ResponseDraft {
         if isRecentMemoryQuery(query), let match = matches.first {
-            return """
+            return ResponseDraft(
+                text: """
             You most recently saved:
             "\(summaryLine(for: match.memory))"
-            """
+            """,
+                citedMemories: [match.memory]
+            )
         }
 
         if let answer = directAnswer(for: query, using: matches) {
@@ -307,14 +311,20 @@ final class ChatViewModel {
         }
 
         if matches.count == 1, let match = matches.first {
-            return summaryLine(for: match.memory)
+            return ResponseDraft(
+                text: summaryLine(for: match.memory),
+                citedMemories: [match.memory]
+            )
         }
 
         let lines = matches.enumerated().map { index, match in
             "\(index + 1). \"\(summaryLine(for: match.memory))\""
         }
 
-        return "I found a few possible matches:\n\n" + lines.joined(separator: "\n")
+        return ResponseDraft(
+            text: "I found a few possible matches:\n\n" + lines.joined(separator: "\n"),
+            citedMemories: matches.map(\.memory)
+        )
     }
 
     private func summaryLine(for memory: MemoryRecord) -> String {
@@ -506,12 +516,20 @@ final class ChatViewModel {
         }
     }
 
-    private func directAnswer(for query: String, using matches: [RankedMemory]) -> String? {
+    private func directAnswer(for query: String, using matches: [RankedMemory]) -> ResponseDraft? {
         let lowercasedQuery = query.lowercased()
+        if isDateQuery(query),
+           let answer = dateAnswer(for: query, using: matches) {
+            return answer
+        }
+
         if lowercasedQuery.contains("where"),
            let memory = matches.first?.memory,
            let location = extractLocation(from: searchableText(for: memory)) {
-            return "It was in \(location)."
+            return ResponseDraft(
+                text: "It was in \(location).",
+                citedMemories: [memory]
+            )
         }
 
         if isSizeQuery(query),
@@ -522,7 +540,130 @@ final class ChatViewModel {
         return nil
     }
 
-    private func sizeAnswer(for query: String, using matches: [RankedMemory]) -> String? {
+    private func dateAnswer(for query: String, using matches: [RankedMemory]) -> ResponseDraft? {
+        for match in matches {
+            let memory = match.memory
+            guard let resolution = resolveDate(from: searchableText(for: memory), referenceDate: memory.createdAt) else {
+                continue
+            }
+
+            return ResponseDraft(
+                text: """
+            By \(formattedDate(resolution.date)).
+
+            I calculated that from "\(resolution.evidence)" in the saved memory.
+            """,
+                citedMemories: [memory]
+            )
+        }
+
+        return nil
+    }
+
+    private func isDateQuery(_ query: String) -> Bool {
+        let lowercased = query.lowercased()
+        return lowercased.contains("date") ||
+            lowercased.contains("when") ||
+            lowercased.contains("deadline") ||
+            lowercased.contains("due") ||
+            lowercased.contains("deliver") ||
+            lowercased.contains("delivery") ||
+            lowercased.contains("finish") ||
+            lowercased.contains("complete") ||
+            lowercased.contains("submit")
+    }
+
+    private func resolveDate(from text: String, referenceDate: Date) -> DateResolution? {
+        if let duration = relativeDuration(in: text, referenceDate: referenceDate) {
+            return duration
+        }
+
+        let lowercased = text.lowercased()
+        let calendar = Calendar.autoupdatingCurrent
+
+        if lowercased.contains("tomorrow"),
+           let date = calendar.date(byAdding: .day, value: 1, to: referenceDate) {
+            return DateResolution(date: date, evidence: "tomorrow")
+        }
+
+        if lowercased.contains("next week"),
+           let date = calendar.date(byAdding: .day, value: 7, to: referenceDate) {
+            return DateResolution(date: date, evidence: "next week")
+        }
+
+        if lowercased.contains("next month"),
+           let date = calendar.date(byAdding: .month, value: 1, to: referenceDate) {
+            return DateResolution(date: date, evidence: "next month")
+        }
+
+        return nil
+    }
+
+    private func relativeDuration(in text: String, referenceDate: Date) -> DateResolution? {
+        let pattern = #"\b(?:in|within|after)\s+(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(day|days|week|weeks|month|months)\b"#
+        guard let regex = try? NSRegularExpression(
+            pattern: pattern,
+            options: [.caseInsensitive]
+        ) else { return nil }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard let match = regex.firstMatch(in: text, range: range),
+              match.numberOfRanges > 2,
+              let fullRange = Range(match.range(at: 0), in: text),
+              let valueRange = Range(match.range(at: 1), in: text),
+              let unitRange = Range(match.range(at: 2), in: text),
+              let value = durationValue(String(text[valueRange]))
+        else { return nil }
+
+        let unit = String(text[unitRange]).lowercased()
+        let calendar = Calendar.autoupdatingCurrent
+        let date: Date?
+        if unit.hasPrefix("day") {
+            date = calendar.date(byAdding: .day, value: value, to: referenceDate)
+        } else if unit.hasPrefix("week") {
+            date = calendar.date(byAdding: .day, value: value * 7, to: referenceDate)
+        } else {
+            date = calendar.date(byAdding: .month, value: value, to: referenceDate)
+        }
+
+        guard let date else { return nil }
+        return DateResolution(
+            date: date,
+            evidence: String(text[fullRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+    }
+
+    private func durationValue(_ text: String) -> Int? {
+        if let number = Int(text) {
+            return number
+        }
+
+        switch text.lowercased() {
+        case "one": return 1
+        case "two": return 2
+        case "three": return 3
+        case "four": return 4
+        case "five": return 5
+        case "six": return 6
+        case "seven": return 7
+        case "eight": return 8
+        case "nine": return 9
+        case "ten": return 10
+        case "eleven": return 11
+        case "twelve": return 12
+        default: return nil
+        }
+    }
+
+    private func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateStyle = .long
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    private func sizeAnswer(for query: String, using matches: [RankedMemory]) -> ResponseDraft? {
         let facts = matches.compactMap { match in
             extractSizeFact(from: searchableText(for: match.memory), memory: match.memory)
         }
@@ -543,13 +684,26 @@ final class ChatViewModel {
         )
 
         if uniqueSizes.count > 1 {
-            return """
+            return ResponseDraft(
+                text: """
             I found a couple of saved sizes.
             The most recent one says your \(subject) is \(chosen.displaySize).
-            """
+            """,
+                citedMemories: uniqueMemories(facts.map(\.memory))
+            )
         }
 
-        return "Your \(subject) is \(chosen.displaySize)."
+        return ResponseDraft(
+            text: "Your \(subject) is \(chosen.displaySize).",
+            citedMemories: [chosen.memory]
+        )
+    }
+
+    private func uniqueMemories(_ memories: [MemoryRecord]) -> [MemoryRecord] {
+        var seenIds = Set<UUID>()
+        return memories.filter { memory in
+            seenIds.insert(memory.id).inserted
+        }
     }
 
     private func sizeSubject(item: String, location: String?) -> String {
@@ -784,6 +938,11 @@ final class ChatViewModel {
         }
     }
 
+    private struct ResponseDraft {
+        let text: String
+        let citedMemories: [MemoryRecord]
+    }
+
     private struct RankedMemory {
         let memory: MemoryRecord
         let score: Double
@@ -795,6 +954,11 @@ final class ChatViewModel {
         let normalisedSize: String
         let location: String?
         let memory: MemoryRecord
+    }
+
+    private struct DateResolution {
+        let date: Date
+        let evidence: String
     }
 
     private enum MemoryCorrection {

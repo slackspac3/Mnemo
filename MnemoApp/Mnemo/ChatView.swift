@@ -159,11 +159,28 @@ struct ChatView: View {
             }
             .sheet(item: $selectedSourceMemory) { selected in
                 if let record = records.first(where: { $0.id == selected.id }) {
-                    MemoryDetailView(record: record)
+                    MemoryDetailView(
+                        record: record,
+                        onArchive: archiveSourceMemory,
+                        onDeletePermanently: deleteSourceMemoryPermanently
+                    )
                 } else {
                     MissingSourceView()
                 }
             }
+        }
+    }
+
+    private func archiveSourceMemory(id: UUID) {
+        selectedSourceMemory = nil
+        try? MemoryCRUD.archive(id: id, in: modelContext)
+    }
+
+    private func deleteSourceMemoryPermanently(id: UUID) {
+        selectedSourceMemory = nil
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            try? await MemoryCRUD.deletePermanently(id: id, in: modelContext)
         }
     }
 }
