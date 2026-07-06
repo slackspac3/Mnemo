@@ -36,8 +36,8 @@ struct MainTabView: View {
                 CaptureTextSheet()
             case .captureVoice:
                 CaptureVoiceSheet()
-            case .captureImage:
-                CaptureImageSheet()
+            case .captureImage(let source):
+                CaptureImageSheet(source: source)
             case .settings:
                 SettingsView()
             case .memoryDetail(let id):

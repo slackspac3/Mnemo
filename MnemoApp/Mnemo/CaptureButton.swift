@@ -13,11 +13,20 @@ struct CaptureButton: View {
                 VStack(spacing: DS.Spacing.xs) {
                     CaptureOptionButton(
                         icon: "camera.fill",
-                        label: "Photo",
+                        label: "Camera",
                         color: DS.Colours.success
                     ) {
                         expanded = false
-                        coordinator.present(.captureImage)
+                        coordinator.present(.captureImage(.camera))
+                    }
+
+                    CaptureOptionButton(
+                        icon: "photo.on.rectangle",
+                        label: "Photo",
+                        color: DS.Colours.warning
+                    ) {
+                        expanded = false
+                        coordinator.present(.captureImage(.photoLibrary))
                     }
 
                     CaptureOptionButton(

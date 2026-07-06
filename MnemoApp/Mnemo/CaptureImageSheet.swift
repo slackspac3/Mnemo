@@ -14,7 +14,12 @@ struct CaptureImageSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
+    let source: ImageCaptureSource
+
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var cameraImage: UIImage?
+    @State private var isShowingCamera = false
+    @State private var hasAutoOpenedCamera = false
     @State private var payload: ClarifyingQuestionPayload?
     @State private var clarifyingAnswer = ""
     @State private var isProcessing = false
@@ -40,8 +45,11 @@ struct CaptureImageSheet: View {
                     } else {
                         ImageSelectionView(
                             selectedPhoto: $selectedPhoto,
+                            source: source,
                             isProcessing: isProcessing
-                        )
+                        ) {
+                            openCamera()
+                        }
                     }
 
                     if let error = errorMessage {
@@ -52,7 +60,7 @@ struct CaptureImageSheet: View {
                 }
                 .padding(DS.Spacing.md)
             }
-            .navigationTitle("Capture Image")
+            .navigationTitle(source == .camera ? "Take Photo" : "Choose Photo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -65,6 +73,20 @@ struct CaptureImageSheet: View {
             .onChange(of: selectedPhoto) { _, item in
                 guard let item else { return }
                 processPhoto(item)
+            }
+            .onChange(of: cameraImage) { _, image in
+                guard let image else { return }
+                processImage(image)
+            }
+            .onAppear {
+                if source == .camera, !hasAutoOpenedCamera {
+                    hasAutoOpenedCamera = true
+                    openCamera()
+                }
+            }
+            .fullScreenCover(isPresented: $isShowingCamera) {
+                CameraImagePicker(image: $cameraImage)
+                    .ignoresSafeArea()
             }
         }
     }
@@ -80,11 +102,7 @@ struct CaptureImageSheet: View {
                     throw CaptureError.ocrFailed("Could not load image")
                 }
 
-                let result = try await handler.capture(image: image)
-                await MainActor.run {
-                    payload = result
-                    isProcessing = false
-                }
+                try await processImageData(image)
             } catch {
                 await MainActor.run {
                     errorMessage = "Could not read image. Try another photo."
@@ -92,6 +110,40 @@ struct CaptureImageSheet: View {
                 }
             }
         }
+    }
+
+    private func processImage(_ image: UIImage) {
+        isProcessing = true
+        errorMessage = nil
+
+        Task {
+            do {
+                try await processImageData(image)
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Could not read image. Try another photo."
+                    isProcessing = false
+                }
+            }
+        }
+    }
+
+    private func processImageData(_ image: UIImage) async throws {
+        let result = try await handler.capture(image: image)
+        await MainActor.run {
+            payload = result
+            isProcessing = false
+        }
+    }
+
+    private func openCamera() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            errorMessage = "Camera is not available on this device. Choose a photo instead."
+            return
+        }
+
+        errorMessage = nil
+        isShowingCamera = true
     }
 
     private func saveCapture(payload: ClarifyingQuestionPayload) {
@@ -142,27 +194,43 @@ struct CaptureImageSheet: View {
 
 struct ImageSelectionView: View {
     @Binding var selectedPhoto: PhotosPickerItem?
+    let source: ImageCaptureSource
     let isProcessing: Bool
+    let onCamera: () -> Void
 
     var body: some View {
         VStack(spacing: DS.Spacing.xl) {
             Spacer()
 
-            Image(systemName: "photo.on.rectangle.angled")
+            Image(systemName: source == .camera ? "camera.viewfinder" : "photo.on.rectangle.angled")
                 .font(DS.Typography.largeTitle)
                 .foregroundStyle(DS.Colours.textTertiary)
 
-            Text("Choose a photo to capture")
-                .font(DS.Typography.headline)
-                .foregroundStyle(DS.Colours.textPrimary)
+            VStack(spacing: DS.Spacing.xs) {
+                Text("Capture an image memory")
+                    .font(DS.Typography.headline)
+                    .foregroundStyle(DS.Colours.textPrimary)
+
+                Text("Use the camera now, or choose a photo you already have.")
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            if source == .camera, !UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Label("Camera is unavailable here", systemImage: "camera.fill")
+                    .font(DS.Typography.footnote)
+                    .foregroundStyle(DS.Colours.warning)
+            }
 
             if isProcessing {
                 ProgressView("Reading image...")
                     .font(DS.Typography.body)
                     .tint(DS.Colours.accent)
             } else {
-                PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    Text("Choose Photo")
+                Button(action: onCamera) {
+                    Label("Take Photo", systemImage: "camera.fill")
                         .font(DS.Typography.headline)
                         .frame(maxWidth: .infinity)
                         .frame(height: DS.ComponentTokens.PrimaryButton.height)
@@ -170,9 +238,59 @@ struct ImageSelectionView: View {
                         .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+
+                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    Label("Choose Photo", systemImage: "photo")
+                        .font(DS.Typography.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: DS.ComponentTokens.SecondaryButton.height)
+                        .background(DS.Colours.surfaceSecondary)
+                        .foregroundStyle(DS.Colours.textPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                }
             }
 
             Spacer()
+        }
+    }
+}
+
+struct CameraImagePicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(image: $image, dismiss: dismiss)
+    }
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        private let image: Binding<UIImage?>
+        private let dismiss: DismissAction
+
+        init(image: Binding<UIImage?>, dismiss: DismissAction) {
+            self.image = image
+            self.dismiss = dismiss
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            image.wrappedValue = info[.originalImage] as? UIImage
+            dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            dismiss()
         }
     }
 }

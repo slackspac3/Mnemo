@@ -215,14 +215,14 @@ struct MemoryDetailView: View {
 
     @MainActor
     private func deleteMemory() async {
+        let memoryId = record.id
         isDeleting = true
         errorMessage = nil
+        dismiss()
 
         do {
-            try await MemoryCRUD.deletePermanently(id: record.id, in: modelContext)
-            dismiss()
+            try await MemoryCRUD.deletePermanently(id: memoryId, in: modelContext)
         } catch {
-            errorMessage = "Could not delete this memory. Try again."
             isDeleting = false
         }
     }

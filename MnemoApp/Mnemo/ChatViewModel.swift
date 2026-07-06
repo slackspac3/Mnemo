@@ -50,11 +50,10 @@ final class ChatViewModel {
     var isProcessing = false
     var errorMessage: String?
 
-    init() {
-        messages.append(Message(
-            role: .assistant,
-            content: "Hi. I'm Mnemo. Tell me things you want to remember, or ask me anything you've already told me."
-        ))
+    func resetConversation() {
+        messages = []
+        inputText = ""
+        errorMessage = nil
     }
 
     @MainActor
@@ -308,10 +307,7 @@ final class ChatViewModel {
         }
 
         if matches.count == 1, let match = matches.first {
-            return """
-            I found this:
-            "\(summaryLine(for: match.memory))"
-            """
+            return summaryLine(for: match.memory)
         }
 
         let lines = matches.enumerated().map { index, match in
@@ -515,12 +511,7 @@ final class ChatViewModel {
         if lowercasedQuery.contains("where"),
            let memory = matches.first?.memory,
            let location = extractLocation(from: searchableText(for: memory)) {
-            return """
-            It was in \(location).
-
-            I found that in:
-            "\(summaryLine(for: memory))"
-            """
+            return "It was in \(location)."
         }
 
         if isSizeQuery(query),
@@ -555,18 +546,10 @@ final class ChatViewModel {
             return """
             I found a couple of saved sizes.
             The most recent one says your \(subject) is \(chosen.displaySize).
-
-            I found that in:
-            "\(summaryLine(for: chosen.memory))"
             """
         }
 
-        return """
-        Your \(subject) is \(chosen.displaySize).
-
-        I found that in:
-        "\(summaryLine(for: chosen.memory))"
-        """
+        return "Your \(subject) is \(chosen.displaySize)."
     }
 
     private func sizeSubject(item: String, location: String?) -> String {

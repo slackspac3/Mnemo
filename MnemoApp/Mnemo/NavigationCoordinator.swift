@@ -31,7 +31,7 @@ final class NavigationCoordinator {
     enum Sheet: Identifiable {
         case captureText
         case captureVoice
-        case captureImage
+        case captureImage(ImageCaptureSource)
         case settings
         case memoryDetail(UUID)
         case threadProposal(UUID)
@@ -42,8 +42,8 @@ final class NavigationCoordinator {
                 return "captureText"
             case .captureVoice:
                 return "captureVoice"
-            case .captureImage:
-                return "captureImage"
+            case .captureImage(let source):
+                return "captureImage-\(source.rawValue)"
             case .settings:
                 return "settings"
             case .memoryDetail(let id):
@@ -61,4 +61,9 @@ final class NavigationCoordinator {
     func dismiss() {
         activeSheet = nil
     }
+}
+
+enum ImageCaptureSource: String {
+    case camera
+    case photoLibrary
 }

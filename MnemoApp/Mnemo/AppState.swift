@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import SwiftData
 import MnemoCore
 import MnemoMemory
 import MnemoIntelligence
@@ -19,9 +20,15 @@ final class AppState {
         // Open the vector store early so semantic search is ready for capture/recall.
         try? await VectorBridge.shared.open()
 
-        // Check onboarding status (read from UserModel when available)
-        // Phase 7: default to false until onboarding is built in Phase 11
-        onboardingComplete = false
-        isInitialised = true
+        let completed = await MainActor.run {
+            let context = MemoryStore.shared.container.mainContext
+            let descriptor = FetchDescriptor<UserModel>()
+            return ((try? context.fetch(descriptor))?.first?.onboardingComplete) ?? false
+        }
+
+        await MainActor.run {
+            onboardingComplete = completed
+            isInitialised = true
+        }
     }
 }

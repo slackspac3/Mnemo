@@ -281,13 +281,15 @@ struct PersonalisationIndexRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
             HStack {
-                Text("Mnemo Intelligence")
+                Text("Memory Profile")
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.textPrimary)
                 Spacer()
-                Text(index.displayLevel.rawValue.capitalized)
+                Text(statusLabel)
                     .font(DS.ComponentTokens.SenseBadge.font)
                     .foregroundStyle(DS.Colours.sense)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .padding(.horizontal, DS.Spacing.sm)
                     .padding(.vertical, DS.Spacing.xs)
                     .background(DS.Colours.senseLight)
@@ -297,9 +299,28 @@ struct PersonalisationIndexRow: View {
             ProgressView(value: index.overall)
                 .tint(DS.Colours.sense)
 
-            Text("\(Int(index.overall * 100))% personalised to you")
+            Text("\(Int(index.overall * 100))% tuned from saved memories")
                 .font(DS.Typography.caption1)
                 .foregroundStyle(DS.Colours.textSecondary)
+        }
+    }
+
+    private var statusLabel: String {
+        if index.overall <= 0.01 {
+            return "Not started"
+        }
+
+        switch index.displayLevel {
+        case .learningYou:
+            return "Learning"
+        case .gettingPersonal:
+            return "Learning"
+        case .mostlyYou:
+            return "Adapting"
+        case .highlyPersonal:
+            return "Personal"
+        case .fullyPersonalised:
+            return "Tuned"
         }
     }
 }
