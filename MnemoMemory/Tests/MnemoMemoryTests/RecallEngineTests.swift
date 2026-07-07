@@ -26,6 +26,25 @@ struct RecallEngineTests {
         #expect(result.text.localizedCaseInsensitiveContains("do not have any saved memories"))
     }
 
+    @Test("Person-owned size answers do not add user ownership prefix")
+    @MainActor
+    func personOwnedSizeAnswerDoesNotAddUserPrefix() {
+        let memory = Self.makeMemory(
+            "Mum wears size 38 shoes.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What size does mum wear?",
+            memories: [memory]
+        )
+
+        #expect(result.text.localizedCaseInsensitiveContains("Mum's shoe size is 38"))
+        #expect(!result.text.localizedCaseInsensitiveContains("Your Mum"))
+    }
+
     @Test("Manual 50-query validation fixture remains passing")
     @MainActor
     func manualRecallValidationFixture() {

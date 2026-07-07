@@ -106,8 +106,16 @@ final class ChatViewModel {
 
         let citedMemories = try citedIds.compactMap { id in
             try MemoryCRUD.fetch(id: id, in: context)
+        }.filter { memory in
+            !memory.isArchived
         }
-        guard !citedMemories.isEmpty else { return nil }
+        guard !citedMemories.isEmpty else {
+            return RecallResponse(
+                text: "I could not find an active source memory to update.",
+                citedMemoryIds: [],
+                citations: []
+            )
+        }
 
         if let requestedSize = requestedSizeUpdate(from: query) {
             return try await updateSizeMemories(

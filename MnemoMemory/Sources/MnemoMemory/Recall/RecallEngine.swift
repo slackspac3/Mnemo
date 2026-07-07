@@ -245,14 +245,14 @@ public struct RecallEngine {
             return ResponseDraft(
                 text: """
                 I found a couple of saved sizes.
-                The most recent one says your \(subject) is \(chosen.displaySize).
+                The most recent one says \(sizeSentence(subject: subject, displaySize: chosen.displaySize)).
                 """,
                 citedMemories: uniqueMemories(facts.map(\.memory))
             )
         }
 
         return ResponseDraft(
-            text: "Your \(subject) is \(chosen.displaySize).",
+            text: "\(capitalizedSentence(sizeSentence(subject: subject, displaySize: chosen.displaySize))).",
             citedMemories: [chosen.memory]
         )
     }
@@ -895,6 +895,16 @@ public struct RecallEngine {
         } else {
             return "\(item) size"
         }
+    }
+
+    private func sizeSentence(subject: String, displaySize: String) -> String {
+        let prefix = subject.contains("'") ? "" : "your "
+        return "\(prefix)\(subject) is \(displaySize)"
+    }
+
+    private func capitalizedSentence(_ sentence: String) -> String {
+        guard let first = sentence.first else { return sentence }
+        return first.uppercased() + String(sentence.dropFirst())
     }
 
     private func normaliseSize(_ size: String) -> String {

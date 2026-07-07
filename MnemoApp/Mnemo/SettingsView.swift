@@ -50,31 +50,23 @@ struct SettingsView: View {
                     }
 
                     Section {
-                        if let model = userModel {
-                            Toggle(isOn: Binding(
-                                get: { model.onDeviceOnly },
-                                set: {
-                                    model.onDeviceOnly = $0
-                                    try? modelContext.save()
-                                }
-                            )) {
-                                Text("On-Device Only")
-                                    .font(DS.Typography.body)
-                                    .foregroundStyle(DS.Colours.textPrimary)
-                            }
-                            .tint(DS.Colours.accent)
+                        if userModel != nil {
+                            HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                                Image(systemName: "checkmark.shield.fill")
+                                    .font(DS.Typography.subheadline)
+                                    .foregroundStyle(DS.Colours.accent)
+                                    .accessibilityHidden(true)
 
-                            if !model.onDeviceOnly {
-                                HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                                    Image(systemName: "info.circle")
-                                        .font(DS.Typography.subheadline)
-                                        .foregroundStyle(DS.Colours.accent)
-                                        .accessibilityHidden(true)
-                                    Text("Cloud Assist is unavailable in this build. Capture and recall stay local in this version.")
+                                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                                    Text("On-Device Only")
+                                        .font(DS.Typography.body)
+                                        .foregroundStyle(DS.Colours.textPrimary)
+                                    Text("Capture and recall stay local in this build. Cloud Assist is unavailable.")
                                         .font(DS.Typography.footnote)
                                         .foregroundStyle(DS.Colours.textSecondary)
                                 }
                             }
+                            .accessibilityElement(children: .combine)
 
                             HStack(alignment: .top, spacing: DS.Spacing.sm) {
                                 Image(systemName: "person.crop.circle.badge.xmark")
@@ -251,6 +243,7 @@ struct SettingsView: View {
         }
         .task {
             refreshAppLockAvailability()
+            enforceLocalOnlySetting()
         }
     }
 
@@ -258,13 +251,13 @@ struct SettingsView: View {
     private func deleteAllData() async {
         destructiveErrorMessage = nil
         do {
-            try await VectorBridge.shared.wipe()
             try modelContext.delete(model: MemoryRecord.self)
             try modelContext.delete(model: MemoryThread.self)
             try modelContext.delete(model: UserModel.self)
             try modelContext.delete(model: ConflictRecord.self)
             try modelContext.delete(model: PersonSubject.self)
             try modelContext.save()
+            try await VectorBridge.shared.wipe()
             NavigationCoordinator.shared.dismiss()
             appState.resetAfterDeleteAllData()
             dismiss()
@@ -277,6 +270,14 @@ struct SettingsView: View {
     private func refreshAppLockAvailability() {
         canUseAppLock = SecurityLayer.shared.canAuthenticateWithBiometrics()
         appLockUnavailableMessage = canUseAppLock ? nil : "Face ID, Touch ID or a device passcode is not available on this device."
+    }
+
+    @MainActor
+    private func enforceLocalOnlySetting() {
+        guard let model = userModel, !model.onDeviceOnly || model.cloudFallbackEnabled else { return }
+        model.onDeviceOnly = true
+        model.cloudFallbackEnabled = false
+        try? modelContext.save()
     }
 
     @MainActor
