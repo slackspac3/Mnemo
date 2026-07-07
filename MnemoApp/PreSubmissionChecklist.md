@@ -41,7 +41,7 @@ Complete every item before submitting to App Store Review.
 ## Security
 - [ ] Secure Enclave key generation tested on physical device
 - [ ] NSFileProtectionComplete verified on physical device (inaccessible when locked)
-- [ ] App Lock tested on physical device: NSFaceIDUsageDescription present, Face ID / Touch ID / device passcode unlock works, and copy states that Mnemo does not store biometric data
+- [ ] App Lock tested on physical device: NSFaceIDUsageDescription present, Face ID / Touch ID / device passcode unlock works, and copy states that App Lock is a LocalAuthentication UI gate, not encryption or account sign-in, and Mnemo does not store biometric or passcode data
 - [ ] No API keys or secrets in the binary
 - [ ] No cleartext HTTP exceptions in Info.plist
 

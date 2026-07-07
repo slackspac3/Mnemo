@@ -13,7 +13,7 @@ Mnemo currently supports:
 - Local chat recall over saved memories.
 - Local SQLite-backed placeholder vector indexing.
 - CloudKit backup and restore hooks using the user's own iCloud account.
-- Optional local App Lock using Apple LocalAuthentication.
+- Optional local App Lock using Apple LocalAuthentication as a UI access gate, not account sign-in or storage encryption.
 - Keychain, Secure Enclave, LocalAuthentication, file protection, and secure deletion helper layers.
 
 Mnemo does not yet ship a production Foundation Models or MLX embedding model. The current vector embedding is deterministic placeholder logic intended to keep the app functional until the model assets are bundled.
@@ -78,5 +78,5 @@ MNEMO_SIMULATOR_ID=<simulator-udid> Scripts/run_local_checks.sh app
 - Recall is local and deterministic; production semantic recall still needs a real embedding model or hybrid keyword/vector search.
 - Foundation Models and MLX routes are present as architecture hooks, not production model execution paths.
 - Voice recognition in Simulator can receive microphone audio while Apple Speech fails to initialise. Validate voice capture on a physical iPhone before submission.
-- App Lock uses Face ID, Touch ID, or device passcode through LocalAuthentication. Validate on a physical iPhone before submission.
+- App Lock uses Face ID, Touch ID, or device passcode through LocalAuthentication as a local UI gate. It is not Mnemo account sign-in or a replacement for file protection. Validate on a physical iPhone before submission.
 - App Store metadata, screenshots, privacy policy URL, support URL, and legal/account setup remain manual pre-submission work.

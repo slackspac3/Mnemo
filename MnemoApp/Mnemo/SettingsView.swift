@@ -19,6 +19,7 @@ struct SettingsView: View {
     @State private var appLockUnavailableMessage: String?
     @State private var canUseAppLock = true
     @State private var isChangingAppLock = false
+    private let appLockSettingsPolicy = AppLockSettingsPolicy()
 
     private var userModel: UserModel? {
         userModels.first
@@ -83,7 +84,7 @@ struct SettingsView: View {
                                 }
                             )) {
                                 VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                                    Text("Require Face ID to Open Mnemo")
+                                    Text("Require App Lock to Open Mnemo")
                                         .font(DS.Typography.body)
                                         .foregroundStyle(DS.Colours.textPrimary)
                                     Text("When enabled, Mnemo asks for Face ID, Touch ID or your device passcode when you reopen the app.")
@@ -255,24 +256,29 @@ struct SettingsView: View {
 
     @MainActor
     private func updateAppLock(_ enabled: Bool, model: UserModel) async {
-        guard enabled != model.appLockEnabled else { return }
-        guard canUseAppLock else {
-            if !enabled, model.appLockEnabled {
-                model.appLockEnabled = false
-                model.updatedAt = Date()
-                do {
-                    try modelContext.save()
-                    appState.setAppLockEnabled(false)
-                    appLockErrorMessage = nil
-                } catch {
-                    appLockErrorMessage = "App Lock is still on. Try again when you are ready."
-                }
-                return
-            }
-
+        switch appLockSettingsPolicy.decision(
+            requestedEnabled: enabled,
+            currentEnabled: model.appLockEnabled,
+            authenticationAvailable: canUseAppLock
+        ) {
+        case .unchanged:
+            return
+        case .blockEnableUnavailable:
             appLockErrorMessage = "Set up Face ID, Touch ID or a device passcode before enabling App Lock."
             return
+        case .allowDisableUnavailable:
+            do {
+                try persistAppLock(false, model: model)
+                appState.setAppLockEnabled(false)
+                appLockErrorMessage = nil
+            } catch {
+                appLockErrorMessage = "App Lock is still on. Try again when you are ready."
+            }
+            return
+        case .authenticateToEnable, .authenticateToDisable:
+            break
         }
+
         guard !isChangingAppLock else { return }
 
         isChangingAppLock = true
@@ -291,9 +297,7 @@ struct SettingsView: View {
                 return
             }
 
-            model.appLockEnabled = enabled
-            model.updatedAt = Date()
-            try modelContext.save()
+            try persistAppLock(enabled, model: model)
             appState.setAppLockEnabled(enabled)
         } catch {
             appLockErrorMessage = enabled
@@ -302,6 +306,23 @@ struct SettingsView: View {
         }
 
         isChangingAppLock = false
+    }
+
+    @MainActor
+    private func persistAppLock(_ enabled: Bool, model: UserModel) throws {
+        let previousEnabled = model.appLockEnabled
+        let previousUpdatedAt = model.updatedAt
+
+        model.appLockEnabled = enabled
+        model.updatedAt = Date()
+
+        do {
+            try modelContext.save()
+        } catch {
+            model.appLockEnabled = previousEnabled
+            model.updatedAt = previousUpdatedAt
+            throw error
+        }
     }
 }
 

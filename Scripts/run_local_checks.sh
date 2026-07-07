@@ -80,6 +80,7 @@ Physical-device validation still required:
 - Notification permission if future active notification features are enabled.
 - iCloud backup/restore with a signed-in account.
 - Locked-device file protection behavior.
+- App Lock Face ID, Touch ID, device passcode fallback, cancelled prompts, and background/force-close behavior.
 PENDING
     ;;
   *)

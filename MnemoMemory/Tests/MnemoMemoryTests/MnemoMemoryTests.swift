@@ -120,6 +120,72 @@ struct MnemoMemoryTests {
         #expect(fetched?.appLockEnabled == true)
     }
 
+    @Test("UserModel privacy and security flags persist across contexts")
+    @MainActor
+    func userModelPrivacySecurityFlagsPersistAcrossContexts() throws {
+        let container = try MemoryStore.makeTestContainer()
+        let writeContext = ModelContext(container)
+
+        let model = UserModel(
+            onboardingComplete: true,
+            cloudFallbackEnabled: true,
+            onDeviceOnly: false,
+            appLockEnabled: true,
+            memoryMomentsEnabled: true,
+            patternInsightsEnabled: false,
+            threadSuggestionsEnabled: false
+        )
+        writeContext.insert(model)
+        try writeContext.save()
+
+        let readContext = ModelContext(container)
+        let fetched = try readContext.fetch(FetchDescriptor<UserModel>()).first
+
+        #expect(fetched?.onboardingComplete == true)
+        #expect(fetched?.cloudFallbackEnabled == true)
+        #expect(fetched?.onDeviceOnly == false)
+        #expect(fetched?.appLockEnabled == true)
+        #expect(fetched?.memoryMomentsEnabled == true)
+        #expect(fetched?.patternInsightsEnabled == false)
+        #expect(fetched?.threadSuggestionsEnabled == false)
+    }
+
+    @Test("UserModel legacy initializer keeps app lock disabled")
+    func userModelLegacyInitializerKeepsAppLockDisabled() {
+        let model = UserModel(
+            id: UUID(),
+            onboardingComplete: true,
+            cloudFallbackEnabled: true,
+            onDeviceOnly: false,
+            memoryMomentsEnabled: true,
+            patternInsightsEnabled: false,
+            threadSuggestionsEnabled: false
+        )
+
+        #expect(model.appLockEnabled == false)
+    }
+
+    @Test("UserModel decoded payloads survive persistence")
+    @MainActor
+    func userModelDecodedPayloadsSurvivePersistence() throws {
+        let container = try MemoryStore.makeTestContainer()
+        let writeContext = ModelContext(container)
+
+        let model = UserModel(appLockEnabled: true)
+        writeContext.insert(model)
+        try writeContext.save()
+
+        let readContext = ModelContext(container)
+        let fetchedModels = try readContext.fetch(FetchDescriptor<UserModel>())
+        let fetched = try #require(fetchedModels.first)
+        let profile = fetched.decodedModalityThresholdProfile()
+        let index = fetched.decodedPersonalisationIndex()
+
+        #expect(profile.textThreshold == 0.90)
+        #expect(profile.voiceThreshold == 0.75)
+        #expect(index.overall == 0.0)
+    }
+
     @Test("VectorBridge mock returns empty results")
     func vectorBridgeMock() async throws {
         let bridge = VectorBridge()

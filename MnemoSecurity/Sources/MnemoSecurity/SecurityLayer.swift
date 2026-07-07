@@ -1,7 +1,7 @@
 import Foundation
 import MnemoCore
 
-/// Central security facade. All Keychain, Secure Enclave, biometric,
+/// Central security facade. All Keychain, Secure Enclave, device authentication,
 /// file protection, and secure deletion operations go through this type.
 /// No other module touches security APIs directly.
 public final class SecurityLayer: Sendable {
@@ -52,7 +52,7 @@ public final class SecurityLayer: Sendable {
         try secureEnclave.revokeKey(identifier: identifier)
     }
 
-    // MARK: - Biometric
+    // MARK: - Device Authentication
 
     public func canAuthenticateWithBiometrics() -> Bool {
         biometric.canAuthenticate()

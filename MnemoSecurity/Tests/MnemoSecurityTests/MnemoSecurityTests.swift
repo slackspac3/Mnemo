@@ -86,4 +86,102 @@ struct MnemoSecurityTests {
             now: backgroundedAt.addingTimeInterval(30)
         ) == true)
     }
+
+    @Test("AppLockPolicy ignores background when disabled or onboarding incomplete")
+    func appLockPolicyBackgroundRequiresEnabledOnboardedUser() {
+        let policy = AppLockPolicy()
+        let backgroundedAt = Date(timeIntervalSince1970: 1_000)
+
+        #expect(policy.shouldLockAfterBackground(
+            appLockEnabled: false,
+            onboardingComplete: true,
+            backgroundedAt: backgroundedAt
+        ) == false)
+
+        #expect(policy.shouldLockAfterBackground(
+            appLockEnabled: true,
+            onboardingComplete: false,
+            backgroundedAt: backgroundedAt
+        ) == false)
+    }
+
+    @Test("AppLockPolicy locks when enabled without background timestamp")
+    func appLockPolicyLocksWithoutTimestamp() {
+        let policy = AppLockPolicy()
+
+        #expect(policy.shouldLockAfterBackground(
+            appLockEnabled: true,
+            onboardingComplete: true,
+            backgroundedAt: nil
+        ) == true)
+    }
+
+    @Test("AppLockPolicy locks immediately with zero grace")
+    func appLockPolicyLocksImmediatelyWithZeroGrace() {
+        let policy = AppLockPolicy(backgroundGracePeriod: 0)
+        let backgroundedAt = Date(timeIntervalSince1970: 1_000)
+
+        #expect(policy.shouldLockAfterBackground(
+            appLockEnabled: true,
+            onboardingComplete: true,
+            backgroundedAt: backgroundedAt,
+            now: backgroundedAt
+        ) == true)
+    }
+
+    @Test("AppLockSettingsPolicy requires authentication for available toggle changes")
+    func appLockSettingsPolicyRequiresAuthenticationWhenAvailable() {
+        let policy = AppLockSettingsPolicy()
+
+        #expect(policy.decision(
+            requestedEnabled: true,
+            currentEnabled: false,
+            authenticationAvailable: true
+        ) == .authenticateToEnable)
+
+        #expect(policy.decision(
+            requestedEnabled: false,
+            currentEnabled: true,
+            authenticationAvailable: true
+        ) == .authenticateToDisable)
+    }
+
+    @Test("AppLockSettingsPolicy blocks enabling when authentication is unavailable")
+    func appLockSettingsPolicyBlocksUnavailableEnable() {
+        let policy = AppLockSettingsPolicy()
+
+        #expect(policy.decision(
+            requestedEnabled: true,
+            currentEnabled: false,
+            authenticationAvailable: false
+        ) == .blockEnableUnavailable)
+    }
+
+    @Test("AppLockSettingsPolicy allows stale disable when authentication is unavailable")
+    func appLockSettingsPolicyAllowsUnavailableDisable() {
+        let policy = AppLockSettingsPolicy()
+
+        #expect(policy.decision(
+            requestedEnabled: false,
+            currentEnabled: true,
+            authenticationAvailable: false
+        ) == .allowDisableUnavailable)
+    }
+
+    @Test("AppLockSettingsPolicy ignores unchanged values")
+    func appLockSettingsPolicyIgnoresUnchangedValues() {
+        let policy = AppLockSettingsPolicy()
+
+        #expect(policy.decision(
+            requestedEnabled: false,
+            currentEnabled: false,
+            authenticationAvailable: true
+        ) == .unchanged)
+
+        #expect(policy.decision(
+            requestedEnabled: true,
+            currentEnabled: true,
+            authenticationAvailable: false
+        ) == .unchanged)
+    }
 }
