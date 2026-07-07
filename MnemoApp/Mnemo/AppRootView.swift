@@ -6,6 +6,7 @@ import MnemoCore
 struct AppRootView: View {
 
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -23,6 +24,7 @@ struct AppRootView: View {
                     .accessibilityIdentifier("root.main")
             }
         }
-        .animation(DS.Animation.standard, value: appState.isInitialised)
+        .animation(reduceMotion ? DS.Animation.fade : DS.Animation.standard, value: appState.isInitialised)
+        .animation(reduceMotion ? DS.Animation.fade : DS.Animation.standard, value: appState.isAppLocked)
     }
 }

@@ -16,7 +16,7 @@ struct ThreadsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                DS.Colours.background.ignoresSafeArea()
+                DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 if confirmedThreads.isEmpty {
                     EmptyThreadsView()
@@ -82,7 +82,11 @@ struct ThreadCard: View {
             }
         }
         .padding(DS.Spacing.md)
-        .background(DS.Colours.surface)
+        .background(DS.Colours.memoryCardSurface)
+        .overlay {
+            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
+        }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
         .shadow(
             color: DS.Shadows.subtle.color,

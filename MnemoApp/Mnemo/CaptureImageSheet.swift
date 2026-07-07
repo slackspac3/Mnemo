@@ -31,7 +31,7 @@ struct CaptureImageSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                DS.Colours.background.ignoresSafeArea()
+                DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 VStack(spacing: DS.Spacing.lg) {
                     if let payload {
@@ -234,10 +234,11 @@ struct ImageSelectionView: View {
                         .font(DS.Typography.headline)
                         .frame(maxWidth: .infinity)
                         .frame(height: DS.ComponentTokens.PrimaryButton.height)
-                        .background(DS.Colours.accent)
+                        .background(DS.ComponentTokens.PrimaryButton.background)
                         .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+                .buttonStyle(.mnemoPressable)
 
                 PhotosPicker(selection: $selectedPhoto, matching: .images) {
                     Label("Choose Photo", systemImage: "photo")
@@ -245,9 +246,14 @@ struct ImageSelectionView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: DS.ComponentTokens.SecondaryButton.height)
                         .background(DS.Colours.surfaceSecondary)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                                .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                        }
                         .foregroundStyle(DS.Colours.textPrimary)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+                .buttonStyle(.mnemoPressable)
             }
 
             Spacer()
@@ -344,17 +350,19 @@ struct ClarifyingQuestionView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: DS.ComponentTokens.PrimaryButton.height)
-                .background(DS.Colours.accent)
+                .background(DS.ComponentTokens.PrimaryButton.background)
                 .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
             .disabled(isSaving)
+            .buttonStyle(.mnemoPressable)
 
             Button(action: onDiscard) {
                 Text("Discard")
                     .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textSecondary)
             }
+            .buttonStyle(.mnemoPressable)
 
             Spacer()
         }

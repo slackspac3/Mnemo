@@ -24,7 +24,7 @@ struct CaptureTextSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                DS.Colours.background.ignoresSafeArea()
+                DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 VStack(spacing: DS.Spacing.lg) {
                     if let result = extractionResult {
@@ -185,11 +185,12 @@ struct TextInputView: View {
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
                 .padding(.vertical, DS.Spacing.xs)
-                .background(canSave ? DS.Colours.accent : DS.Colours.textTertiary)
+                .background(canSave ? DS.ComponentTokens.PrimaryButton.background : DS.Colours.accentDisabled)
                 .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
             .disabled(!canSave || isExtracting)
+            .buttonStyle(.mnemoPressable)
             .accessibilityLabel("Review memory")
             .accessibilityIdentifier(AccessibilityID.CaptureText.extract)
 
@@ -220,7 +221,11 @@ struct ExtractionConfirmView: View {
                     .foregroundStyle(DS.Colours.textPrimary)
                     .padding(DS.Spacing.md)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(DS.Colours.surface)
+                    .background(DS.Colours.memoryCardSurface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                            .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
+                    }
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                     .shadow(
                         color: DS.Shadows.subtle.color,
@@ -273,11 +278,12 @@ struct ExtractionConfirmView: View {
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
                     .padding(.vertical, DS.Spacing.xs)
-                    .background(DS.Colours.accent)
+                    .background(DS.ComponentTokens.PrimaryButton.background)
                     .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
                 .disabled(isSaving)
+                .buttonStyle(.mnemoPressable)
                 .accessibilityIdentifier(AccessibilityID.CaptureText.save)
 
                 Button(action: onEdit) {
@@ -287,10 +293,15 @@ struct ExtractionConfirmView: View {
                         .frame(minHeight: DS.ComponentTokens.SecondaryButton.height)
                         .padding(.vertical, DS.Spacing.xs)
                         .background(DS.Colours.surfaceSecondary)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                                .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                        }
                         .foregroundStyle(DS.Colours.textPrimary)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
                 .disabled(isSaving)
+                .buttonStyle(.mnemoPressable)
 
                 Button(action: onDiscard) {
                     Text("Discard")

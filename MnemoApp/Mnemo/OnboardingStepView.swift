@@ -55,7 +55,7 @@ struct OnboardingStepView: View {
     private var iconColor: Color {
         switch step {
         case .welcome:
-            return DS.Colours.primary
+            return DS.Colours.brandInk
         case .notifications:
             return DS.Colours.accent
         case .done:
@@ -105,7 +105,11 @@ struct WelcomeStepContent: View {
             )
         }
         .padding(DS.Spacing.md)
-        .background(DS.Colours.surface)
+        .background(DS.Colours.memoryCardSurface)
+        .overlay {
+            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
+        }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
         .shadow(
             color: DS.Shadows.subtle.color,
@@ -213,7 +217,11 @@ struct OnboardingInfoCard: View {
             Spacer()
         }
         .padding(DS.Spacing.md)
-        .background(DS.Colours.surface)
+        .background(DS.Colours.memoryCardSurface)
+        .overlay {
+            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
+        }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
         .shadow(
             color: DS.Shadows.subtle.color,
@@ -244,7 +252,7 @@ struct BackupStepContent: View {
                 }
             }
             .padding(DS.Spacing.md)
-            .background(DS.Colours.warningLight)
+            .background(DS.Colours.warningSoft)
             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
 
             if setupDeferred {
@@ -274,6 +282,7 @@ struct BackupStepContent: View {
                     .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+                .buttonStyle(.mnemoPressable)
 
                 Button("Continue without backup") {
                     setupDeferred = true
@@ -281,6 +290,7 @@ struct BackupStepContent: View {
                 }
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textSecondary)
+                .buttonStyle(.mnemoPressable)
             }
         }
     }

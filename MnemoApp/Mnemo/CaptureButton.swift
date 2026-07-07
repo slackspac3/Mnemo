@@ -5,6 +5,7 @@ import MnemoUI
 struct CaptureButton: View {
 
     @Environment(NavigationCoordinator.self) private var coordinator
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var expanded = false
 
     var body: some View {
@@ -41,17 +42,17 @@ struct CaptureButton: View {
                     CaptureOptionButton(
                         icon: "square.and.pencil",
                         label: "Text",
-                        color: DS.Colours.primary
+                        color: DS.Colours.brandInk
                     ) {
                         expanded = false
                         coordinator.present(.captureText)
                     }
                 }
-                .transition(.scale.combined(with: .opacity))
+                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
             }
 
             Button {
-                withAnimation(DS.Animation.spring) {
+                withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.gentleSpring) {
                     expanded.toggle()
                 }
             } label: {
@@ -68,10 +69,12 @@ struct CaptureButton: View {
                         y: DS.Shadows.medium.y
                     )
             }
+            .buttonStyle(.mnemoPressable)
             .accessibilityLabel(expanded ? "Close capture menu" : "Add memory")
             .accessibilityHint("Choose how to save a memory")
             .accessibilityIdentifier(AccessibilityID.Main.capture)
         }
+        .animation(reduceMotion ? DS.Animation.fade : DS.Animation.gentleSpring, value: expanded)
     }
 }
 
@@ -89,7 +92,11 @@ struct CaptureOptionButton: View {
                     .foregroundStyle(DS.Colours.textPrimary)
                     .padding(.horizontal, DS.Spacing.md)
                     .padding(.vertical, DS.Spacing.sm)
-                    .background(DS.Colours.surface)
+                    .background(DS.Colours.surfaceElevated)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                            .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                    }
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                     .shadow(
                         color: DS.Shadows.subtle.color,
@@ -109,6 +116,7 @@ struct CaptureOptionButton: View {
                     .clipShape(Circle())
             }
         }
+        .buttonStyle(.mnemoPressable)
         .accessibilityLabel("\(label) memory")
         .accessibilityHint("Open \(label.lowercased()) capture")
         .accessibilityIdentifier(accessibilityIdentifier)

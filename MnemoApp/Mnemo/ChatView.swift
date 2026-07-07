@@ -10,6 +10,7 @@ struct ChatView: View {
     @State private var viewModel = ChatViewModel()
     @Environment(NavigationCoordinator.self) private var coordinator
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: \MemoryRecord.createdAt, order: .reverse) private var records: [MemoryRecord]
     @State private var selectedSourceMemory: ChatSelectedMemory?
 
@@ -22,7 +23,7 @@ struct ChatView: View {
 
         NavigationStack {
             ZStack {
-                DS.Colours.background.ignoresSafeArea()
+                DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 VStack(spacing: DS.Spacing.xs) {
                     ScrollViewReader { proxy in
@@ -93,7 +94,7 @@ struct ChatView: View {
                         }
                         .scrollDismissesKeyboard(.interactively)
                         .onChange(of: viewModel.messages.count) {
-                            withAnimation(DS.Animation.standard) {
+                            withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.standard) {
                                 proxy.scrollTo(ChatScrollAnchor.bottom, anchor: .bottom)
                             }
                         }
@@ -197,6 +198,7 @@ struct MessageBubble: View {
 
     let message: ChatViewModel.Message
     let onSourceTap: (UUID) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isUser: Bool {
         message.role == .user
@@ -215,7 +217,7 @@ struct MessageBubble: View {
                     .multilineTextAlignment(isUser ? .trailing : .leading)
                     .padding(.horizontal, DS.Spacing.md)
                     .padding(.vertical, DS.Spacing.md)
-                    .background(isUser ? DS.Colours.accent : DS.Colours.surface)
+                    .background(isUser ? DS.Colours.accent : DS.Colours.surfaceElevated)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                     .shadow(
                         color: DS.Shadows.subtle.color,
@@ -241,6 +243,7 @@ struct MessageBubble: View {
                 Spacer(minLength: DS.Spacing.xxxl)
             }
         }
+        .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: isUser ? .trailing : .leading)))
         .accessibilityIdentifier(isUser ? AccessibilityID.Chat.messageUser : AccessibilityID.Chat.messageAssistant)
     }
 }
@@ -259,7 +262,7 @@ struct CitationSection: View {
         VStack(alignment: .leading, spacing: DS.Spacing.xs) {
             Label(title, systemImage: "bookmark.fill")
                 .font(DS.Typography.caption1)
-                .foregroundStyle(DS.Colours.accent)
+                .foregroundStyle(DS.Colours.sourceCardAccent)
                 .accessibilityLabel(title)
 
             if citations.isEmpty {
@@ -267,17 +270,18 @@ struct CitationSection: View {
                     .font(DS.Typography.caption1)
                     .foregroundStyle(DS.Colours.textSecondary)
                     .padding(DS.Spacing.sm)
-                    .background(DS.Colours.surfaceSecondary)
+                    .background(DS.Colours.sourceCardSurface)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             } else {
                 ForEach(citations.prefix(3)) { citation in
+                    let isPrimary = citation.id == citations.first?.id
                     Button {
                         onSourceTap(citation.id)
                     } label: {
                         HStack(alignment: .center, spacing: DS.Spacing.sm) {
                             Image(systemName: "doc.text.magnifyingglass")
                                 .font(DS.Typography.caption1)
-                                .foregroundStyle(DS.Colours.accent)
+                                .foregroundStyle(isPrimary ? DS.Colours.sourceCardAccent : DS.Colours.textTertiary)
                                 .frame(width: DS.Spacing.md)
                                 .accessibilityHidden(true)
 
@@ -301,14 +305,14 @@ struct CitationSection: View {
                                 .accessibilityHidden(true)
                         }
                         .padding(DS.ComponentTokens.SourceCard.padding)
-                        .background(DS.ComponentTokens.SourceCard.background)
+                        .background(isPrimary ? DS.ComponentTokens.SourceCard.background : DS.Colours.surfaceElevated)
                         .overlay {
                             RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius)
-                                .stroke(DS.ComponentTokens.SourceCard.border, lineWidth: 1.0)
+                                .stroke(isPrimary ? DS.ComponentTokens.SourceCard.border : DS.Colours.memoryCardBorder, lineWidth: 1.0)
                         }
                         .clipShape(RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.mnemoPressable)
                     .accessibilityLabel("\(citation.source) source memory")
                     .accessibilityValue(citation.summary)
                     .accessibilityHint("Open source memory details")
@@ -317,6 +321,7 @@ struct CitationSection: View {
             }
         }
         .frame(maxWidth: 300.0, alignment: .leading)
+        .transition(.opacity)
     }
 
     private var title: String {
@@ -360,7 +365,7 @@ struct TypingIndicator: View {
             }
             .padding(.horizontal, DS.Spacing.md)
             .padding(.vertical, DS.Spacing.sm)
-            .background(DS.Colours.surface)
+            .background(DS.Colours.surfaceElevated)
             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                 .shadow(
                     color: DS.Shadows.subtle.color,
@@ -524,10 +529,14 @@ struct EmptyMemoryRecoveryPanel: View {
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.accent)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.mnemoPressable)
         }
         .padding(DS.Spacing.md)
-        .background(DS.Colours.surface)
+        .background(DS.Colours.memoryCardSurface)
+        .overlay {
+            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
+        }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
         .shadow(
             color: DS.Shadows.subtle.color,
@@ -559,7 +568,7 @@ struct CompactCaptureButton: View {
             .background(DS.Colours.surfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.mnemoPressable)
     }
 }
 
@@ -610,26 +619,26 @@ struct LandingActionButton: View {
                 y: DS.Shadows.subtle.y
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.mnemoPressable)
         .accessibilityLabel(title)
         .accessibilityHint(subtitle)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 
     private var backgroundColor: Color {
-        prominence == .primary ? DS.Colours.accent : DS.Colours.surface
+        prominence == .primary ? DS.Colours.accent : DS.Colours.memoryCardSurface
     }
 
     private var iconColor: Color {
-        prominence == .primary ? .white : tint
+        prominence == .primary ? DS.Colours.textOnAccent : tint
     }
 
     private var titleColor: Color {
-        prominence == .primary ? .white : DS.Colours.textPrimary
+        prominence == .primary ? DS.Colours.textOnAccent : DS.Colours.textPrimary
     }
 
     private var subtitleColor: Color {
-        prominence == .primary ? .white.opacity(0.86) : DS.Colours.textSecondary
+        prominence == .primary ? DS.Colours.brandThreadSoft : DS.Colours.textSecondary
     }
 }
 
@@ -654,7 +663,7 @@ struct RecallExampleButton: View {
             .background(DS.Colours.surfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.mnemoPressable)
     }
 }
 
@@ -692,7 +701,7 @@ struct ChatInputBar: View {
                     .foregroundStyle(DS.Colours.accent)
                     .frame(width: 40.0, height: 44.0)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.mnemoPressable)
             .accessibilityLabel("Add memory")
             .accessibilityHint("Choose how to save a memory")
             .accessibilityIdentifier(AccessibilityID.Main.capture)
@@ -706,7 +715,7 @@ struct ChatInputBar: View {
                         height: 44.0
                     )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.mnemoPressable)
             .accessibilityLabel("Record voice memory")
             .accessibilityHint("Open voice capture")
             .accessibilityIdentifier("capture.voice.open")
@@ -732,17 +741,17 @@ struct ChatInputBar: View {
                     .frame(width: 44.0, height: 44.0)
             }
             .disabled(!canSend)
-            .buttonStyle(.plain)
+            .buttonStyle(.mnemoPressable)
             .accessibilityLabel("Send")
             .accessibilityHint("Ask Mnemo to recall a saved memory")
             .accessibilityIdentifier(AccessibilityID.Chat.send)
         }
         .padding(.horizontal, DS.Spacing.md)
         .padding(.vertical, DS.Spacing.sm)
-        .background(DS.Colours.surface)
+        .background(DS.Colours.surfaceElevated)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(DS.Colours.surfaceSecondary)
+                .fill(DS.Colours.borderSubtle)
                 .frame(height: DS.Spacing.xs / DS.Spacing.xs)
         }
     }

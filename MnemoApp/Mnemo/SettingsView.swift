@@ -28,7 +28,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                DS.Colours.background.ignoresSafeArea()
+                DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 List {
                     Section {
@@ -39,12 +39,12 @@ struct SettingsView: View {
                                 bottom: DS.Spacing.md,
                                 trailing: DS.Spacing.md
                             ))
-                            .listRowBackground(DS.Colours.surface)
+                            .listRowBackground(DS.Colours.surfaceElevated)
                     }
 
                     Section {
                         DeviceTierRow(capability: appState.deviceCapability)
-                            .listRowBackground(DS.Colours.surface)
+                            .listRowBackground(DS.Colours.surfaceElevated)
                     } header: {
                         SettingsSectionHeader("Your Device")
                     }
@@ -93,7 +93,7 @@ struct SettingsView: View {
                     } header: {
                         SettingsSectionHeader("Privacy")
                     }
-                    .listRowBackground(DS.Colours.surface)
+                    .listRowBackground(DS.Colours.surfaceElevated)
 
                     Section {
                         if let model = userModel {
@@ -143,7 +143,7 @@ struct SettingsView: View {
                     } header: {
                         SettingsSectionHeader("Security")
                     }
-                    .listRowBackground(DS.Colours.surface)
+                    .listRowBackground(DS.Colours.surfaceElevated)
                     .accessibilityIdentifier(AccessibilityID.Settings.securitySection)
 
                     Section {
@@ -168,7 +168,7 @@ struct SettingsView: View {
                     } header: {
                         SettingsSectionHeader("Mnemo Sense")
                     }
-                    .listRowBackground(DS.Colours.surface)
+                    .listRowBackground(DS.Colours.surfaceElevated)
 
                     if let model = userModel {
                         Section {
@@ -176,7 +176,7 @@ struct SettingsView: View {
                         } header: {
                             SettingsSectionHeader("Personalisation")
                         }
-                        .listRowBackground(DS.Colours.surface)
+                        .listRowBackground(DS.Colours.surfaceElevated)
                     }
 
                     Section {
@@ -195,7 +195,7 @@ struct SettingsView: View {
                     } header: {
                         SettingsSectionHeader("Backup")
                     }
-                    .listRowBackground(DS.Colours.surface)
+                    .listRowBackground(DS.Colours.surfaceElevated)
 
                     Section {
                         if let destructiveErrorMessage {
@@ -232,10 +232,10 @@ struct SettingsView: View {
                             Text("This permanently deletes all your memories, threads, and settings. This cannot be undone.")
                         }
                     }
-                    .listRowBackground(DS.Colours.surface)
+                    .listRowBackground(DS.Colours.surfaceElevated)
                 }
                 .scrollContentBackground(.hidden)
-                .background(DS.Colours.background)
+                .background(DS.Colours.backgroundGrouped)
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
@@ -400,6 +400,10 @@ struct SenseComingSoonRow: View {
                 .font(DS.Typography.caption1)
                 .foregroundStyle(DS.Colours.textSecondary)
                 .lineLimit(1)
+                .padding(.horizontal, DS.Spacing.sm)
+                .padding(.vertical, DS.Spacing.xs)
+                .background(DS.Colours.surfaceDisabled)
+                .clipShape(Capsule())
         }
     }
 }

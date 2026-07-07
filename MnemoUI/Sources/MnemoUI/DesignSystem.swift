@@ -1,44 +1,91 @@
 import SwiftUI
 
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
+
 /// Mnemo's shared design system namespace.
 public enum DS {
     // MARK: - Colours
 
     /// Shared color palette for brand, surfaces, text, states, and Mnemo Sense features.
     public enum Colours {
-        public static let primary: Color = Color(.sRGB, red: 23.0 / 255.0, green: 35.0 / 255.0, blue: 52.0 / 255.0, opacity: 1.0)
-        public static let accent: Color = Color(.sRGB, red: 47.0 / 255.0, green: 111.0 / 255.0, blue: 91.0 / 255.0, opacity: 1.0)
+        public static let brandInk: Color = Color(.sRGB, red: 23.0 / 255.0, green: 35.0 / 255.0, blue: 52.0 / 255.0, opacity: 1.0)
+        public static let brandSage: Color = Color(.sRGB, red: 47.0 / 255.0, green: 111.0 / 255.0, blue: 91.0 / 255.0, opacity: 1.0)
+        public static let brandSageSoft: Color = brandSage.opacity(0.14)
+        public static let brandThread: Color = Color(.sRGB, red: 247.0 / 255.0, green: 250.0 / 255.0, blue: 247.0 / 255.0, opacity: 1.0)
+        public static let brandThreadSoft: Color = brandThread.opacity(0.74)
+
+        public static let accent: Color = brandSage
+        public static let accentSoft: Color = brandSageSoft
         public static let accentPressed: Color = Color(.sRGB, red: 36.0 / 255.0, green: 87.0 / 255.0, blue: 71.0 / 255.0, opacity: 1.0)
-        public static let accentSoft: Color = accent.opacity(0.14)
+        public static let accentDisabled: Color = brandSage.opacity(0.28)
+
         #if os(iOS)
-        public static let background: Color = Color(uiColor: .systemGroupedBackground)
-        public static let surface: Color = Color(uiColor: .secondarySystemGroupedBackground)
+        public static let backgroundPrimary: Color = Color(uiColor: .systemBackground)
+        public static let backgroundSecondary: Color = Color(uiColor: .secondarySystemBackground)
+        public static let backgroundGrouped: Color = Color(uiColor: .systemGroupedBackground)
+        public static let backgroundElevated: Color = Color(uiColor: .secondarySystemGroupedBackground)
+        public static let surfacePrimary: Color = Color(uiColor: .secondarySystemGroupedBackground)
         public static let surfaceSecondary: Color = Color(uiColor: .tertiarySystemGroupedBackground)
+        public static let surfaceElevated: Color = Color(uiColor: .systemBackground)
+        public static let surfacePressed: Color = Color(uiColor: .tertiarySystemFill)
+        public static let surfaceDisabled: Color = Color(uiColor: .secondarySystemFill)
+        public static let success: Color = Color(uiColor: .systemGreen)
+        public static let warning: Color = Color(uiColor: .systemOrange)
+        public static let destructive: Color = Color(uiColor: .systemRed)
         #else
-        public static let background: Color = Color(nsColor: .windowBackgroundColor)
-        public static let surface: Color = Color(nsColor: .controlBackgroundColor)
+        public static let backgroundPrimary: Color = Color(nsColor: .windowBackgroundColor)
+        public static let backgroundSecondary: Color = Color(nsColor: .underPageBackgroundColor)
+        public static let backgroundGrouped: Color = Color(nsColor: .windowBackgroundColor)
+        public static let backgroundElevated: Color = Color(nsColor: .controlBackgroundColor)
+        public static let surfacePrimary: Color = Color(nsColor: .controlBackgroundColor)
         public static let surfaceSecondary: Color = Color(nsColor: .underPageBackgroundColor)
+        public static let surfaceElevated: Color = Color(nsColor: .windowBackgroundColor)
+        public static let surfacePressed: Color = Color(nsColor: .selectedContentBackgroundColor).opacity(0.18)
+        public static let surfaceDisabled: Color = Color(nsColor: .disabledControlTextColor).opacity(0.14)
+        public static let success: Color = .green
+        public static let warning: Color = .orange
+        public static let destructive: Color = .red
         #endif
+
         public static let textPrimary: Color = .primary
         public static let textSecondary: Color = .secondary
         public static let textTertiary: Color = .secondary.opacity(0.82)
-        public static let backgroundPrimary: Color = background
-        public static let backgroundSecondary: Color = surface
-        public static let surfacePrimary: Color = surface
-        public static let surfaceElevated: Color = surface
+        public static let textOnAccent: Color = brandThread
+        public static let textDestructive: Color = destructive
+
         public static let borderSubtle: Color = textTertiary.opacity(0.18)
-        public static let sourceCardSurface: Color = surface
-        public static let sourceCardBorder: Color = accent.opacity(0.22)
-        public static let appLockSurface: Color = surface
+        public static let borderStrong: Color = textTertiary.opacity(0.34)
+        public static let borderAccent: Color = accent.opacity(0.28)
+        public static let borderDestructive: Color = destructive.opacity(0.34)
+
+        public static let successSoft: Color = success.opacity(0.14)
+        public static let warningSoft: Color = warning.opacity(0.14)
+        public static let destructiveSoft: Color = destructive.opacity(0.14)
+
+        public static let sourceCardSurface: Color = accentSoft
+        public static let sourceCardBorder: Color = borderAccent
+        public static let sourceCardAccent: Color = accent
+        public static let memoryCardSurface: Color = surfacePrimary
+        public static let memoryCardBorder: Color = borderSubtle
+        public static let appLockBackground: Color = backgroundGrouped
+        public static let appLockSurface: Color = surfaceElevated
         public static let privateBadgeSurface: Color = accentSoft
-        public static let success: Color = Color(.sRGB, red: 6.0 / 255.0, green: 78.0 / 255.0, blue: 59.0 / 255.0, opacity: 1.0)
-        public static let successLight: Color = Color(.sRGB, red: 236.0 / 255.0, green: 253.0 / 255.0, blue: 245.0 / 255.0, opacity: 1.0)
-        public static let warning: Color = Color(.sRGB, red: 120.0 / 255.0, green: 53.0 / 255.0, blue: 15.0 / 255.0, opacity: 1.0)
-        public static let warningLight: Color = Color(.sRGB, red: 255.0 / 255.0, green: 251.0 / 255.0, blue: 235.0 / 255.0, opacity: 1.0)
-        public static let destructive: Color = Color(.sRGB, red: 127.0 / 255.0, green: 29.0 / 255.0, blue: 29.0 / 255.0, opacity: 1.0)
-        public static let destructiveLight: Color = Color(.sRGB, red: 254.0 / 255.0, green: 242.0 / 255.0, blue: 242.0 / 255.0, opacity: 1.0)
+        public static let privateBadgeText: Color = accent
+
         public static let sense: Color = Color(.sRGB, red: 65.0 / 255.0, green: 83.0 / 255.0, blue: 72.0 / 255.0, opacity: 1.0)
-        public static let senseLight: Color = accentSoft
+        public static let senseLight: Color = privateBadgeSurface
+
+        // Legacy aliases kept for existing app surfaces.
+        public static let primary: Color = brandInk
+        public static let background: Color = backgroundGrouped
+        public static let surface: Color = surfacePrimary
+        public static let successLight: Color = successSoft
+        public static let warningLight: Color = warningSoft
+        public static let destructiveLight: Color = destructiveSoft
     }
 
     // MARK: - Typography
@@ -96,9 +143,16 @@ public enum DS {
     /// Motion timings for feedback, transitions, and spring interactions.
     public enum Animation {
         public static let quick: SwiftUI.Animation = .easeInOut(duration: 0.15)
-        public static let standard: SwiftUI.Animation = .easeInOut(duration: 0.25)
-        public static let slow: SwiftUI.Animation = .easeInOut(duration: 0.4)
-        public static let spring: SwiftUI.Animation = .spring(response: 0.4, dampingFraction: 0.75)
+        public static let standard: SwiftUI.Animation = .easeInOut(duration: 0.24)
+        public static let slow: SwiftUI.Animation = .easeInOut(duration: 0.38)
+        public static let gentleSpring: SwiftUI.Animation = .spring(response: 0.36, dampingFraction: 0.86)
+        public static let emphasisSpring: SwiftUI.Animation = .spring(response: 0.42, dampingFraction: 0.78)
+        public static let fade: SwiftUI.Animation = .easeInOut(duration: 0.18)
+        public static let contentTransition: SwiftUI.Animation = standard
+        public static let sheetTransition: SwiftUI.Animation = standard
+        public static let spring: SwiftUI.Animation = gentleSpring
+
+        public static let scalePress: CGFloat = 0.975
     }
 
     // MARK: - Component Tokens
@@ -106,7 +160,8 @@ public enum DS {
     /// Reusable component-level tokens composed from the core design system.
     public enum ComponentTokens {
         public enum Card {
-            public static let background: Color = DS.Colours.surface
+            public static let background: Color = DS.Colours.memoryCardSurface
+            public static let border: Color = DS.Colours.memoryCardBorder
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let shadow: Shadow = DS.Shadows.subtle
             public static let padding: CGFloat = DS.Spacing.md
@@ -114,7 +169,7 @@ public enum DS {
 
         public enum PrimaryButton {
             public static let background: Color = DS.Colours.accent
-            public static let foreground: Color = .white
+            public static let foreground: Color = DS.Colours.textOnAccent
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let height: CGFloat = 52.0
         }
@@ -128,7 +183,7 @@ public enum DS {
 
         public enum DestructiveButton {
             public static let background: Color = DS.Colours.destructive
-            public static let foreground: Color = .white
+            public static let foreground: Color = DS.Colours.textOnAccent
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let height: CGFloat = 52.0
         }

@@ -26,7 +26,7 @@ struct CaptureVoiceSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                DS.Colours.background.ignoresSafeArea()
+                DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 VStack(spacing: DS.Spacing.xl) {
                     if permissionDenied {
@@ -248,7 +248,7 @@ struct VoiceRecordingView: View {
                 }
 
                 Circle()
-                    .fill(isRecording ? DS.Colours.destructiveLight : DS.Colours.surfaceSecondary)
+                    .fill(isRecording ? DS.Colours.destructiveSoft : DS.Colours.surfaceSecondary)
                     .frame(
                         width: DS.Spacing.xxxl + DS.Spacing.xxl,
                         height: DS.Spacing.xxxl + DS.Spacing.xxl
@@ -299,7 +299,11 @@ struct VoiceRecordingView: View {
                     .foregroundStyle(DS.Colours.textPrimary)
                     .multilineTextAlignment(.center)
                     .padding(DS.Spacing.md)
-                    .background(DS.Colours.surface)
+                    .background(DS.Colours.memoryCardSurface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                            .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
+                    }
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
 
                 Button("Use this transcript") {
@@ -307,6 +311,7 @@ struct VoiceRecordingView: View {
                 }
                 .font(DS.Typography.headline)
                 .foregroundStyle(DS.Colours.accent)
+                .buttonStyle(.mnemoPressable)
             }
 
             Spacer()
@@ -401,23 +406,26 @@ struct VoiceConfirmView: View {
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
                 .padding(.vertical, DS.Spacing.xs)
-                .background(transcript.isEmpty ? DS.Colours.textTertiary : DS.Colours.accent)
+                .background(transcript.isEmpty ? DS.Colours.accentDisabled : DS.ComponentTokens.PrimaryButton.background)
                 .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
             .disabled(transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
+            .buttonStyle(.mnemoPressable)
 
             Button(action: onRetry) {
                 Text("Record again")
                     .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textSecondary)
             }
+            .buttonStyle(.mnemoPressable)
 
             Button(action: onDiscard) {
                 Text("Discard")
                     .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textSecondary)
             }
+            .buttonStyle(.mnemoPressable)
 
             Spacer()
         }
@@ -444,6 +452,7 @@ struct PermissionDeniedView: View {
             }
             .font(DS.Typography.headline)
             .foregroundStyle(DS.Colours.accent)
+            .buttonStyle(.mnemoPressable)
         }
     }
 }

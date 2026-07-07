@@ -33,7 +33,7 @@ struct MemoryDetailView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                DS.Colours.background.ignoresSafeArea()
+                DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Spacing.lg) {
@@ -44,7 +44,11 @@ struct MemoryDetailView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(DS.Spacing.md)
-                        .background(DS.Colours.surface)
+                        .background(DS.Colours.memoryCardSurface)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                                .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
+                        }
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                         .shadow(
                             color: DS.Shadows.subtle.color,
@@ -79,7 +83,11 @@ struct MemoryDetailView: View {
                             )
                         }
                         .padding(DS.Spacing.md)
-                        .background(DS.Colours.surface)
+                        .background(DS.Colours.surfaceElevated)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                                .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                        }
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                         .shadow(
                             color: DS.Shadows.subtle.color,
@@ -102,14 +110,18 @@ struct MemoryDetailView: View {
                                                 .foregroundStyle(DS.Colours.accent)
                                                 .padding(.horizontal, DS.Spacing.sm)
                                                 .padding(.vertical, DS.Spacing.xs)
-                                                .background(DS.Colours.surfaceSecondary)
+                                                .background(DS.Colours.accentSoft)
                                                 .clipShape(Capsule())
                                         }
                                     }
                                 }
                             }
                             .padding(DS.Spacing.md)
-                            .background(DS.Colours.surface)
+                            .background(DS.Colours.surfaceElevated)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                                    .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                            }
                             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                             .shadow(
                                 color: DS.Shadows.subtle.color,
@@ -126,7 +138,7 @@ struct MemoryDetailView: View {
                                     .foregroundStyle(DS.Colours.success)
                             }
                             .padding(DS.Spacing.md)
-                            .background(DS.Colours.successLight)
+                            .background(DS.Colours.successSoft)
                             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                         }
 
@@ -139,7 +151,11 @@ struct MemoryDetailView: View {
                                 .foregroundStyle(DS.Colours.textTertiary)
                         }
                         .padding(DS.Spacing.md)
-                        .background(DS.Colours.surface)
+                        .background(DS.Colours.surfaceElevated)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                                .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                        }
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
 
                         if let errorMessage {
@@ -158,9 +174,14 @@ struct MemoryDetailView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(DS.Spacing.md)
                                     .background(DS.Colours.surfaceSecondary)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                                            .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                                    }
                                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                             }
                             .disabled(isArchiving || isDeleting)
+                            .buttonStyle(.mnemoPressable)
                             .accessibilityIdentifier(AccessibilityID.MemoryDetail.archive)
 
                             Button {
@@ -171,10 +192,15 @@ struct MemoryDetailView: View {
                                     .foregroundStyle(DS.Colours.destructive)
                                     .frame(maxWidth: .infinity)
                                     .padding(DS.Spacing.md)
-                                    .background(DS.Colours.destructiveLight)
+                                    .background(DS.Colours.destructiveSoft)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                                            .stroke(DS.Colours.borderDestructive, lineWidth: 1.0)
+                                    }
                                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                             }
                             .disabled(isDeleting)
+                            .buttonStyle(.mnemoPressable)
                             .accessibilityIdentifier(AccessibilityID.MemoryDetail.delete)
                         }
                         .confirmationDialog(

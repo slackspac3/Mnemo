@@ -41,20 +41,20 @@ public struct MnemoLogoMark: View {
     private var background: Color {
         switch style {
         case .filled:
-            return colorScheme == .dark ? DS.Colours.accentPressed : DS.Colours.primary
+            return colorScheme == .dark ? DS.Colours.accentPressed : DS.Colours.brandInk
         case .subtle:
             return DS.Colours.privateBadgeSurface
         case .monochrome:
-            return DS.Colours.surfaceSecondary
+            return DS.Colours.surfacePrimary
         }
     }
 
     private var thread: Color {
         switch style {
         case .filled:
-            return .white.opacity(0.94)
+            return DS.Colours.textOnAccent
         case .subtle:
-            return DS.Colours.accent
+            return DS.Colours.privateBadgeText
         case .monochrome:
             return DS.Colours.textPrimary
         }

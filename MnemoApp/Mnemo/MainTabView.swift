@@ -5,6 +5,7 @@ import MnemoUI
 struct MainTabView: View {
 
     @State private var coordinator = NavigationCoordinator.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -55,10 +56,10 @@ struct MainTabView: View {
                 CaptureButton()
                     .environment(coordinator)
                     .padding(.bottom, DS.Spacing.xxxl + DS.Spacing.xxxl + DS.Spacing.md)
-                    .transition(.scale.combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
             }
         }
-        .animation(DS.Animation.standard, value: coordinator.activeTab)
+        .animation(reduceMotion ? DS.Animation.fade : DS.Animation.standard, value: coordinator.activeTab)
     }
 }
 
@@ -67,7 +68,7 @@ struct MemoryDetailPlaceholderView: View {
 
     var body: some View {
         ZStack {
-            DS.Colours.background.ignoresSafeArea()
+            DS.Colours.backgroundGrouped.ignoresSafeArea()
             VStack(spacing: DS.Spacing.sm) {
                 Text("Memory Detail")
                     .font(DS.Typography.headline)
@@ -89,7 +90,7 @@ struct ThreadProposalPlaceholderView: View {
 
     var body: some View {
         ZStack {
-            DS.Colours.background.ignoresSafeArea()
+            DS.Colours.backgroundGrouped.ignoresSafeArea()
             VStack(spacing: DS.Spacing.sm) {
                 Text("Thread Proposal")
                     .font(DS.Typography.headline)

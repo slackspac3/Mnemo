@@ -8,10 +8,11 @@ import MnemoCore
 struct OnboardingView: View {
 
     @State private var viewModel = OnboardingViewModel()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            DS.Colours.background.ignoresSafeArea()
+            DS.Colours.backgroundGrouped.ignoresSafeArea()
 
             VStack(spacing: DS.Spacing.xs) {
                 OnboardingProgressBar(progress: viewModel.progress)
@@ -22,7 +23,7 @@ struct OnboardingView: View {
                     step: viewModel.currentStep,
                     viewModel: viewModel
                 )
-                .animation(DS.Animation.standard, value: viewModel.currentStep)
+                .animation(reduceMotion ? DS.Animation.fade : DS.Animation.standard, value: viewModel.currentStep)
 
                 OnboardingNavigationBar(viewModel: viewModel)
                     .padding(.horizontal, DS.Spacing.xl)
@@ -35,6 +36,7 @@ struct OnboardingView: View {
 
 struct OnboardingProgressBar: View {
     let progress: Double
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geometry in
@@ -49,7 +51,7 @@ struct OnboardingProgressBar: View {
                         width: geometry.size.width * progress,
                         height: DS.Spacing.xs
                     )
-                    .animation(DS.Animation.standard, value: progress)
+                    .animation(reduceMotion ? DS.Animation.fade : DS.Animation.standard, value: progress)
             }
         }
         .frame(height: DS.Spacing.xs)
@@ -85,6 +87,7 @@ struct OnboardingNavigationBar: View {
                         .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+                .buttonStyle(.mnemoPressable)
                 .accessibilityIdentifier(AccessibilityID.Onboarding.completeButton)
 
             default:
@@ -100,6 +103,7 @@ struct OnboardingNavigationBar: View {
                         .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+                .buttonStyle(.mnemoPressable)
                 .accessibilityIdentifier(AccessibilityID.Onboarding.continueButton)
             }
         }

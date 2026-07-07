@@ -22,7 +22,7 @@ struct BackupRestoreView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                DS.Colours.background.ignoresSafeArea()
+                DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 List {
                     Section {
@@ -53,7 +53,7 @@ struct BackupRestoreView: View {
                     } header: {
                         SettingsSectionHeader("Backup Status")
                     }
-                    .listRowBackground(DS.Colours.surface)
+                    .listRowBackground(DS.Colours.surfaceElevated)
 
                     Section {
                         Button {
@@ -75,7 +75,7 @@ struct BackupRestoreView: View {
                         }
                         .disabled(isBackingUp || isRestoring)
                     }
-                    .listRowBackground(DS.Colours.surface)
+                    .listRowBackground(DS.Colours.surfaceElevated)
 
                     if !availableBackups.isEmpty {
                         Section {
@@ -101,7 +101,7 @@ struct BackupRestoreView: View {
                         } header: {
                             SettingsSectionHeader("Available Backups")
                         }
-                        .listRowBackground(DS.Colours.surface)
+                        .listRowBackground(DS.Colours.surfaceElevated)
                     }
 
                     Section {
@@ -114,7 +114,7 @@ struct BackupRestoreView: View {
                                 .foregroundStyle(DS.Colours.textSecondary)
                         }
                     }
-                    .listRowBackground(DS.Colours.surface)
+                    .listRowBackground(DS.Colours.surfaceElevated)
 
                     if let error = errorMessage {
                         Section {
@@ -122,7 +122,7 @@ struct BackupRestoreView: View {
                                 .font(DS.Typography.footnote)
                                 .foregroundStyle(DS.Colours.destructive)
                         }
-                        .listRowBackground(DS.Colours.surface)
+                        .listRowBackground(DS.Colours.surfaceElevated)
                     }
 
                     if let success = successMessage {
@@ -131,11 +131,11 @@ struct BackupRestoreView: View {
                                 .font(DS.Typography.footnote)
                                 .foregroundStyle(DS.Colours.success)
                         }
-                        .listRowBackground(DS.Colours.surface)
+                        .listRowBackground(DS.Colours.surfaceElevated)
                     }
                 }
                 .scrollContentBackground(.hidden)
-                .background(DS.Colours.background)
+                .background(DS.Colours.backgroundGrouped)
             }
             .navigationTitle("iCloud Backup")
             .navigationBarTitleDisplayMode(.inline)

@@ -5,7 +5,7 @@ import MnemoUI
 struct SplashView: View {
     var body: some View {
         ZStack {
-            DS.Colours.background.ignoresSafeArea()
+            DS.Colours.backgroundGrouped.ignoresSafeArea()
             VStack(spacing: DS.Spacing.lg) {
                 MnemoLogoMark(size: 88.0, style: .filled)
 

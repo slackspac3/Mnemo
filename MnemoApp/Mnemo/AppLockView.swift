@@ -8,7 +8,7 @@ struct AppLockView: View {
 
     var body: some View {
         ZStack {
-            DS.Colours.background.ignoresSafeArea()
+            DS.Colours.appLockBackground.ignoresSafeArea()
 
             VStack(spacing: DS.Spacing.xl) {
                 Spacer()
@@ -30,6 +30,10 @@ struct AppLockView: View {
                 .padding(DS.ComponentTokens.LockState.cardPadding)
                 .frame(maxWidth: 360.0)
                 .background(DS.Colours.appLockSurface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge)
+                        .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                }
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge))
                 .shadow(
                     color: DS.Shadows.subtle.color,
@@ -55,14 +59,14 @@ struct AppLockView: View {
                     HStack(spacing: DS.Spacing.sm) {
                         if appState.isAuthenticatingAppLock {
                             ProgressView()
-                                .tint(.white)
+                                .tint(DS.Colours.textOnAccent)
                         } else {
                             Image(systemName: "lock.open.fill")
                         }
                         Text(appState.isAuthenticatingAppLock ? "Unlocking..." : "Unlock")
                     }
                     .font(DS.Typography.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(DS.Colours.textOnAccent)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
                     .padding(.vertical, DS.Spacing.xs)
@@ -70,6 +74,7 @@ struct AppLockView: View {
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
                 .disabled(appState.isAuthenticatingAppLock)
+                .buttonStyle(.mnemoPressable)
                 .padding(.horizontal, DS.Spacing.xl)
                 .accessibilityLabel("Unlock Mnemo")
                 .accessibilityHint("Use Face ID, Touch ID or your device passcode")

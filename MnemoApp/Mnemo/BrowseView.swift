@@ -60,7 +60,7 @@ struct BrowseView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                DS.Colours.background.ignoresSafeArea()
+                DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 VStack(spacing: DS.Spacing.xs) {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -97,7 +97,7 @@ struct BrowseView: View {
                                     } label: {
                                         MemoryCard(record: record)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.mnemoPressable)
                                     .accessibilityLabel(record.summary)
                                     .accessibilityHint("Open memory details")
                                     .accessibilityIdentifier(AccessibilityID.Browse.memoryCell)
@@ -159,6 +159,7 @@ struct FilterChip: View {
                 .background(isSelected ? DS.Colours.accent : DS.Colours.surfaceSecondary)
                 .clipShape(Capsule())
         }
+        .buttonStyle(.mnemoPressable)
         .accessibilityLabel(label)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
@@ -204,7 +205,11 @@ struct MemoryCard: View {
         }
         .padding(DS.Spacing.md)
         .frame(maxWidth: .infinity, minHeight: 96.0, alignment: .leading)
-        .background(DS.Colours.surface)
+        .background(DS.Colours.memoryCardSurface)
+        .overlay {
+            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
+        }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
         .shadow(
             color: DS.Shadows.subtle.color,
@@ -321,11 +326,11 @@ struct EmptyBrowseView: View {
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
                         .padding(.vertical, DS.Spacing.xs)
-                        .background(DS.Colours.accent)
-                        .foregroundStyle(.white)
+                        .background(DS.ComponentTokens.PrimaryButton.background)
+                        .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.mnemoPressable)
                 .accessibilityIdentifier(AccessibilityID.CaptureText.open)
             }
             Spacer()
