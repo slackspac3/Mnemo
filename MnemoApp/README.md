@@ -59,6 +59,7 @@ Build and run the app from `MnemoApp/Mnemo.xcworkspace` with the `Mnemo` scheme.
 - Prefer small, package-scoped changes with package builds before app builds.
 - App screens can use SwiftUI state directly or `@Observable` UI state objects when state needs to be shared across a multi-screen flow.
 - Business logic belongs in package services and actors, not in large SwiftUI views.
+- Use `ManualRecallValidation.md` before tuning recall so changes are driven by observed failures.
 - Keep privacy and App Review notes factual. Do not claim bundled Foundation Models, MLX embeddings, or cloud LLM processing until those code paths are active and tested.
 
 ## Known Gaps
