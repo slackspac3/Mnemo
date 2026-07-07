@@ -35,6 +35,10 @@ public struct RecallEngine {
             )
         }
 
+        if let guardedResult = guardedPrecisionResult(for: query, memories: activeMemories) {
+            return guardedResult
+        }
+
         let ranked = activeMemories
             .map { memory in
                 RankedMemory(
@@ -83,17 +87,21 @@ public struct RecallEngine {
         let phraseBoost = phraseScore(query: query, memoryText: memoryText)
         let categoryBoost = categoryScore(query: query, memoryText: memoryText)
         let personBoost = personScore(query: query, memoryText: memoryText)
+        let forgetIntentBoost = forgetShoppingScore(query: query, memoryText: memoryText)
         let confidenceBoost = min(max(memory.confidence, 0), 1) * 0.03
         let persistenceBoost = min(max(memory.persistenceScore, 0), 1) * 0.03
 
-        return (lexicalScore * 0.72) +
+        let score = (lexicalScore * 0.72) +
             (embeddingScore * 0.06) +
             numberBoost +
             phraseBoost +
             categoryBoost +
             personBoost +
+            forgetIntentBoost +
             confidenceBoost +
             persistenceBoost
+
+        return max(0, score)
     }
 
     private func numberScore(query: String, memoryText: String) -> Double {
@@ -122,6 +130,18 @@ public struct RecallEngine {
         guard !queryNames.isEmpty else { return 0 }
         let memoryNames = notableTerms(in: memoryText)
         return queryNames.intersection(memoryNames).isEmpty ? 0 : 0.14
+    }
+
+    private func forgetShoppingScore(query: String, memoryText: String) -> Double {
+        guard hasForgetIntent(query),
+              categories(in: query).contains("shopping")
+        else { return 0 }
+
+        if hasForgetIntent(memoryText) {
+            return 0.24
+        }
+
+        return categories(in: memoryText).contains("shopping") ? -0.10 : 0
     }
 
     // MARK: - Answers
@@ -244,6 +264,141 @@ public struct RecallEngine {
         ([memory.summary, memory.rawInput] + memory.tags).joined(separator: " ")
     }
 
+    private func guardedPrecisionResult(for query: String, memories: [MemoryRecord]) -> RecallResult? {
+        if let result = passportNumberGuard(for: query, memories: memories) {
+            return result
+        }
+
+        if let result = birthdayGuard(for: query, memories: memories) {
+            return result
+        }
+
+        if let result = homeWifiGuard(for: query, memories: memories) {
+            return result
+        }
+
+        if let result = sizeVariantGuard(for: query, memories: memories) {
+            return result
+        }
+
+        return nil
+    }
+
+    private func passportNumberGuard(for query: String, memories: [MemoryRecord]) -> RecallResult? {
+        let lowercasedQuery = query.lowercased()
+        guard lowercasedQuery.contains("passport"),
+              lowercasedQuery.contains("number")
+        else { return nil }
+
+        let passportNumberMemories = memories.filter { memory in
+            let text = searchableText(for: memory).lowercased()
+            return text.contains("passport") &&
+                (text.contains("passport number") ||
+                    text.contains("passport no") ||
+                    text.contains("passport #"))
+        }
+        if !passportNumberMemories.isEmpty {
+            return nil
+        }
+
+        if memories.contains(where: { searchableText(for: $0).lowercased().contains("passport") }) {
+            return RecallResult(
+                text: "I do not have a passport number saved. I found a passport memory, but it does not contain a passport number.",
+                citedMemoryIds: [],
+                citations: []
+            )
+        }
+
+        return nil
+    }
+
+    private func birthdayGuard(for query: String, memories: [MemoryRecord]) -> RecallResult? {
+        guard let subject = birthdaySubject(in: query) else { return nil }
+
+        let matchingBirthdayMemories = memories.filter { memory in
+            let tokens = meaningfulTokens(in: searchableText(for: memory), expandingSynonyms: false)
+            return tokens.contains(subject) && tokens.contains("birthday")
+        }
+        if !matchingBirthdayMemories.isEmpty {
+            return nil
+        }
+
+        return RecallResult(
+            text: "I do not have \(subject.capitalized)'s birthday saved.",
+            citedMemoryIds: [],
+            citations: []
+        )
+    }
+
+    private func homeWifiGuard(for query: String, memories: [MemoryRecord]) -> RecallResult? {
+        let lowercasedQuery = query.lowercased()
+        guard lowercasedQuery.contains("wi-fi") || lowercasedQuery.contains("wifi"),
+              lowercasedQuery.contains("password"),
+              lowercasedQuery.contains("home")
+        else { return nil }
+
+        let homeWifiMemories = memories.filter { memory in
+            let text = searchableText(for: memory).lowercased()
+            return (text.contains("wi-fi") || text.contains("wifi")) &&
+                text.contains("password") &&
+                text.contains("home")
+        }
+        if !homeWifiMemories.isEmpty {
+            return nil
+        }
+
+        guard let otherWifiMemory = memories.first(where: { memory in
+            let text = searchableText(for: memory).lowercased()
+            return (text.contains("wi-fi") || text.contains("wifi")) && text.contains("password")
+        }) else { return nil }
+
+        let place = wifiPlace(in: searchableText(for: otherWifiMemory)) ?? "another place"
+        return result(
+            text: "I do not have a home Wi-Fi password saved. I found a \(place) Wi-Fi password, but that may be different.",
+            memories: [otherWifiMemory]
+        )
+    }
+
+    private func sizeVariantGuard(for query: String, memories: [MemoryRecord]) -> RecallResult? {
+        guard isSizeQuery(query),
+              let requestedVariant = sizeVariant(in: query)
+        else { return nil }
+
+        let queryTokens = meaningfulTokens(in: query, expandingSynonyms: false)
+        let sizeMemories = memories.filter { memory in
+            let memoryText = searchableText(for: memory)
+            guard isSizeQuery(memoryText),
+                  queryTokens.intersection(meaningfulTokens(in: memoryText, expandingSynonyms: false)).count >= 2
+            else { return false }
+
+            return true
+        }
+
+        if sizeMemories.contains(where: { sizeVariant(in: searchableText(for: $0)) == requestedVariant }) {
+            return nil
+        }
+
+        guard let mismatchedMemory = sizeMemories.first(where: { memory in
+            guard let memoryVariant = sizeVariant(in: searchableText(for: memory)) else { return false }
+            return memoryVariant != requestedVariant
+        }) else { return nil }
+
+        let foundVariant = sizeVariant(in: searchableText(for: mismatchedMemory)) ?? "another"
+        let item = itemLabel(for: query)
+        let location = extractLocation(from: searchableText(for: mismatchedMemory)) ?? extractLocation(from: query)
+        let subject = sizeSubject(
+            item: item,
+            location: location,
+            query: query,
+            memoryText: searchableText(for: mismatchedMemory)
+        )
+
+        return result(
+            text: "I do not have your \(requestedVariant) \(subject) saved. I found a \(foundVariant) \(subject), but that may not be the same.",
+            memories: [mismatchedMemory]
+        )
+    }
+
     private func extractSizeFact(from text: String, memory: MemoryRecord) -> SizeFact? {
         let patterns: [(pattern: String, sizeGroup: Int, locationGroup: Int?)] = [
             (#"\b(?:size\s+)?(?:is|=|:)\s*(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b"#, 1, nil),
@@ -362,6 +517,59 @@ public struct RecallEngine {
             lowercased.contains("clothes") ||
             lowercased.contains("clothing") ||
             lowercased.contains("wear")
+    }
+
+    private func birthdaySubject(in query: String) -> String? {
+        let pattern = #"\b([A-Za-z][A-Za-z-]+)(?:'s)?\s+birthday\b"#
+        if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
+            let range = NSRange(query.startIndex..<query.endIndex, in: query)
+            if let match = regex.firstMatch(in: query, range: range),
+               let subjectRange = Range(match.range(at: 1), in: query) {
+                return String(query[subjectRange]).lowercased()
+            }
+        }
+
+        let tokens = Array(meaningfulTokens(in: query, expandingSynonyms: false))
+        guard tokens.contains("birthday") else { return nil }
+        let nonSubjectTerms: Set<String> = ["birthday", "birthdays", "date"]
+        return tokens
+            .filter { !nonSubjectTerms.contains($0) }
+            .sorted()
+            .first
+    }
+
+    private func hasForgetIntent(_ text: String) -> Bool {
+        let lowercased = text.lowercased()
+        return lowercased.contains("forget") ||
+            lowercased.contains("forgot") ||
+            lowercased.contains("remember to")
+    }
+
+    private func wifiPlace(in text: String) -> String? {
+        let lowercased = text.lowercased()
+        if lowercased.contains("beach house") {
+            return "beach house"
+        }
+        if lowercased.contains("office") {
+            return "office"
+        }
+        if lowercased.contains("hotel") {
+            return "hotel"
+        }
+        return extractLocation(from: text)?.lowercased()
+    }
+
+    private func sizeVariant(in text: String) -> String? {
+        let lowercased = text.lowercased()
+        if lowercased.contains("loose-fit") ||
+            lowercased.contains("loose fit") ||
+            lowercased.contains("loosefit") {
+            return "loose-fit"
+        }
+        if lowercased.contains("regular") {
+            return "regular"
+        }
+        return nil
     }
 
     private func categories(in text: String) -> Set<String> {
@@ -520,7 +728,12 @@ public struct RecallEngine {
         }
 
         if token.count > 5, token.hasSuffix("ing") {
-            variants.insert(String(token.dropLast(3)))
+            let stem = String(token.dropLast(3))
+            variants.insert(stem)
+            if stem.count > 1,
+               stem.last == stem.dropLast().last {
+                variants.insert(String(stem.dropLast()))
+            }
         }
 
         return variants

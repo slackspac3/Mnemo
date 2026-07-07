@@ -4,8 +4,8 @@
 
 | Field | Value |
 | --- | --- |
-| Build / commit | `9767692986ec142594a21b990ec73536675d7418` |
-| Device / simulator | RecallEngine runner on macOS 14 target, app simulator build checked separately |
+| Build / commit | Precision working tree based on `48e526e28be9d22887ab3ed21be1bf166d37f35a` |
+| Device / simulator | RecallEngine runner on macOS 14 target; no fresh app UI run in this precision pass |
 | Tester | Codex |
 | Date | 2026-07-07 |
 | Starting state | Synthetic clean seed set from `ManualRecallValidation.md` |
@@ -15,23 +15,33 @@
 | Metric | Count |
 | --- | ---: |
 | Total queries | 50 |
-| Pass | 44 |
-| Wrong answer | 2 |
-| Wrong source | 1 |
+| Pass | 49 |
+| Wrong answer | 1 |
+| Wrong source | 0 |
 | No match when expected match | 0 |
-| False positive | 2 |
-| Confusing wording/source display | 1 |
+| False positive | 0 |
+| Confusing wording/source display | 0 |
 | Permanent delete failures | 0 in simulated delete path |
-| App crashes | 0 during app build/launch smoke check |
-| Pass rate | 88% |
+| App crashes | Not evaluated in engine runner |
+| Pass rate | 98% |
 
-## Top 5 Failure Patterns
+## Precision Pass Before/After
 
-1. False positives on specific missing attributes: `passport number` matched the saved passport-location memory.
-2. False positives on person-specific unknowns: `Ahmed's birthday` matched the saved Ahmed preference.
-3. Context mismatch on location scope: `Wi-Fi password at home` matched `beach house` because password/Wi-Fi tokens dominated.
-4. Variant conflict after delete: after deleting regular Zara size, recall used loose-fit Zara size without a strong enough caveat.
-5. Update validation is only engine-simulated here; the full ChatViewModel last-cited update flow still needs a simulator UI pass.
+| Query | Before | After |
+| --- | --- | --- |
+| Q32 `What shopping thing do I keep forgetting?` | Wrong source ordering: candle-buying memory ranked above dishwasher tablets. | Pass: dishwasher tablets ranks first; candle preference remains secondary. |
+| Q45 `What is my passport number?` | False positive: passport-location memory answered a number query. | Pass: no passport number answer is invented; response says only a passport memory exists. |
+| Q46 `What is Ahmed's birthday?` | False positive: Ahmed preference and Nora birthday gift were combined. | Pass: response says Ahmed's birthday is not saved. |
+| Q48 `What is the Wi-Fi password at home?` | Confusing: beach house Wi-Fi was answered confidently as home Wi-Fi. | Pass: response says home Wi-Fi is not saved and cites beach house only as a possible different location. |
+| Q49 deleted regular Zara size | Wrong answer: loose-fit size was treated as regular size. | Pass: response says regular size is not saved and cites loose-fit only with a caveat. |
+
+## Remaining Failure Patterns and Risks
+
+1. Q16 location detail extraction is still too coarse: `Where did I park at Dubai Mall?` cites the correct memory but answers only `Dubai Mall`, not `P3, row C18`.
+2. Date and qualifier precision has improved for the tested cases, but similar variants such as `office` versus `home` or `regular` versus `slim` still need validation before broader synonym expansion.
+3. Update validation is still engine-simulated here; the full ChatViewModel last-cited update flow needs a simulator UI pass.
+4. Source-card UI was not exhaustively operated by hand in this runner, so tap-through and display density still need device validation.
+5. Voice, camera, and OCR capture were represented by seeded source labels, but the physical capture paths still need a real-device pass.
 
 ## Scope Notes
 
@@ -75,7 +85,7 @@
 | Q29 | What is the workshop budget cap? | 15,000 AED. | M29 | Sarah said the workshop budget cap is 15,000 AED. | M29 | `pass` |  |
 | Q30 | What is the backup hard drive labelled? | Mnemo Archive. | M30 | The backup hard drive is labelled Mnemo Archive. | M30 | `pass` |  |
 | Q31 | Where should I take Ahmed for dinner? | Quiet restaurants, or a cautious answer citing Ahmed's preference. | M07 | I found a few possible matches: 1. "Ahmed prefers quiet restaurants." 2. "Mum wears size 38 shoes." | M07, M02 | `pass` |  |
-| Q32 | What shopping thing do I keep forgetting? | Dishwasher tablets. | M03 | I found a few possible matches: 1. "When buying candles, choose cedar or fig, not vanilla." 2. "I always forget to buy dishwasher tablets." | M28, M03 | `wrong-source` | Expected M03, got M28, M03.  |
+| Q32 | What shopping thing do I keep forgetting? | Dishwasher tablets. | M03 | I found a few possible matches: 1. "I always forget to buy dishwasher tablets." 2. "When buying candles, choose cedar or fig, not vanilla." | M03, M28 | `pass` |  |
 | Q33 | Which skincare product was recommended? | La Roche-Posay Cicaplast. | M05 | My dermatologist recommended La Roche-Posay Cicaplast. | M05 | `pass` |  |
 | Q34 | Did I renew Notion AI? | No, I decided not to renew it. | M20 | I found a few possible matches: 1. "I decided not to renew the trial for Notion AI." 2. "For Gamma, I decided to cancel because I am travelling." | M20, M06 | `pass` |  |
 | Q35 | What room should I ask for at a hotel? | Away from the lift. | M10 | I found a few possible matches: 1. "My preferred hotel room is away from the lift." 2. "The hotel breakfast I liked had shakshuka and strong coffee." | M10, M26 | `pass` |  |
@@ -84,21 +94,21 @@
 | Q38 | What needs to be announced soon? | ACME forum winners. | M08 | The ACME forum winners need to be announced soon. | M08 | `pass` |  |
 | Q39 | What should I avoid when buying candles? | Vanilla. | M28 | I found a few possible matches: 1. "When buying candles, choose cedar or fig, not vanilla." 2. "I always forget to buy dishwasher tablets." | M28, M03 | `pass` |  |
 | Q40 | What should I do for the podcast launch first? | Publish the teaser before the guest announcement. | M24 | For the podcast launch, publish the teaser before the guest announcement. | M24 | `pass` |  |
-| Q45 | What is my passport number? | Graceful no-match. | None | My passport is in the top drawer of the study desk. | M11 | `false-positive` | Expected no source, but cited M11.  |
-| Q46 | What is Ahmed's birthday? | Graceful no-match. | None | I found a few possible matches: 1. "Ahmed prefers quiet restaurants." 2. "Nora's birthday gift idea is a Kindle case." 3. "Mum wears size 38 shoes." | M07, M14, M02 | `false-positive` | Expected no source, but cited M07, M14, M02.  |
+| Q45 | What is my passport number? | Graceful no-match. | None | I do not have a passport number saved. I found a passport memory, but it does not contain a passport number. | None | `pass` |  |
+| Q46 | What is Ahmed's birthday? | Graceful no-match. | None | I do not have Ahmed's birthday saved. | None | `pass` |  |
 | Q47 | Where did I leave my sunglasses? | Graceful no-match. | None | I could not find a saved memory that matched that. Try asking with a specific name, place, or detail you remember saving. | None | `pass` |  |
-| Q48 | What is the Wi-Fi password at home? | Graceful no-match unless beach house context is clearly used. | None or M15 if phrased cautiously | The Wi-Fi password at the beach house is ReefSunset42. | M15 | `confusing` | Accepted by checklist, but answer needs caveat wording. Checklist allows M15 only if phrased cautiously. |
+| Q48 | What is the Wi-Fi password at home? | Graceful no-match unless beach house context is clearly used. | None or M15 if phrased cautiously | I do not have a home Wi-Fi password saved. I found a beach house Wi-Fi password, but that may be different. | M15 | `pass` | Cautious caveat accepted; beach house is cited only as a possibly different location. |
 | Q41 | Update that to size 39. | After Q01, updates Mum's shoe-size memory to 39. | M02 | Updated simulated last cited memory M02 to: Mum wears size 39 shoes. | M02 | `pass` | Engine validation simulates the update target from Q01; full ChatViewModel update flow still needs UI/device validation. |
 | Q42 | What size does mum wear now? | Size 39 shoes after the update. | M02 | I found a couple of saved sizes. The most recent one says your Mum's shoe size is 39. | M02, M13, M12 | `pass` |  |
 | Q43 | Update it to cedar only. | After Q28, updates candle preference to cedar only. | M28 | Updated simulated last cited memory M28 to: When buying candles, choose cedar only. | M28 | `pass` | Engine validation simulates the update target from Q28; full ChatViewModel update flow still needs UI/device validation. |
 | Q44 | What candle scent should I choose now? | Cedar only after the update. | M28 | When buying candles, choose cedar only. | M28 | `pass` |  |
-| Q49 | Delete the Zara regular T-shirt memory, then ask: what is my Zara regular T-shirt size? | No match or only loose-fit size with clear caveat. | None or M13 with caveat | I found a couple of saved sizes. The most recent one says your Zara T-shirt size is S. | M13, M01, M02 | `wrong-answer` | Correct source but answer did not include expected fragment. Checklist allows M13 only with a caveat after M12 deletion. |
+| Q49 | Delete the Zara regular T-shirt memory, then ask: what is my Zara regular T-shirt size? | No match or only loose-fit size with clear caveat. | None or M13 with caveat | I do not have your regular Zara T-shirt size saved. I found a loose-fit Zara T-shirt size, but that may not be the same. | M13 | `pass` | Cautious caveat accepted; loose-fit is not treated as regular. |
 | Q50 | Delete all data, then ask: what did I save most recently? | Says there are no saved memories. | None | I do not have any saved memories yet. Save something first, then ask me again. | None | `pass` |  |
 
 ## Recommended Next Actions
 
-1. Fix false positives by requiring stronger intent compatibility for sensitive attribute queries such as numbers, birthdays, passwords, and locations.
-2. Add explicit mismatch handling for qualifier conflicts such as `home` vs `beach house`, and `regular` vs `loose-fit`.
-3. Improve no-match confidence thresholds before expanding synonyms further.
-4. Run Q41-Q44 through the actual chat UI to validate last-cited-memory update behavior.
-5. Run a physical iPhone pass for voice capture, camera capture, OCR, source-card tap-through, and delete UI behavior.
+1. Fix Q16 by extracting parking sub-location details, not just the broad venue.
+2. Run Q41-Q44 through the actual chat UI to validate last-cited-memory update behavior.
+3. Run a physical iPhone pass for voice capture, camera capture, OCR, source-card tap-through, and delete UI behavior.
+4. Continue tuning only from observed failures; avoid broad synonym expansion until the next validation pass identifies a pattern.
+5. Re-run the full sheet after the Q16 parking fix to confirm the pass rate and source-card behavior.

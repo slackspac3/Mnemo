@@ -47,6 +47,120 @@ struct RecallEngineTests {
         #expect(result.text.localizedCaseInsensitiveContains("could not find"))
     }
 
+    @Test("Passport number query does not answer from passport location")
+    @MainActor
+    func passportNumberDoesNotUseLocationMemory() {
+        let memory = Self.makeMemory(
+            "My passport is in drawer 2 of the study desk.",
+            type: .fact,
+            source: .image,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my passport number?",
+            memories: [memory]
+        )
+
+        #expect(result.text.localizedCaseInsensitiveContains("do not have a passport number saved"))
+        #expect(!result.text.localizedCaseInsensitiveContains("drawer 2"))
+        #expect(result.citedMemoryIds.isEmpty)
+    }
+
+    @Test("Birthday query requires the requested person and birthday in one memory")
+    @MainActor
+    func personBirthdayRequiresSamePersonEvidence() {
+        let memories = [
+            Self.makeMemory(
+                "Ahmed prefers quiet restaurants.",
+                type: .preference,
+                source: .text,
+                createdAt: referenceDate
+            ),
+            Self.makeMemory(
+                "Nora's birthday gift idea is a Kindle case.",
+                type: .fact,
+                source: .voice,
+                createdAt: referenceDate.addingTimeInterval(60)
+            ),
+        ]
+
+        let result = RecallEngine().recall(
+            query: "What is Ahmed's birthday?",
+            memories: memories
+        )
+
+        #expect(result.text.localizedCaseInsensitiveContains("do not have Ahmed's birthday saved"))
+        #expect(result.citedMemoryIds.isEmpty)
+    }
+
+    @Test("Home Wi-Fi query does not confidently answer with beach house password")
+    @MainActor
+    func homeWifiUsesCautiousBeachHouseCaveat() {
+        let memory = Self.makeMemory(
+            "The Wi-Fi password at the beach house is ReefSunset42.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is the Wi-Fi password at home?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("do not have a home Wi-Fi password saved"))
+        #expect(result.text.localizedCaseInsensitiveContains("beach house"))
+        #expect(result.text.localizedCaseInsensitiveContains("may be different"))
+    }
+
+    @Test("Regular size query returns caveat when only loose-fit size exists")
+    @MainActor
+    func regularSizeDoesNotCollapseToLooseFit() {
+        let memory = Self.makeMemory(
+            "My loose-fit T-shirt size at Zara is S.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my Zara regular T-shirt size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("do not have your regular Zara T-shirt size saved"))
+        #expect(result.text.localizedCaseInsensitiveContains("loose-fit Zara T-shirt size"))
+        #expect(result.text.localizedCaseInsensitiveContains("may not be the same"))
+    }
+
+    @Test("Forget-to-buy query prioritises forgotten shopping memory")
+    @MainActor
+    func forgetToBuyIntentRanksForgottenItemFirst() {
+        let dishwasher = Self.makeMemory(
+            "I always forget to buy dishwasher tablets.",
+            type: .list,
+            source: .voice,
+            createdAt: referenceDate
+        )
+        let candles = Self.makeMemory(
+            "When buying candles, choose cedar or fig, not vanilla.",
+            type: .preference,
+            source: .voice,
+            createdAt: referenceDate.addingTimeInterval(60)
+        )
+
+        let result = RecallEngine().recall(
+            query: "What shopping thing do I keep forgetting?",
+            memories: [dishwasher, candles]
+        )
+
+        #expect(result.citedMemoryIds.first == dishwasher.id)
+        #expect(result.text.localizedCaseInsensitiveContains("dishwasher tablets"))
+    }
+
     @MainActor
     private static func launchMemories(referenceDate: Date) -> [MemoryRecord] {
         [
