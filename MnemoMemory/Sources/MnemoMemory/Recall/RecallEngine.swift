@@ -286,6 +286,10 @@ public struct RecallEngine {
             return result
         }
 
+        if let result = personSizeGuard(for: query, memories: memories) {
+            return result
+        }
+
         if let result = sizeVariantGuard(for: query, memories: memories) {
             return result
         }
@@ -365,6 +369,26 @@ public struct RecallEngine {
         return result(
             text: "I do not have a home Wi-Fi password saved. I found a \(place) Wi-Fi password, but that may be different.",
             memories: [otherWifiMemory]
+        )
+    }
+
+    private func personSizeGuard(for query: String, memories: [MemoryRecord]) -> RecallResult? {
+        guard let subject = sizePersonSubject(in: query) else { return nil }
+
+        let matchingSizeMemories = memories.filter { memory in
+            let memoryText = searchableText(for: memory)
+            let tokens = meaningfulTokens(in: memoryText, expandingSynonyms: false)
+            return tokens.contains(subject) &&
+                extractSizeFact(from: memoryText, memory: memory) != nil
+        }
+        if !matchingSizeMemories.isEmpty {
+            return nil
+        }
+
+        return RecallResult(
+            text: "I do not have \(displayName(for: subject))'s size saved.",
+            citedMemoryIds: [],
+            citations: []
         )
     }
 
@@ -608,6 +632,32 @@ public struct RecallEngine {
             return "hotel"
         }
         return extractLocation(from: text)?.lowercased()
+    }
+
+    private func sizePersonSubject(in query: String) -> String? {
+        guard isSizeQuery(query) else { return nil }
+
+        let patterns = [
+            #"\bwhat\s+size\s+does\s+([A-Za-z][A-Za-z-]+)\s+wear\b"#,
+            #"\b([A-Za-z][A-Za-z-]+)(?:'s)?\s+(?:shoe\s+|shirt\s+|t-shirt\s+|t\s+shirt\s+)?size\b"#,
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+                continue
+            }
+            let range = NSRange(query.startIndex..<query.endIndex, in: query)
+            guard let match = regex.firstMatch(in: query, range: range),
+                  let subjectRange = Range(match.range(at: 1), in: query)
+            else { continue }
+
+            let subject = String(query[subjectRange]).lowercased()
+            if !Self.genericSizeSubjects.contains(subject) {
+                return subject
+            }
+        }
+
+        return nil
     }
 
     private func sizeVariant(in text: String) -> String? {
@@ -889,6 +939,19 @@ public struct RecallEngine {
         )
     }
 
+    private func displayName(for subject: String) -> String {
+        switch subject {
+        case "mum":
+            return "Mum"
+        case "mom":
+            return "Mom"
+        case "mother":
+            return "Mother"
+        default:
+            return subject.capitalized
+        }
+    }
+
     private func uniqueMemories(_ memories: [MemoryRecord]) -> [MemoryRecord] {
         var seenIds = Set<UUID>()
         return memories.filter { memory in
@@ -931,6 +994,20 @@ public struct RecallEngine {
 
     private static let genericNotableTerms: Set<String> = [
         "about", "always", "because", "memory", "preferred", "prefer", "recommended", "remember"
+    ]
+
+    private static let genericSizeSubjects: Set<String> = [
+        "clothes",
+        "clothing",
+        "loose",
+        "regular",
+        "shirt",
+        "shoe",
+        "shoes",
+        "size",
+        "tshirt",
+        "wear",
+        "zara"
     ]
 
     private static let synonyms: [String: Set<String>] = [

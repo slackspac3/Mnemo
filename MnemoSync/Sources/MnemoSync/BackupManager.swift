@@ -6,9 +6,8 @@ import SwiftData
 import CryptoKit
 
 /// Orchestrates the full backup sequence.
-/// Encryption key is generated in the Secure Enclave and never included
-/// in the backup payload. Restore requires the same device or
-/// iCloud Keychain key sync.
+/// Encryption uses a symmetric key stored by MnemoSecurity in the Keychain.
+/// The key is never included in the backup payload.
 public final class BackupManager: Sendable {
 
     public static let encryptionKeyIdentifier = "com.mnemo.backup.encryption.key"

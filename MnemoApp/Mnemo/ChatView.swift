@@ -13,6 +13,10 @@ struct ChatView: View {
     @Query(sort: \MemoryRecord.createdAt, order: .reverse) private var records: [MemoryRecord]
     @State private var selectedSourceMemory: ChatSelectedMemory?
 
+    private var activeRecords: [MemoryRecord] {
+        records.filter { !$0.isArchived }
+    }
+
     var body: some View {
         @Bindable var viewModel = viewModel
 
@@ -26,7 +30,7 @@ struct ChatView: View {
                             LazyVStack(spacing: DS.Spacing.md) {
                                 if viewModel.messages.isEmpty && !viewModel.isProcessing {
                                     EmptyChatLanding(
-                                        hasSavedMemories: !records.isEmpty,
+                                        hasSavedMemories: !activeRecords.isEmpty,
                                         onText: {
                                             coordinator.present(.captureText)
                                         },
@@ -55,7 +59,7 @@ struct ChatView: View {
                                         .id(message.id)
                                 }
 
-                                if !viewModel.messages.isEmpty && records.isEmpty && !viewModel.isProcessing {
+                                if !viewModel.messages.isEmpty && activeRecords.isEmpty && !viewModel.isProcessing {
                                     EmptyMemoryRecoveryPanel(
                                         onText: {
                                             coordinator.present(.captureText)
@@ -269,11 +273,16 @@ struct CitationSection: View {
                                 .foregroundStyle(DS.Colours.accent)
                                 .frame(width: DS.Spacing.md)
 
-                            Text("\"\(citation.summary)\"")
-                                .font(DS.Typography.caption1)
-                                .foregroundStyle(DS.Colours.textSecondary)
-                                .lineLimit(3)
-                                .multilineTextAlignment(.leading)
+                            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                                Text(citation.source)
+                                    .font(DS.Typography.caption2)
+                                    .foregroundStyle(DS.Colours.textTertiary)
+                                Text("\"\(citation.summary)\"")
+                                    .font(DS.Typography.caption1)
+                                    .foregroundStyle(DS.Colours.textSecondary)
+                                    .lineLimit(3)
+                                    .multilineTextAlignment(.leading)
+                            }
 
                             Spacer(minLength: DS.Spacing.xs)
                         }

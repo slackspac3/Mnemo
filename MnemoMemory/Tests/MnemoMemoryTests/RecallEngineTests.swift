@@ -136,6 +136,52 @@ struct RecallEngineTests {
         #expect(result.text.localizedCaseInsensitiveContains("may not be the same"))
     }
 
+    @Test("Person size query does not answer from unrelated size memories")
+    @MainActor
+    func personSizeQueryDoesNotUseUnrelatedSizeMemory() {
+        let memories = [
+            Self.makeMemory(
+                "My size in Zara for t shirt is M and for blazer is S Loose Fit.",
+                type: .fact,
+                source: .text,
+                createdAt: referenceDate
+            ),
+            Self.makeMemory(
+                "size 39.",
+                type: .fact,
+                source: .text,
+                createdAt: referenceDate.addingTimeInterval(60)
+            ),
+        ]
+
+        let result = RecallEngine().recall(
+            query: "What size does Tania wear now?",
+            memories: memories
+        )
+
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.text.localizedCaseInsensitiveContains("do not have Tania's size saved"))
+    }
+
+    @Test("Person size query still answers when that person's size exists")
+    @MainActor
+    func personSizeQueryUsesMatchingPersonMemory() {
+        let memory = Self.makeMemory(
+            "Tania wears size 41 shoes.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What size does Tania wear now?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("41"))
+    }
+
     @Test("Forget-to-buy query prioritises forgotten shopping memory")
     @MainActor
     func forgetToBuyIntentRanksForgottenItemFirst() {

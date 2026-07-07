@@ -6,7 +6,7 @@ import SwiftData
 import CryptoKit
 
 /// Handles restore from an encrypted CloudKit backup.
-/// Decrypts the payload using the Secure Enclave-derived key,
+/// Decrypts the payload using the Keychain-stored backup key,
 /// then re-inserts all records into SwiftData.
 public final class RestoreManager: Sendable {
 

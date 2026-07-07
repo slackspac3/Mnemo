@@ -136,7 +136,7 @@ struct ProcessingModeStepContent: View {
 
             ProcessingOptionCard(
                 icon: "cloud.fill",
-                title: "On-Device + Cloud Assist",
+                title: "Future Cloud Assist",
                 description: "Cloud Assist is a future opt-in route for ambiguous captures. In this build, captures stay on this device.",
                 isSelected: !viewModel.onDeviceOnly,
                 color: DS.Colours.textSecondary

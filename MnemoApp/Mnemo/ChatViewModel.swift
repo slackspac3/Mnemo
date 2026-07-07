@@ -138,16 +138,16 @@ final class ChatViewModel {
         requestedSize: String,
         context: ModelContext
     ) async throws -> RecallResponse? {
-        let sizeMemories = citedMemories.filter { memory in
+        guard let sizeMemory = citedMemories.first(where: { memory in
             extractSizeFact(from: searchableText(for: memory), memory: memory) != nil
-        }
-        guard !sizeMemories.isEmpty else {
+        }) else {
             return RecallResponse(
                 text: "I found the memory you were referring to, but I could not find a size in it to update.",
                 citedMemoryIds: citedMemories.map(\.id),
                 citations: citations(for: citedMemories)
             )
         }
+        let sizeMemories = [sizeMemory]
 
         let normalisedSize = normaliseSize(requestedSize)
         let displaySize = displaySize(for: normalisedSize)
@@ -279,7 +279,7 @@ final class ChatViewModel {
         else { return nil }
 
         let patterns = [
-            #"\b(?:update|change|set|make)\b.*\b(?:to|as)\s+(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b"#,
+            #"\b(?:update|change|set|make)\b.*\b(?:to|as)\s+(?:size\s+)?(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b"#,
             #"\bnow\s+(?:it\s+)?(?:is|=)\s*(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\b"#,
         ]
 
@@ -379,9 +379,11 @@ final class ChatViewModel {
     }
 
     private func lastCitedMemoryIds() -> [UUID] {
-        messages.reversed().first { message in
-            message.role == .assistant && !message.citedMemoryIds.isEmpty
-        }?.citedMemoryIds ?? []
+        guard messages.last?.role == .user else { return [] }
+        guard let previousAssistant = messages.dropLast().reversed().first(where: { message in
+            message.role == .assistant
+        }) else { return [] }
+        return Array(previousAssistant.citedMemoryIds.prefix(1))
     }
 
     private func replacingSize(in text: String, with displaySize: String) -> String {

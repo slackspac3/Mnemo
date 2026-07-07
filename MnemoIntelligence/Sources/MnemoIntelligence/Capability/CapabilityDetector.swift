@@ -2,9 +2,8 @@ import Foundation
 import MnemoCore
 
 /// Detects device capability tier at app launch.
-/// Checks Apple Intelligence availability and Mnemo's own MLX model availability
-/// as two independent checks — a device can fail the Apple Intelligence gate
-/// (A17 Pro / M1 requirement) while still being capable of running the bundled MLX model.
+/// Checks coarse device capability for future model routes.
+/// Production Foundation Models and MLX execution are not active in this build.
 public final class CapabilityDetector: Sendable {
 
     public init() {}
@@ -63,9 +62,7 @@ public final class CapabilityDetector: Sendable {
     }
 
     private func checkMnemoMLX() -> Bool {
-        // Mnemo's own bundled model requires Apple Silicon Neural Engine.
-        // All devices running iOS 18+ have sufficient Neural Engine capability
-        // to run Phi-3 Mini class models. Conservative: return true for iOS 18+.
+        // Placeholder: real MLX availability must check bundled assets and runtime support.
         return true
     }
 }

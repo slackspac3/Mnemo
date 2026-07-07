@@ -15,6 +15,7 @@ struct CaptureTextSheet: View {
     @State private var inputText = ""
     @State private var extractionResult: ExtractionResult?
     @State private var isExtracting = false
+    @State private var isSaving = false
     @State private var errorMessage: String?
 
     private let handler = TextCaptureHandler()
@@ -29,9 +30,16 @@ struct CaptureTextSheet: View {
                     if let result = extractionResult {
                         ExtractionConfirmView(
                             result: result,
+                            isSaving: isSaving,
                             onConfirm: { save(result: result) },
-                            onEdit: { extractionResult = nil },
-                            onDiscard: { dismiss() }
+                            onEdit: {
+                                guard !isSaving else { return }
+                                extractionResult = nil
+                            },
+                            onDiscard: {
+                                guard !isSaving else { return }
+                                dismiss()
+                            }
                         )
                     } else {
                         TextInputView(
@@ -91,8 +99,13 @@ struct CaptureTextSheet: View {
     }
 
     private func save(result: ExtractionResult) {
+        guard !isSaving else { return }
+        isSaving = true
+        errorMessage = nil
+        let rawInput = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+
         let record = MemoryRecord(
-            rawInput: inputText,
+            rawInput: rawInput,
             summary: result.summary,
             memoryType: result.memoryType,
             persistenceScore: result.persistenceScore,
@@ -111,6 +124,7 @@ struct CaptureTextSheet: View {
                 }
             } catch {
                 await MainActor.run {
+                    isSaving = false
                     errorMessage = "Could not save memory. Try again."
                 }
             }
@@ -124,6 +138,8 @@ struct TextInputView: View {
     let onExtract: () -> Void
 
     var body: some View {
+        let canSave = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
         VStack(spacing: DS.Spacing.lg) {
             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
                 Text("What do you want to remember?")
@@ -152,11 +168,11 @@ struct TextInputView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: DS.ComponentTokens.PrimaryButton.height)
-                .background(text.isEmpty ? DS.Colours.textTertiary : DS.Colours.accent)
+                .background(canSave ? DS.Colours.accent : DS.Colours.textTertiary)
                 .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
-            .disabled(text.isEmpty || isExtracting)
+            .disabled(!canSave || isExtracting)
 
             Spacer()
         }
@@ -165,6 +181,7 @@ struct TextInputView: View {
 
 struct ExtractionConfirmView: View {
     let result: ExtractionResult
+    let isSaving: Bool
     let onConfirm: () -> Void
     let onEdit: () -> Void
     let onDiscard: () -> Void
@@ -197,7 +214,7 @@ struct ExtractionConfirmView: View {
 
                     Spacer()
 
-                    Text("\(Int(result.confidence * 100))% confident")
+                    Text(confidenceLabel)
                         .font(DS.Typography.caption1)
                         .foregroundStyle(result.confidence > 0.70 ? DS.Colours.success : DS.Colours.warning)
                 }
@@ -221,14 +238,22 @@ struct ExtractionConfirmView: View {
 
             VStack(spacing: DS.Spacing.sm) {
                 Button(action: onConfirm) {
-                    Text("Save Memory")
-                        .font(DS.Typography.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: DS.ComponentTokens.PrimaryButton.height)
-                        .background(DS.Colours.accent)
-                        .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                    HStack {
+                        if isSaving {
+                            ProgressView()
+                                .tint(DS.ComponentTokens.PrimaryButton.foreground)
+                        } else {
+                            Text("Save Memory")
+                                .font(DS.Typography.headline)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: DS.ComponentTokens.PrimaryButton.height)
+                    .background(DS.Colours.accent)
+                    .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+                .disabled(isSaving)
 
                 Button(action: onEdit) {
                     Text("Edit")
@@ -239,15 +264,21 @@ struct ExtractionConfirmView: View {
                         .foregroundStyle(DS.Colours.textPrimary)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+                .disabled(isSaving)
 
                 Button(action: onDiscard) {
                     Text("Discard")
                         .font(DS.Typography.body)
                         .foregroundStyle(DS.Colours.textSecondary)
                 }
+                .disabled(isSaving)
             }
 
             Spacer()
         }
+    }
+
+    private var confidenceLabel: String {
+        result.confidence < 0.50 ? "Review suggested" : "\(Int(result.confidence * 100))% confident"
     }
 }

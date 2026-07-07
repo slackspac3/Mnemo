@@ -49,7 +49,10 @@ struct BrowseView: View {
                 }
             }
             .filter { record in
-                searchText.isEmpty || record.summary.localizedCaseInsensitiveContains(searchText)
+                searchText.isEmpty ||
+                    record.summary.localizedCaseInsensitiveContains(searchText) ||
+                    record.rawInput.localizedCaseInsensitiveContains(searchText) ||
+                    record.tags.contains { $0.localizedCaseInsensitiveContains(searchText) }
             }
     }
 

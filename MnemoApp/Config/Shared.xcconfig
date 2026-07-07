@@ -26,8 +26,8 @@ TARGETED_DEVICE_FAMILY = 1,2
 GENERATE_INFOPLIST_FILE = YES
 INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationLandscapeRight UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait
 INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationLandscapeRight UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
-INFOPLIST_KEY_NSMicrophoneUsageDescription = Mnemo uses your microphone to capture voice notes. Audio is transcribed on your device and never uploaded.
-INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = Mnemo uses speech recognition to transcribe your voice notes privately on your device.
+INFOPLIST_KEY_NSMicrophoneUsageDescription = Mnemo uses your microphone to capture voice notes for memory capture.
+INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = Mnemo uses speech recognition to transcribe your voice notes for memory capture.
 INFOPLIST_KEY_NSCameraUsageDescription = Mnemo uses your camera to capture images for memory extraction. Photos are processed on your device.
 INFOPLIST_KEY_NSPhotoLibraryUsageDescription = Mnemo reads photos from your library to extract memory information. Images are processed on your device.
 

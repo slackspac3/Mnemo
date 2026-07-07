@@ -3,8 +3,8 @@ import MnemoCore
 
 /// Metadata record for a Mnemo backup archive.
 /// Stored alongside the encrypted backup in CloudKit.
-/// The encryption key reference points to the Secure Enclave key -
-/// it is never included in the backup payload itself.
+/// The encryption key reference points to a Keychain-stored symmetric key.
+/// The key is never included in the backup payload itself.
 public struct BackupManifest: Codable, Sendable, Identifiable {
     public let id: UUID
     public let createdAt: Date

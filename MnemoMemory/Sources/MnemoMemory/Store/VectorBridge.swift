@@ -1,6 +1,7 @@
 import Foundation
 import SQLite3
 import MnemoCore
+import MnemoSecurity
 
 /// Actor-isolated interface to the sqlite-vec vector store.
 /// Phase 12: live sqlite-vec implementation replacing the Phase 3 mock.
@@ -18,7 +19,22 @@ public actor VectorBridge {
     private let dbURL: URL
     private static let dimensions = 26
 
-    public init() {
+    public init(databaseURL: URL? = nil) {
+        if let databaseURL {
+            try? FileManager.default.createDirectory(
+                at: databaseURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            self.dbURL = databaseURL
+            return
+        }
+
+        if Self.isRunningTests {
+            self.dbURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("mnemo_vectors_\(ProcessInfo.processInfo.processIdentifier).sqlite")
+            return
+        }
+
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -46,6 +62,35 @@ public actor VectorBridge {
             throw VectorBridgeError.executionFailed("busy timeout")
         }
         try createTable()
+        try configureDatabaseSecurity()
+    }
+
+    private func configureDatabaseSecurity() throws {
+        guard sqlite3_exec(db, "PRAGMA secure_delete = ON;", nil, nil, nil) == SQLITE_OK else {
+            throw VectorBridgeError.executionFailed("secure delete")
+        }
+
+        #if targetEnvironment(simulator)
+        return
+        #else
+        let fileManager = FileManager.default
+        for url in vectorFileURLs where fileManager.fileExists(atPath: url.path) {
+            try SecurityLayer.shared.applyFileProtection(to: url)
+        }
+        #endif
+    }
+
+    private var vectorFileURLs: [URL] {
+        [
+            dbURL,
+            URL(fileURLWithPath: dbURL.path + "-shm"),
+            URL(fileURLWithPath: dbURL.path + "-wal"),
+        ]
+    }
+
+    private static var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+            Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
     }
 
     private func createTable() throws {

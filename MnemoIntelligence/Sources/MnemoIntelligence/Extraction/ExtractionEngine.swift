@@ -6,7 +6,7 @@ import MnemoMemory
 /// Order of operations:
 /// 1. Check corroboration (VectorBridge query)
 /// 2. Build extraction prompt
-/// 3. Attempt on-device extraction (Foundation Models, then MLX)
+/// 3. Attempt model extraction hooks (currently stubbed)
 /// 4. If confidence < threshold AND cloud permitted: escalate
 /// 5. Parse JSON response into ExtractionResult
 /// 6. Return result with correct processingTier and modalityThresholdUsed
@@ -56,7 +56,7 @@ public final class ExtractionEngine: Sendable {
             userContext: userContext
         )
 
-        // Attempt Foundation Models first
+        // Attempt Foundation Models hook first. It returns nil until production inference is wired.
         if let response = try await foundationLoader.generate(prompt: prompt) {
             let result = jsonParser.parse(
                 json: response,
@@ -69,7 +69,7 @@ public final class ExtractionEngine: Sendable {
             }
         }
 
-        // Attempt MLX fallback
+        // Attempt MLX fallback hook. It returns nil until production inference is wired.
         if let response = try await mlxLoader.generate(prompt: prompt) {
             let result = jsonParser.parse(
                 json: response,
@@ -89,12 +89,12 @@ public final class ExtractionEngine: Sendable {
                 rawText: anonymisedText,
                 userContext: userContext
             )
-            // Cloud provider called via ModelRouter in Phase 6.
-            // For Phase 4, return a low-confidence on-device result.
+            // Cloud provider is not configured in this build.
+            // Fall through to the low-confidence local review result.
             _ = cloudPrompt
         }
 
-        // Final fallback: return low-confidence result from raw input
+        // Final fallback: return low-confidence result from raw input for user review.
         return ExtractionResult(
             summary: String(rawText.prefix(200)),
             memoryType: .fact,

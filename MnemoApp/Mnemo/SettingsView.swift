@@ -182,7 +182,9 @@ struct SettingsView: View {
             try modelContext.delete(model: ConflictRecord.self)
             try modelContext.delete(model: PersonSubject.self)
             try modelContext.save()
+            NavigationCoordinator.shared.dismiss()
             appState.onboardingComplete = false
+            dismiss()
         } catch {
             destructiveErrorMessage = "Could not delete all data. Try again before removing the app."
         }
@@ -227,11 +229,11 @@ struct DeviceTierRow: View {
     var tierLabel: String {
         switch capability.tier {
         case .full:
-            return "Local Processing Ready"
+            return "Local Recall Ready"
         case .standard:
-            return "Local Processing Ready"
+            return "Local Recall Ready"
         case .mlxOnly:
-            return "Local Processing Ready"
+            return "Local Recall Ready"
         case .cloudPrimary:
             return "Local Only in This Build"
         case .unsupported:
