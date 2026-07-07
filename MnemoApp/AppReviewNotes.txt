@@ -15,7 +15,7 @@ AI AND EXTRACTION STATUS
 The codebase contains routing hooks for Apple Foundation Models and a future MLX model, but this build does not bundle a production Foundation Models or MLX embedding model. No cloud LLM provider is configured in this build, and no external LLM requests are made in this build.
 
 BACKUP
-CloudKit backup uses the user's own iCloud account. Mnemo does not operate a server for backup storage. Current restore requires the local Keychain backup key on this device, so this build should not be described as lost-device recovery until that path is validated.
+CloudKit backup uses the user's own iCloud account. Mnemo does not operate a server for backup storage. Current restore requires the local Keychain backup key on this iPhone, so this build should not be described as lost-device or new-device recovery.
 
 APP LOCK / BIOMETRICS
 Optional App Lock uses iOS LocalAuthentication only, using Face ID, Touch ID, or the device passcode where available. Mnemo does not receive, store, or upload biometric data, biometric templates, passcodes, account credentials, or backend identity data.
@@ -26,6 +26,7 @@ These are requested contextually only when the user first uses each feature:
 - Microphone: when user taps the voice capture button
 - Camera/Photos: when user taps the image capture button
 - Notifications: not requested during onboarding in this build. Future Memory Moments reminders are shown as not active.
+- Background refresh: not registered or scheduled in this build. Memory Moments and automatic thread suggestions are not active V1 features.
 
 TESTING THE APP
 1. Complete onboarding.
@@ -34,10 +35,11 @@ TESTING THE APP
 4. In Chat, ask about what was saved to test local recall.
 5. Browse shows captured memories.
 6. Settings shows privacy controls, backup/restore, inactive Sense feature labels, and delete-all-data controls.
+7. Threads is not shown as a primary tab in this V1 build because automatic thread suggestions are not active.
 
 SANDBOX / TEST ACCOUNT
 No Mnemo account, sign-up, login, or test credentials are required. The app does not create a backend identity.
-The app is usable without iCloud. Optional iCloud backup uses the reviewer's signed-in Apple ID/iCloud account only; Mnemo does not operate an account server.
+The app is usable without iCloud. Optional iCloud backup uses the reviewer's signed-in Apple ID/iCloud account only; Mnemo does not operate an account server or backup server.
 
 BUNDLE ID: com.thinkact.mnemo
 DEVELOPER: Think Act Management Consulting L.L.C

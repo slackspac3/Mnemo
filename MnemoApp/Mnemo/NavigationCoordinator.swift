@@ -15,14 +15,12 @@ final class NavigationCoordinator {
     enum Tab: String, CaseIterable {
         case chat = "Chat"
         case browse = "Browse"
-        case threads = "Threads"
         case capture = "Capture"
 
         var icon: String {
             switch self {
             case .chat: return "bubble.left.and.bubble.right"
             case .browse: return "square.grid.2x2"
-            case .threads: return "link"
             case .capture: return "plus.circle.fill"
             }
         }
@@ -33,8 +31,6 @@ final class NavigationCoordinator {
         case captureVoice
         case captureImage(ImageCaptureSource)
         case settings
-        case memoryDetail(UUID)
-        case threadProposal(UUID)
 
         var id: String {
             switch self {
@@ -46,10 +42,6 @@ final class NavigationCoordinator {
                 return "captureImage-\(source.rawValue)"
             case .settings:
                 return "settings"
-            case .memoryDetail(let id):
-                return "memoryDetail-\(id)"
-            case .threadProposal(let id):
-                return "threadProposal-\(id)"
             }
         }
     }

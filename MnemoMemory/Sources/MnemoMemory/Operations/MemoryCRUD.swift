@@ -23,7 +23,16 @@ public struct MemoryCRUD {
         try context.save()
 
         let helper = EmbeddingHelper()
-        try await helper.index(id: record.id, summary: record.summary)
+        do {
+            try await helper.index(id: record.id, summary: record.summary)
+        } catch {
+            do {
+                try await helper.index(id: record.id, summary: record.summary)
+            } catch {
+                try? await rebuildIndex(in: context)
+                throw error
+            }
+        }
     }
 
     /// Rebuild the VectorBridge index from the current non-archived SwiftData store.

@@ -32,7 +32,7 @@ These arguments are ignored outside DEBUG builds and do not change production pr
 
 | Flow | Method | Environment | Expected | Actual | Outcome | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| Onboarding completion | XcodeBuildMCP simulator QA | Simulator | First-run onboarding reaches main Chat | Welcome, privacy, inactive Memory Moments, backup deferral, and completion screens were exercised, then main Chat appeared | Pass | No physical-device permissions were claimed. |
+| Onboarding completion | XcodeBuildMCP simulator QA | Simulator | First-run onboarding reaches main Chat | Welcome, source-backed recall, optional App Lock/no-account, and completion screens were exercised, then main Chat appeared | Pass | No physical-device permissions were claimed and onboarding does not seed memories. |
 | Text capture -> Browse -> Chat | XcodeBuildMCP simulator QA + accessibility IDs | Simulator | Correct answer and source | Saved `Mum wears size 38 shoes.`, saw it in Browse, asked `What size does mum wear?`, and Chat returned the correct answer with a source card | Pass | Stable IDs now exist for future XCUITest coverage. |
 | Source card tap-through | XcodeBuildMCP simulator QA + accessibility IDs | Simulator | Opens correct memory | Tapping the primary source card opened `MemoryDetailView` for the cited Mum memory | Pass | `MemoryDetailView` has stable identifiers for title/archive/delete. |
 | Last-cited update | XcodeBuildMCP simulator QA + manual bug report | Simulator/source | Updates cited memory and uses correct owner in reply | `Update that to size 39.` updated the last cited memory and follow-up recall returned `Mum` with size 39 | Pass after fix | This pass also fixes the reported update confirmation copy so it preserves `Mum's shoe size` instead of saying `Your size`. |
@@ -56,23 +56,23 @@ Result:
 - Build/install/launch: `SUCCEEDED`
 - XcodeBuildMCP diagnostics: zero warnings, zero errors
 - Runtime snapshot: `SUCCEEDED`
-- Snapshot hash: `1kqnomw`
+- Snapshot hash: `0kdlf1k`
 - Snapshot confirmed target identifiers for:
   - `capture.text.open`
   - `capture.voice.open`
   - `capture.camera.open`
   - `capture.photo.open`
   - `chat.input`
-  - `chat.homeButton`
   - `tab.settings`
-  - `tab.capture`
   - `tab.browse`
-  - `tab.threads`
+  - Chat tab target
+  - Threads is intentionally absent from the V1 tab bar.
 
 ## Accessibility Identifiers Added
 
 - Onboarding: `onboarding.continue`, `onboarding.complete`
-- Main navigation: `main.tabView`, `tab.chat`, `tab.browse`, `tab.threads`, `tab.capture`, `tab.settings`
+- Main navigation: `main.tabView`, `tab.chat`, `tab.browse`
+- Global controls: `tab.settings`; the floating capture button keeps the legacy `tab.capture` identifier for test compatibility even though it is not a tab bar item.
 - Text capture: `capture.text.open`, `capture.text.input`, `capture.text.extract`, `capture.text.review`, `capture.text.save`, `capture.text.dismiss`
 - Browse: `browse.screen`, `browse.memoryCell`
 - Chat: `chat.landing`, `chat.input`, `chat.send`, `chat.message.user`, `chat.message.assistant`, `chat.sourceCard`, `chat.sourceCard.primary`, `chat.sourceCard.sourceType`

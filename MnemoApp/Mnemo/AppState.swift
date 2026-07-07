@@ -17,6 +17,7 @@ final class AppState {
     var isAppLocked: Bool = false
     var isAuthenticatingAppLock: Bool = false
     var appLockErrorMessage: String?
+    var isPrivacyShieldVisible: Bool = false
 
     private let appLockPolicy = AppLockPolicy(backgroundGracePeriod: 0)
     private var backgroundedAt: Date?
@@ -56,11 +57,14 @@ final class AppState {
         switch scenePhase {
         case .background:
             backgroundedAt = Date()
+            showPrivacyShieldIfNeeded()
             lockIfNeeded()
         case .active:
-            break
+            if !isAppLocked {
+                isPrivacyShieldVisible = false
+            }
         case .inactive:
-            break
+            showPrivacyShieldIfNeeded()
         @unknown default:
             break
         }
@@ -83,6 +87,7 @@ final class AppState {
             )
             if success {
                 isAppLocked = false
+                isPrivacyShieldVisible = false
                 backgroundedAt = nil
             } else {
                 appLockErrorMessage = "Mnemo is still locked. Try again when you are ready."
@@ -99,6 +104,7 @@ final class AppState {
         appLockEnabled = enabled
         if !enabled {
             isAppLocked = false
+            isPrivacyShieldVisible = false
             appLockErrorMessage = nil
             backgroundedAt = nil
         }
@@ -109,9 +115,16 @@ final class AppState {
         onboardingComplete = false
         appLockEnabled = false
         isAppLocked = false
+        isPrivacyShieldVisible = false
         isAuthenticatingAppLock = false
         appLockErrorMessage = nil
         backgroundedAt = nil
+    }
+
+    @MainActor
+    private func showPrivacyShieldIfNeeded() {
+        guard appLockEnabled, onboardingComplete else { return }
+        isPrivacyShieldVisible = true
     }
 
     @MainActor

@@ -24,13 +24,6 @@ struct MainTabView: View {
                     Label(NavigationCoordinator.Tab.browse.rawValue, systemImage: NavigationCoordinator.Tab.browse.icon)
                 }
                 .tag(NavigationCoordinator.Tab.browse)
-
-            ThreadsView()
-                .accessibilityIdentifier(AccessibilityID.Main.threadsTab)
-                .tabItem {
-                    Label(NavigationCoordinator.Tab.threads.rawValue, systemImage: NavigationCoordinator.Tab.threads.icon)
-                }
-                .tag(NavigationCoordinator.Tab.threads)
         }
         .accessibilityIdentifier(AccessibilityID.Main.tabView)
         .tint(DS.Colours.accent)
@@ -45,10 +38,6 @@ struct MainTabView: View {
                 CaptureImageSheet(source: source)
             case .settings:
                 SettingsView()
-            case .memoryDetail(let id):
-                MemoryDetailPlaceholderView(memoryId: id)
-            case .threadProposal(let id):
-                ThreadProposalPlaceholderView(threadId: id)
             }
         }
         .overlay(alignment: .bottomTrailing) {
@@ -61,49 +50,5 @@ struct MainTabView: View {
             }
         }
         .animation(reduceMotion ? DS.Animation.fade : DS.Animation.standard, value: coordinator.activeTab)
-    }
-}
-
-struct MemoryDetailPlaceholderView: View {
-    let memoryId: UUID
-
-    var body: some View {
-        ZStack {
-            DS.Colours.backgroundGrouped.ignoresSafeArea()
-            VStack(spacing: DS.Spacing.sm) {
-                Text("Memory Detail")
-                    .font(DS.Typography.headline)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                Text("Phase 9")
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.textSecondary)
-                Text(memoryId.uuidString)
-                    .font(DS.Typography.caption2)
-                    .foregroundStyle(DS.Colours.textTertiary)
-            }
-            .padding(DS.Spacing.md)
-        }
-    }
-}
-
-struct ThreadProposalPlaceholderView: View {
-    let threadId: UUID
-
-    var body: some View {
-        ZStack {
-            DS.Colours.backgroundGrouped.ignoresSafeArea()
-            VStack(spacing: DS.Spacing.sm) {
-                Text("Thread Proposal")
-                    .font(DS.Typography.headline)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                Text("Phase 9")
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.textSecondary)
-                Text(threadId.uuidString)
-                    .font(DS.Typography.caption2)
-                    .foregroundStyle(DS.Colours.textTertiary)
-            }
-            .padding(DS.Spacing.md)
-        }
     }
 }

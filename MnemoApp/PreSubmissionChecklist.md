@@ -33,10 +33,11 @@ Complete every item before submitting to App Store Review.
 - [ ] Voice capture tested on physical device (simulator cannot test microphone)
 - [ ] Image capture tested on physical device (simulator has no camera)
 - [ ] iCloud backup tested (requires signed-in iCloud account)
-- [ ] Onboarding backup copy confirmed: setup is deferred to Settings unless a real backup is performed
+- [ ] Restore limitation copy confirmed: current restore requires this iPhone's local Keychain backup key and is not positioned as lost-device or new-device recovery
 - [ ] Delete All Data flow tested and confirmed complete wipe
-- [ ] Onboarding AI consent screen confirmed: cloud-assist copy matches the configured provider status
-- [ ] Memory Moments, Pattern Insights, and Thread Suggestions are hidden, disabled, or clearly marked inactive unless implemented
+- [ ] Onboarding confirmed short and safe: no sensitive seeded capture prompts and no writes to real memory storage
+- [ ] Memory Moments and Pattern Insights are disabled or clearly marked inactive unless implemented
+- [ ] Threads remains hidden from primary navigation unless automatic thread suggestions are implemented
 
 ## Security
 - [ ] Secure Enclave key generation tested on physical device

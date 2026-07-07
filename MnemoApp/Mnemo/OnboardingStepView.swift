@@ -1,5 +1,4 @@
 import SwiftUI
-import SwiftData
 import MnemoUI
 
 /// Renders the correct content for each onboarding step.
@@ -62,17 +61,10 @@ struct OnboardingStepView: View {
         switch step {
         case .welcome:
             WelcomeStepContent()
-        case .capturePreference, .captureList, .captureCredential:
-            CaptureOnboardingStepContent(
-                placeholder: capturePlaceholder(for: step),
-                viewModel: viewModel
-            )
         case .processingMode:
             RecallStepContent()
         case .notifications:
             ProtectionStepContent()
-        case .backup:
-            BackupStepContent(viewModel: viewModel)
         case .done:
             DoneStepContent(viewModel: viewModel)
         }
@@ -82,17 +74,11 @@ struct OnboardingStepView: View {
         switch step {
         case .welcome:
             return DS.Colours.brandInk
-        case .capturePreference:
-            return DS.Colours.sense
-        case .captureList:
-            return DS.Colours.success
-        case .captureCredential:
-            return DS.Colours.warning
         case .notifications:
             return DS.Colours.accent
         case .done:
             return DS.Colours.success
-        case .processingMode, .backup:
+        case .processingMode:
             return DS.Colours.accent
         }
     }
@@ -119,19 +105,6 @@ struct OnboardingStepView: View {
     private func revealContent() {
         withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.gentleSpring) {
             contentAppeared = true
-        }
-    }
-
-    private func capturePlaceholder(for step: OnboardingViewModel.Step) -> String {
-        switch step {
-        case .capturePreference:
-            return "e.g. I wear a medium at Zara"
-        case .captureList:
-            return "e.g. oat milk, bin bags, parmesan"
-        case .captureCredential:
-            return "e.g. My Boots card number is 1234"
-        default:
-            return "Tell Mnemo something..."
         }
     }
 }
@@ -311,138 +284,15 @@ struct OnboardingInfoCard: View {
     }
 }
 
-struct BackupStepContent: View {
-    let viewModel: OnboardingViewModel
-    @State private var setupDeferred = false
-
-    var body: some View {
-        VStack(spacing: DS.Spacing.md) {
-            HStack(alignment: .top, spacing: DS.Spacing.md) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(DS.Typography.subheadline)
-                    .foregroundStyle(DS.Colours.warning)
-                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Text("Backup is optional and should be validated on your device before you rely on it for recovery.")
-                        .font(DS.Typography.subheadline)
-                        .foregroundStyle(DS.Colours.textPrimary)
-                    Text("The backup screen in Settings stores encrypted backup data in your iCloud account. Mnemo does not operate a backup server.")
-                        .font(DS.Typography.footnote)
-                        .foregroundStyle(DS.Colours.textSecondary)
-                }
-            }
-            .padding(DS.Spacing.md)
-            .background(DS.Colours.warningSoft)
-            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-
-            if setupDeferred {
-                HStack(spacing: DS.Spacing.sm) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(DS.Typography.subheadline)
-                        .foregroundStyle(DS.Colours.success)
-                    Text("Backup setup left for Settings")
-                        .font(DS.Typography.subheadline)
-                        .foregroundStyle(DS.Colours.success)
-                }
-            } else {
-                Button {
-                    setupDeferred = true
-                    viewModel.backupDeferred = true
-                } label: {
-                    HStack(spacing: DS.Spacing.sm) {
-                        Image(systemName: "gearshape")
-                            .font(DS.Typography.subheadline)
-                        Text("Set Up Backup Later in Settings")
-                            .font(DS.Typography.headline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                    .padding(.vertical, DS.Spacing.xs)
-                    .background(DS.Colours.accent)
-                    .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-                }
-                .buttonStyle(.mnemoPressable)
-
-                Button("Continue without backup") {
-                    setupDeferred = true
-                    viewModel.backupDeferred = true
-                }
-                .font(DS.Typography.body)
-                .foregroundStyle(DS.Colours.textSecondary)
-                .buttonStyle(.mnemoPressable)
-            }
-        }
-    }
-}
-
 struct DoneStepContent: View {
     let viewModel: OnboardingViewModel
 
     var body: some View {
         VStack(spacing: DS.Spacing.md) {
-            if viewModel.seededCount > 0 {
-                HStack(spacing: DS.Spacing.sm) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(DS.Colours.success)
-                    Text(viewModel.seededCount == 1
-                        ? "1 memory saved. Ask Mnemo about it in Chat."
-                        : "\(viewModel.seededCount) memories saved. Ask Mnemo about them in Chat."
-                    )
-                    .font(DS.Typography.subheadline)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                }
-                .padding(DS.Spacing.md)
-                .background(DS.Colours.successSoft)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-            }
-
             Text("Save one detail now. Later, ask Mnemo in plain language and check the source memory it used.")
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textSecondary)
                 .multilineTextAlignment(.center)
-        }
-    }
-}
-
-struct CaptureOnboardingStepContent: View {
-    let placeholder: String
-    let viewModel: OnboardingViewModel
-    @Environment(\.modelContext) private var modelContext
-
-    var body: some View {
-        @Bindable var viewModel = viewModel
-
-        VStack(spacing: DS.Spacing.md) {
-            TextField(placeholder, text: $viewModel.captureText, axis: .vertical)
-                .font(DS.Typography.body)
-                .foregroundStyle(DS.Colours.textPrimary)
-                .lineLimit(2...5)
-                .padding(DS.Spacing.md)
-                .background(DS.Colours.surfaceSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                        .stroke(DS.Colours.borderSubtle, lineWidth: 0.5)
-                }
-
-            if viewModel.captureConfirmed {
-                HStack(spacing: DS.Spacing.sm) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(DS.Colours.success)
-                        .font(DS.Typography.subheadline)
-                    Text("Saved to Mnemo")
-                        .font(DS.Typography.footnote)
-                        .foregroundStyle(DS.Colours.success)
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.94)))
-            }
-
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .font(DS.Typography.footnote)
-                    .foregroundStyle(DS.Colours.destructive)
-                    .multilineTextAlignment(.center)
-            }
         }
     }
 }

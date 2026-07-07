@@ -33,4 +33,4 @@ Use this checklist on a physical iPhone before App Store submission. Simulator v
 
 - App Lock is a local UI access gate using Apple LocalAuthentication.
 - App Lock does not replace file protection. Verify locked-device file protection separately in the pre-submission checklist.
-- Optional iCloud backup still uses the user's signed-in iCloud account; Mnemo does not operate an account server.
+- Optional iCloud backup still uses the user's signed-in iCloud account; Mnemo does not operate an account or backup server. Current restore requires this iPhone's local Keychain backup key and is not validated for lost-device or new-device recovery.

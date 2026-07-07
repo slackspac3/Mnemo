@@ -8,7 +8,6 @@ enum AccessibilityID {
         static let tabView = "main.tabView"
         static let chatTab = "tab.chat"
         static let browseTab = "tab.browse"
-        static let threadsTab = "tab.threads"
         static let capture = "tab.capture"
         static let settings = "tab.settings"
     }
