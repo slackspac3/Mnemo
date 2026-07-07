@@ -1,0 +1,10 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+*.xcresult
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+mnemo_vectors*.sqlite*
+default.store*

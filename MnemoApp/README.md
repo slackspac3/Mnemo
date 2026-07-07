@@ -46,13 +46,22 @@ done
 Run package tests where available:
 
 ```sh
-(cd MnemoMemory && swift test)
-(cd MnemoCapture && swift test)
-(cd MnemoSecurity && swift test)
-(cd MnemoIntelligence && swift test)
+Scripts/run_local_checks.sh fast
+```
+
+Run the slower local efficiency baseline:
+
+```sh
+Scripts/run_local_checks.sh efficiency
 ```
 
 Build and run the app from `MnemoApp/Mnemo.xcworkspace` with the `Mnemo` scheme. The workspace is required because it includes the local Swift packages used by the app target.
+
+If XcodeBuildMCP is installed, the app smoke build can also be run from the repo root:
+
+```sh
+MNEMO_SIMULATOR_ID=<simulator-udid> Scripts/run_local_checks.sh app
+```
 
 ## Development Notes
 
@@ -60,6 +69,7 @@ Build and run the app from `MnemoApp/Mnemo.xcworkspace` with the `Mnemo` scheme.
 - App screens can use SwiftUI state directly or `@Observable` UI state objects when state needs to be shared across a multi-screen flow.
 - Business logic belongs in package services and actors, not in large SwiftUI views.
 - Use `ManualRecallValidation.md` before tuning recall so changes are driven by observed failures.
+- Use `AutomatedTestingPlan-2026-07-07.md` and `EfficiencyBaseline-2026-07-07.md` before changing recall, indexing, archive/delete, or source citation behavior.
 - Keep privacy and App Review notes factual. Do not claim bundled Foundation Models, MLX embeddings, or cloud LLM processing until those code paths are active and tested.
 
 ## Known Gaps

@@ -26,6 +26,112 @@ struct RecallEngineTests {
         #expect(result.text.localizedCaseInsensitiveContains("do not have any saved memories"))
     }
 
+    @Test("Manual 50-query validation fixture remains passing")
+    @MainActor
+    func manualRecallValidationFixture() {
+        let memories = ManualRecallFixture.makeMemories()
+        let ids = ManualRecallFixture.idByKey(memories: memories)
+        let engine = RecallEngine()
+
+        for testCase in ManualRecallFixture.preMutationCases {
+            let result = engine.recall(query: testCase.query, memories: memories)
+            assert(result: result, satisfies: testCase, ids: ids)
+        }
+
+        let mum = memories.first { $0.id == ids["M02"] }!
+        mum.summary = "Mum wears size 39 shoes."
+        mum.rawInput = "Mum wears size 39 shoes."
+
+        let q42 = ManualRecallFixture.ValidationCase(
+            "Q42",
+            query: "What size does mum wear now?",
+            expectedFragments: ["39"],
+            primarySource: "M02"
+        )
+        assert(result: engine.recall(query: q42.query, memories: memories), satisfies: q42, ids: ids)
+
+        let candles = memories.first { $0.id == ids["M28"] }!
+        candles.summary = "When buying candles, choose cedar only."
+        candles.rawInput = "When buying candles, choose cedar only."
+
+        let q44 = ManualRecallFixture.ValidationCase(
+            "Q44",
+            query: "What candle scent should I choose now?",
+            expectedFragments: ["cedar only"],
+            primarySource: "M28"
+        )
+        assert(result: engine.recall(query: q44.query, memories: memories), satisfies: q44, ids: ids)
+
+        let regularZara = memories.first { $0.id == ids["M12"] }!
+        regularZara.isArchived = true
+        let q49 = ManualRecallFixture.ValidationCase(
+            "Q49",
+            query: "What is my Zara regular T-shirt size?",
+            expectedFragments: [
+                "do not have your regular Zara T-shirt size saved",
+                "loose-fit Zara T-shirt size",
+                "may not be the same",
+            ],
+            primarySource: "M13"
+        )
+        assert(result: engine.recall(query: q49.query, memories: memories), satisfies: q49, ids: ids)
+
+        let q50Result = engine.recall(query: "What did I save most recently?", memories: [])
+        #expect(q50Result.citedMemoryIds.isEmpty)
+        #expect(q50Result.text.localizedCaseInsensitiveContains("do not have any saved memories"))
+    }
+
+    @Test("Archived memories are excluded from recall and latest-memory fast path")
+    @MainActor
+    func archivedMemoriesExcludedFromRecall() {
+        let archived = Self.makeMemory(
+            "Mum wears size 38 shoes.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(60)
+        )
+        archived.isArchived = true
+        let active = Self.makeMemory(
+            "My blue suit size at Zara is 42.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let specific = RecallEngine().recall(
+            query: "What size does mum wear?",
+            memories: [archived, active]
+        )
+        #expect(specific.citedMemoryIds.isEmpty)
+
+        let latest = RecallEngine().recall(
+            query: "What did I save most recently?",
+            memories: [archived, active]
+        )
+        #expect(latest.citedMemoryIds == [active.id])
+        #expect(latest.text.localizedCaseInsensitiveContains("blue suit"))
+    }
+
+    @Test("Citation payloads match cited memory ids")
+    @MainActor
+    func citationPayloadsMatchCitedMemoryIds() {
+        let memory = Self.makeMemory(
+            "Ahmed prefers quiet restaurants.",
+            type: .preference,
+            source: .voice,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What does Ahmed prefer?",
+            memories: [memory]
+        )
+
+        #expect(result.citations.map(\.id) == result.citedMemoryIds)
+        #expect(result.citations.first?.summary == memory.summary)
+        #expect(result.citations.first?.source == "Voice")
+    }
+
     @Test("Recent memory query bypasses lexical scoring")
     @MainActor
     func recentMemoryFastPath() {
@@ -225,6 +331,34 @@ struct RecallEngineTests {
         #expect(result.citedMemoryIds == [memory.id])
         #expect(result.text.localizedCaseInsensitiveContains("P3, row C18"))
         #expect(!result.text.localizedCaseInsensitiveContains("It was in Dubai Mall"))
+    }
+
+    private func assert(
+        result: RecallResult,
+        satisfies testCase: ManualRecallFixture.ValidationCase,
+        ids: [String: UUID]
+    ) {
+        for fragment in testCase.expectedFragments {
+            #expect(
+                result.text.localizedCaseInsensitiveContains(fragment),
+                "\(testCase.id) expected answer fragment: \(fragment). Actual: \(result.text)"
+            )
+        }
+
+        if testCase.requiresNoCitations {
+            #expect(result.citedMemoryIds.isEmpty, "\(testCase.id) expected no citations.")
+            #expect(result.citations.isEmpty, "\(testCase.id) expected no citation payloads.")
+        }
+
+        if let primarySource = testCase.primarySource,
+           let expectedId = ids[primarySource] {
+            #expect(
+                result.citedMemoryIds.first == expectedId,
+                "\(testCase.id) expected first citation \(primarySource), got \(result.citedMemoryIds.first?.uuidString ?? "none")"
+            )
+        }
+
+        #expect(result.citations.map(\.id) == result.citedMemoryIds)
     }
 
     @MainActor

@@ -68,6 +68,28 @@ public struct MemoryCRUD {
         try context.save()
     }
 
+    /// Archive a memory and remove its vector index row so hidden memories do
+    /// not participate in vector-backed recall, corroboration, or threads.
+    @MainActor
+    public static func archiveAndUnindex(id: UUID, in context: ModelContext) async throws {
+        guard let record = try fetch(id: id, in: context) else {
+            try await VectorBridge.shared.delete(id: id)
+            return
+        }
+        let summary = record.summary
+
+        try await VectorBridge.shared.delete(id: id)
+
+        do {
+            record.isArchived = true
+            record.updatedAt = Date()
+            try context.save()
+        } catch {
+            try? await EmbeddingHelper().index(id: id, summary: summary)
+            throw error
+        }
+    }
+
     public static func markDone(id: UUID, in context: ModelContext) throws {
         guard let record = try fetch(id: id, in: context) else { return }
         record.isDone = true

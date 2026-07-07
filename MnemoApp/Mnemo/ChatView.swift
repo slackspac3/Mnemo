@@ -175,10 +175,12 @@ struct ChatView: View {
         }
     }
 
-    private func archiveSourceMemory(id: UUID) throws {
-        try MemoryCRUD.archive(id: id, in: modelContext)
+    @MainActor
+    private func archiveSourceMemory(id: UUID) async throws {
+        try await MemoryCRUD.archiveAndUnindex(id: id, in: modelContext)
     }
 
+    @MainActor
     private func deleteSourceMemoryPermanently(id: UUID) async throws {
         try await MemoryCRUD.deletePermanently(id: id, in: modelContext)
     }

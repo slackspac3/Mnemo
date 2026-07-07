@@ -999,7 +999,9 @@ public struct RecallEngine {
     private static let genericSizeSubjects: Set<String> = [
         "clothes",
         "clothing",
+        "fit",
         "loose",
+        "loose-fit",
         "regular",
         "shirt",
         "shoe",
@@ -1007,6 +1009,7 @@ public struct RecallEngine {
         "size",
         "tshirt",
         "wear",
+        "what",
         "zara"
     ]
 

@@ -50,6 +50,10 @@ public actor VectorBridge {
         sqlite3_close(db)
     }
 
+    public func diagnosticsDatabasePath() -> String {
+        dbURL.path
+    }
+
     // MARK: - Setup
 
     public func open() throws {
@@ -89,7 +93,16 @@ public actor VectorBridge {
     }
 
     private static var isRunningTests: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+        let processName = ProcessInfo.processInfo.processName.lowercased()
+        let arguments = ProcessInfo.processInfo.arguments.joined(separator: " ").lowercased()
+        let mainBundlePath = Bundle.main.bundlePath.lowercased()
+        return ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+            processName.contains("packagetests") ||
+            processName.contains("xctest") ||
+            arguments.contains(".build") ||
+            arguments.contains("xctest") ||
+            mainBundlePath.contains(".build") ||
+            mainBundlePath.contains("xctest") ||
             Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
     }
 

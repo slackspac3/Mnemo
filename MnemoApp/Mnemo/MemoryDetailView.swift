@@ -8,7 +8,7 @@ import MnemoMemory
 struct MemoryDetailView: View {
 
     private let snapshot: MemoryDetailSnapshot
-    private let onArchive: ((UUID) throws -> Void)?
+    private let onArchive: ((UUID) async throws -> Void)?
     private let onDeletePermanently: ((UUID) async throws -> Void)?
 
     @Environment(\.dismiss) private var dismiss
@@ -16,12 +16,13 @@ struct MemoryDetailView: View {
 
     @State private var showingArchiveConfirm = false
     @State private var showingDeleteConfirm = false
+    @State private var isArchiving = false
     @State private var isDeleting = false
     @State private var errorMessage: String?
 
     init(
         record: MemoryRecord,
-        onArchive: ((UUID) throws -> Void)? = nil,
+        onArchive: ((UUID) async throws -> Void)? = nil,
         onDeletePermanently: ((UUID) async throws -> Void)? = nil
     ) {
         self.snapshot = MemoryDetailSnapshot(record: record)
@@ -150,7 +151,7 @@ struct MemoryDetailView: View {
                             Button {
                                 showingArchiveConfirm = true
                             } label: {
-                                Text("Archive Memory")
+                                Text(isArchiving ? "Archiving..." : "Archive Memory")
                                     .font(DS.Typography.body)
                                     .foregroundStyle(DS.Colours.textPrimary)
                                     .frame(maxWidth: .infinity)
@@ -158,6 +159,7 @@ struct MemoryDetailView: View {
                                     .background(DS.Colours.surfaceSecondary)
                                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                             }
+                            .disabled(isArchiving || isDeleting)
 
                             Button {
                                 showingDeleteConfirm = true
@@ -178,7 +180,9 @@ struct MemoryDetailView: View {
                             titleVisibility: .visible
                         ) {
                             Button("Archive", role: .destructive) {
-                                archiveMemory()
+                                Task {
+                                    await archiveMemory()
+                                }
                             }
                             Button("Cancel", role: .cancel) {}
                         } message: {
@@ -217,17 +221,23 @@ struct MemoryDetailView: View {
         }
     }
 
-    private func archiveMemory() {
+    @MainActor
+    private func archiveMemory() async {
+        isArchiving = true
+        errorMessage = nil
+
         do {
             if let onArchive {
-                try onArchive(snapshot.id)
+                try await onArchive(snapshot.id)
             } else {
-                try MemoryCRUD.archive(id: snapshot.id, in: modelContext)
+                try await MemoryCRUD.archiveAndUnindex(id: snapshot.id, in: modelContext)
             }
             dismiss()
         } catch {
             errorMessage = "Could not archive this memory. Try again."
         }
+
+        isArchiving = false
     }
 
     @MainActor

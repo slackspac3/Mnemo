@@ -125,10 +125,12 @@ struct BrowseView: View {
         }
     }
 
-    private func archiveMemory(id: UUID) throws {
-        try MemoryCRUD.archive(id: id, in: modelContext)
+    @MainActor
+    private func archiveMemory(id: UUID) async throws {
+        try await MemoryCRUD.archiveAndUnindex(id: id, in: modelContext)
     }
 
+    @MainActor
     private func deleteMemoryPermanently(id: UUID) async throws {
         try await MemoryCRUD.deletePermanently(id: id, in: modelContext)
     }
