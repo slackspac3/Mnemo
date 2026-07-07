@@ -260,6 +260,7 @@ struct CitationSection: View {
             Label(title, systemImage: "bookmark.fill")
                 .font(DS.Typography.caption1)
                 .foregroundStyle(DS.Colours.accent)
+                .accessibilityLabel(title)
 
             if citations.isEmpty {
                 Text(fallbackCount == 1 ? "Source memory is saved locally." : "\(fallbackCount) source memories are saved locally.")
@@ -273,11 +274,12 @@ struct CitationSection: View {
                     Button {
                         onSourceTap(citation.id)
                     } label: {
-                        HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                        HStack(alignment: .center, spacing: DS.Spacing.sm) {
                             Image(systemName: "doc.text.magnifyingglass")
                                 .font(DS.Typography.caption1)
                                 .foregroundStyle(DS.Colours.accent)
                                 .frame(width: DS.Spacing.md)
+                                .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                                 Text(citation.source)
@@ -292,16 +294,24 @@ struct CitationSection: View {
                             }
 
                             Spacer(minLength: DS.Spacing.xs)
+
+                            Image(systemName: "chevron.right")
+                                .font(DS.Typography.caption1)
+                                .foregroundStyle(DS.Colours.textTertiary)
+                                .accessibilityHidden(true)
                         }
-                        .padding(DS.Spacing.sm)
-                        .background(DS.Colours.surface)
+                        .padding(DS.ComponentTokens.SourceCard.padding)
+                        .background(DS.ComponentTokens.SourceCard.background)
                         .overlay {
-                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                .stroke(DS.Colours.surfaceSecondary, lineWidth: 1.0)
+                            RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius)
+                                .stroke(DS.ComponentTokens.SourceCard.border, lineWidth: 1.0)
                         }
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                        .clipShape(RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("\(citation.source) source memory")
+                    .accessibilityValue(citation.summary)
+                    .accessibilityHint("Open source memory details")
                     .accessibilityIdentifier(citation.id == citations.first?.id ? AccessibilityID.Chat.sourceCardPrimary : AccessibilityID.Chat.sourceCard)
                 }
             }
@@ -310,7 +320,7 @@ struct CitationSection: View {
     }
 
     private var title: String {
-        fallbackCount == 1 ? "Memory used" : "Sources"
+        fallbackCount == 1 ? "Source memory" : "Source memories"
     }
 }
 
@@ -379,52 +389,58 @@ struct EmptyChatLanding: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                Text("Save it. Ask for it later.")
-                    .font(DS.Typography.title2)
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                Text("What do you want to remember?")
+                    .font(DS.Typography.title1)
                     .foregroundStyle(DS.Colours.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Text("Add a memory with text, voice, camera, or a photo. Then ask Mnemo in plain language when you need it back.")
+                Text("Save a thought, detail, decision or reminder. Ask Mnemo about it later in plain language.")
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                Text("Add a memory")
+                Text("Save a memory")
                     .font(DS.Typography.headline)
                     .foregroundStyle(DS.Colours.textPrimary)
 
+                LandingActionButton(
+                    title: "Write memory",
+                    subtitle: "Type a detail, decision or reminder",
+                    icon: "square.and.pencil",
+                    tint: DS.Colours.accent,
+                    prominence: .primary,
+                    accessibilityIdentifier: AccessibilityID.CaptureText.open,
+                    action: onText
+                )
+
                 LazyVGrid(columns: columns, spacing: DS.Spacing.sm) {
                     LandingActionButton(
-                        title: "Write",
-                        subtitle: "Type a fact",
-                        icon: "square.and.pencil",
-                        tint: DS.Colours.accent,
-                        accessibilityIdentifier: AccessibilityID.CaptureText.open,
-                        action: onText
-                    )
-                    LandingActionButton(
                         title: "Voice",
-                        subtitle: "Speak it",
+                        subtitle: "Speak",
                         icon: "mic.fill",
                         tint: DS.Colours.primary,
+                        prominence: .secondary,
                         accessibilityIdentifier: "capture.voice.open",
                         action: onVoice
                     )
                     LandingActionButton(
                         title: "Camera",
-                        subtitle: "Capture now",
+                        subtitle: "Capture",
                         icon: "camera.fill",
                         tint: DS.Colours.success,
+                        prominence: .secondary,
                         accessibilityIdentifier: "capture.camera.open",
                         action: onCamera
                     )
                     LandingActionButton(
                         title: "Photo",
-                        subtitle: "Choose image",
+                        subtitle: "Choose",
                         icon: "photo.on.rectangle",
                         tint: DS.Colours.warning,
+                        prominence: .secondary,
                         accessibilityIdentifier: "capture.photo.open",
                         action: onPhoto
                     )
@@ -443,12 +459,12 @@ struct EmptyChatLanding: View {
                             action: { onExample("What did I save most recently?") }
                         )
                         RecallExampleButton(
-                            text: "What size was my Zara shirt?",
-                            action: { onExample("What size was my Zara shirt?") }
+                            text: "What decision did I save?",
+                            action: { onExample("What decision did I save?") }
                         )
                         RecallExampleButton(
-                            text: "Where was that waterfall I liked?",
-                            action: { onExample("Where was that waterfall I liked?") }
+                            text: "Where did I put it?",
+                            action: { onExample("Where did I put it?") }
                         )
                     }
                 }
@@ -457,6 +473,9 @@ struct EmptyChatLanding: View {
                     Label("Save your first memory to unlock recall.", systemImage: "arrow.turn.down.right")
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(DS.Colours.textSecondary)
+                    Label("Stored locally on this iPhone.", systemImage: "lock.shield")
+                        .font(DS.Typography.footnote)
+                        .foregroundStyle(DS.Colours.textTertiary)
                 }
             }
         }
@@ -540,10 +559,16 @@ struct CompactCaptureButton: View {
 }
 
 struct LandingActionButton: View {
+    enum Prominence {
+        case primary
+        case secondary
+    }
+
     let title: String
     let subtitle: String
     let icon: String
     let tint: Color
+    let prominence: Prominence
     let accessibilityIdentifier: String
     let action: () -> Void
 
@@ -552,25 +577,26 @@ struct LandingActionButton: View {
             HStack(spacing: DS.Spacing.sm) {
                 Image(systemName: icon)
                     .font(DS.Typography.title2)
-                    .foregroundStyle(tint)
+                    .foregroundStyle(iconColor)
                     .frame(width: DS.Spacing.xl, alignment: .leading)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                     Text(title)
                         .font(DS.Typography.headline)
-                        .foregroundStyle(DS.Colours.textPrimary)
+                        .foregroundStyle(titleColor)
                     Text(subtitle)
                         .font(DS.Typography.caption1)
-                        .foregroundStyle(DS.Colours.textSecondary)
+                        .foregroundStyle(subtitleColor)
                         .lineLimit(2)
                 }
 
                 Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, minHeight: 76.0, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: prominence == .primary ? 72.0 : 76.0, alignment: .leading)
             .padding(.horizontal, DS.Spacing.md)
             .padding(.vertical, DS.Spacing.sm)
-            .background(DS.Colours.surface)
+            .background(backgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
             .shadow(
                 color: DS.Shadows.subtle.color,
@@ -580,7 +606,25 @@ struct LandingActionButton: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityHint(subtitle)
         .accessibilityIdentifier(accessibilityIdentifier)
+    }
+
+    private var backgroundColor: Color {
+        prominence == .primary ? DS.Colours.accent : DS.Colours.surface
+    }
+
+    private var iconColor: Color {
+        prominence == .primary ? .white : tint
+    }
+
+    private var titleColor: Color {
+        prominence == .primary ? .white : DS.Colours.textPrimary
+    }
+
+    private var subtitleColor: Color {
+        prominence == .primary ? .white.opacity(0.86) : DS.Colours.textSecondary
     }
 }
 
@@ -619,6 +663,10 @@ struct ChatInputBar: View {
     let onSend: () -> Void
     let onVoice: () -> Void
 
+    private var canSend: Bool {
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isProcessing
+    }
+
     var body: some View {
         HStack(spacing: DS.Spacing.xs) {
             Menu {
@@ -640,6 +688,8 @@ struct ChatInputBar: View {
                     .frame(width: 40.0, height: 44.0)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Add memory")
+            .accessibilityHint("Choose how to save a memory")
             .accessibilityIdentifier(AccessibilityID.Main.capture)
 
             Button(action: onVoice) {
@@ -652,9 +702,11 @@ struct ChatInputBar: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Record voice memory")
+            .accessibilityHint("Open voice capture")
             .accessibilityIdentifier("capture.voice.open")
 
-            TextField("Ask Mnemo about a memory...", text: $text, axis: .vertical)
+            TextField("Ask about a saved memory...", text: $text, axis: .vertical)
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textPrimary)
                 .lineLimit(1...4)
@@ -665,16 +717,19 @@ struct ChatInputBar: View {
                 .onSubmit {
                     onSend()
                 }
+                .submitLabel(.send)
                 .accessibilityIdentifier(AccessibilityID.Chat.input)
 
             Button(action: onSend) {
                 Image(systemName: isProcessing ? "ellipsis" : "arrow.up.circle.fill")
                     .font(.system(size: 32.0, weight: .semibold))
-                    .foregroundStyle(text.isEmpty || isProcessing ? DS.Colours.textTertiary : DS.Colours.accent)
+                    .foregroundStyle(canSend ? DS.Colours.accent : DS.Colours.textTertiary)
                     .frame(width: 44.0, height: 44.0)
             }
-            .disabled(text.isEmpty || isProcessing)
+            .disabled(!canSend)
             .buttonStyle(.plain)
+            .accessibilityLabel("Send")
+            .accessibilityHint("Ask Mnemo to recall a saved memory")
             .accessibilityIdentifier(AccessibilityID.Chat.send)
         }
         .padding(.horizontal, DS.Spacing.md)

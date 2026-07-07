@@ -16,7 +16,11 @@ struct AppLockView: View {
                 VStack(spacing: DS.Spacing.md) {
                     Image(systemName: "lock.shield.fill")
                         .font(.system(size: 54, weight: .semibold))
-                        .foregroundStyle(DS.Colours.accent)
+                        .foregroundStyle(DS.ComponentTokens.LockState.iconForeground)
+                        .frame(width: 96.0, height: 96.0)
+                        .background(DS.ComponentTokens.LockState.iconBackground)
+                        .clipShape(Circle())
+                        .accessibilityHidden(true)
 
                     Text("Mnemo is locked")
                         .font(DS.Typography.largeTitle)
@@ -29,6 +33,16 @@ struct AppLockView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, DS.Spacing.lg)
                 }
+                .padding(DS.ComponentTokens.LockState.cardPadding)
+                .frame(maxWidth: 360.0)
+                .background(DS.Colours.surface)
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge))
+                .shadow(
+                    color: DS.Shadows.subtle.color,
+                    radius: DS.Shadows.subtle.radius,
+                    x: DS.Shadows.subtle.x,
+                    y: DS.Shadows.subtle.y
+                )
 
                 if let message = appState.appLockErrorMessage {
                     Text(message)
@@ -49,19 +63,22 @@ struct AppLockView: View {
                             ProgressView()
                                 .tint(.white)
                         } else {
-                            Image(systemName: "faceid")
+                            Image(systemName: "lock.open.fill")
                         }
                         Text(appState.isAuthenticatingAppLock ? "Unlocking..." : "Unlock")
                     }
                     .font(DS.Typography.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, DS.Spacing.md)
+                    .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
+                    .padding(.vertical, DS.Spacing.xs)
                     .background(DS.Colours.accent)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
                 .disabled(appState.isAuthenticatingAppLock)
                 .padding(.horizontal, DS.Spacing.xl)
+                .accessibilityLabel("Unlock Mnemo")
+                .accessibilityHint("Use Face ID, Touch ID or your device passcode")
                 .accessibilityIdentifier(AccessibilityID.AppLock.unlockButton)
 
                 Spacer()

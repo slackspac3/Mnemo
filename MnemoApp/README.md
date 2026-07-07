@@ -12,7 +12,7 @@ Mnemo currently supports:
 - Local memory browsing.
 - Local chat recall over saved memories.
 - Local SQLite-backed placeholder vector indexing.
-- CloudKit backup and restore hooks using the user's own iCloud account.
+- CloudKit backup and restore hooks using the user's own iCloud account. Current restore requires the local Keychain backup key on this device and should not be treated as validated lost-device recovery yet.
 - Optional local App Lock using Apple LocalAuthentication as a UI access gate, not account sign-in or storage encryption.
 - Keychain, Secure Enclave, LocalAuthentication, file protection, and secure deletion helper layers.
 
@@ -87,4 +87,5 @@ This builds and launches the app on Simulator, resets local test data for that D
 - Foundation Models and MLX routes are present as architecture hooks, not production model execution paths.
 - Voice recognition in Simulator can receive microphone audio while Apple Speech fails to initialise. Validate voice capture on a physical iPhone before submission.
 - App Lock uses Face ID, Touch ID, or device passcode through LocalAuthentication as a local UI gate. It is not Mnemo account sign-in or a replacement for file protection. Validate on a physical iPhone before submission.
+- CloudKit backup does not use a Mnemo backup server. Lost-device restore remains a physical-device/iCloud validation item.
 - App Store metadata, screenshots, privacy policy URL, support URL, and legal/account setup remain manual pre-submission work.

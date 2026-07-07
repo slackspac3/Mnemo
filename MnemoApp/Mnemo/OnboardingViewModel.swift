@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import SwiftData
-import UserNotifications
 import MnemoUI
 import MnemoCore
 import MnemoMemory
@@ -22,41 +21,41 @@ final class OnboardingViewModel {
         var title: String {
             switch self {
             case .welcome:
-                return "Welcome to Mnemo"
+                return "Your private memory layer"
             case .processingMode:
-                return "Your Privacy"
+                return "Ask what you saved"
             case .notifications:
-                return "Memory Moments"
+                return "Protected by your device"
             case .backup:
-                return "Keep it safe"
+                return "Backup is optional"
             case .done:
-                return "You're all set"
+                return "Start with one memory"
             }
         }
 
         var subtitle: String {
             switch self {
             case .welcome:
-                return "A private memory companion for your iPhone. Saved memories stay in your local Mnemo store."
+                return "Save the details, decisions, and reminders you do not want to lose. Mnemo keeps them organised on your iPhone."
             case .processingMode:
-                return "Mnemo stores memories and runs recall locally in this build. System services such as Speech recognition follow Apple's device settings."
+                return "Ask in plain language. Mnemo answers from saved memories and shows the source it used."
             case .notifications:
-                return "Smart reminders are being prepared. They stay off in this build."
+                return "Use App Lock with Face ID, Touch ID or your device passcode. No Mnemo account is required."
             case .backup:
-                return "Your memories live on your device. Set up iCloud backup from Settings when you are ready."
+                return "You can set up iCloud backup from Settings after validating it on your device."
             case .done:
-                return "Mnemo is ready. Save memories now, then ask for them later."
+                return "Begin by saving one thing you want Mnemo to remember."
             }
         }
 
         var icon: String {
             switch self {
             case .welcome:
-                return "brain.head.profile"
+                return "lock.doc.fill"
             case .processingMode:
-                return "lock.shield.fill"
+                return "quote.bubble.fill"
             case .notifications:
-                return "bell.badge"
+                return "lock.shield.fill"
             case .backup:
                 return "icloud.fill"
             case .done:
@@ -85,26 +84,6 @@ final class OnboardingViewModel {
     }
 
     @MainActor
-    func requestMemoryMomentsPermission() {
-        Task {
-            do {
-                let granted = try await UNUserNotificationCenter.current().requestAuthorization(
-                    options: [.alert, .sound, .badge]
-                )
-                await MainActor.run {
-                    memoryMomentsEnabled = granted
-                    errorMessage = granted ? nil : "Notifications were not enabled. You can turn them on later in Settings."
-                }
-            } catch {
-                await MainActor.run {
-                    memoryMomentsEnabled = false
-                    errorMessage = "Notifications were not enabled. You can turn them on later in Settings."
-                }
-            }
-        }
-    }
-
-    @MainActor
     func complete(context: ModelContext, appState: AppState) {
         let descriptor = FetchDescriptor<UserModel>()
         let existing = try? context.fetch(descriptor)
@@ -119,7 +98,7 @@ final class OnboardingViewModel {
 
         userModel.onboardingComplete = true
         userModel.onDeviceOnly = onDeviceOnly
-        userModel.cloudFallbackEnabled = !onDeviceOnly
+        userModel.cloudFallbackEnabled = false
         userModel.memoryMomentsEnabled = memoryMomentsEnabled
         try? context.save()
 

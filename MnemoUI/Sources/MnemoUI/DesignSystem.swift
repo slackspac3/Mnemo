@@ -8,12 +8,18 @@ public enum DS {
     public enum Colours {
         public static let primary: Color = Color(.sRGB, red: 27.0 / 255.0, green: 58.0 / 255.0, blue: 107.0 / 255.0, opacity: 1.0)
         public static let accent: Color = Color(.sRGB, red: 46.0 / 255.0, green: 117.0 / 255.0, blue: 182.0 / 255.0, opacity: 1.0)
-        public static let background: Color = Color(.sRGB, red: 250.0 / 255.0, green: 250.0 / 255.0, blue: 248.0 / 255.0, opacity: 1.0)
-        public static let surface: Color = Color(.sRGB, red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, opacity: 1.0)
-        public static let surfaceSecondary: Color = Color(.sRGB, red: 243.0 / 255.0, green: 244.0 / 255.0, blue: 246.0 / 255.0, opacity: 1.0)
-        public static let textPrimary: Color = Color(.sRGB, red: 31.0 / 255.0, green: 41.0 / 255.0, blue: 55.0 / 255.0, opacity: 1.0)
-        public static let textSecondary: Color = Color(.sRGB, red: 107.0 / 255.0, green: 114.0 / 255.0, blue: 128.0 / 255.0, opacity: 1.0)
-        public static let textTertiary: Color = Color(.sRGB, red: 156.0 / 255.0, green: 163.0 / 255.0, blue: 175.0 / 255.0, opacity: 1.0)
+        #if os(iOS)
+        public static let background: Color = Color(uiColor: .systemGroupedBackground)
+        public static let surface: Color = Color(uiColor: .secondarySystemGroupedBackground)
+        public static let surfaceSecondary: Color = Color(uiColor: .tertiarySystemGroupedBackground)
+        #else
+        public static let background: Color = Color(nsColor: .windowBackgroundColor)
+        public static let surface: Color = Color(nsColor: .controlBackgroundColor)
+        public static let surfaceSecondary: Color = Color(nsColor: .underPageBackgroundColor)
+        #endif
+        public static let textPrimary: Color = .primary
+        public static let textSecondary: Color = .secondary
+        public static let textTertiary: Color = .secondary.opacity(0.82)
         public static let success: Color = Color(.sRGB, red: 6.0 / 255.0, green: 78.0 / 255.0, blue: 59.0 / 255.0, opacity: 1.0)
         public static let successLight: Color = Color(.sRGB, red: 236.0 / 255.0, green: 253.0 / 255.0, blue: 245.0 / 255.0, opacity: 1.0)
         public static let warning: Color = Color(.sRGB, red: 120.0 / 255.0, green: 53.0 / 255.0, blue: 15.0 / 255.0, opacity: 1.0)
@@ -26,19 +32,19 @@ public enum DS {
 
     // MARK: - Typography
 
-    /// SF Pro-backed type scale for consistent hierarchy across Mnemo screens.
+    /// SF Pro-backed Dynamic Type scale for consistent hierarchy across Mnemo screens.
     public enum Typography {
-        public static let largeTitle: Font = .system(size: 34.0, weight: .bold)
-        public static let title1: Font = .system(size: 28.0, weight: .bold)
-        public static let title2: Font = .system(size: 22.0, weight: .bold)
-        public static let title3: Font = .system(size: 18.0, weight: .semibold)
-        public static let headline: Font = .system(size: 17.0, weight: .semibold)
-        public static let body: Font = .system(size: 17.0, weight: .regular)
-        public static let callout: Font = .system(size: 16.0, weight: .regular)
-        public static let subheadline: Font = .system(size: 15.0, weight: .regular)
-        public static let footnote: Font = .system(size: 13.0, weight: .regular)
-        public static let caption1: Font = .system(size: 12.0, weight: .regular)
-        public static let caption2: Font = .system(size: 11.0, weight: .regular)
+        public static let largeTitle: Font = .largeTitle.weight(.bold)
+        public static let title1: Font = .title.weight(.bold)
+        public static let title2: Font = .title2.weight(.bold)
+        public static let title3: Font = .title3.weight(.semibold)
+        public static let headline: Font = .headline
+        public static let body: Font = .body
+        public static let callout: Font = .callout
+        public static let subheadline: Font = .subheadline
+        public static let footnote: Font = .footnote
+        public static let caption1: Font = .caption
+        public static let caption2: Font = .caption2
     }
 
     // MARK: - Spacing
@@ -120,7 +126,7 @@ public enum DS {
             public static let background: Color = DS.Colours.senseLight
             public static let foreground: Color = DS.Colours.sense
             public static let cornerRadius: CGFloat = DS.CornerRadius.full
-            public static let font: Font = .system(size: 12.0, weight: .semibold)
+            public static let font: Font = DS.Typography.caption1.weight(.semibold)
         }
 
         public enum InputField {
@@ -128,6 +134,25 @@ public enum DS {
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let height: CGFloat = 48.0
             public static let padding: CGFloat = DS.Spacing.sm
+        }
+
+        public enum SourceCard {
+            public static let background: Color = DS.Colours.surface
+            public static let border: Color = DS.Colours.accent.opacity(0.16)
+            public static let cornerRadius: CGFloat = DS.CornerRadius.medium
+            public static let padding: CGFloat = DS.Spacing.md
+        }
+
+        public enum EmptyState {
+            public static let iconBackground: Color = DS.Colours.accent.opacity(0.10)
+            public static let iconForeground: Color = DS.Colours.accent
+            public static let maxWidth: CGFloat = 360.0
+        }
+
+        public enum LockState {
+            public static let iconBackground: Color = DS.Colours.accent.opacity(0.12)
+            public static let iconForeground: Color = DS.Colours.accent
+            public static let cardPadding: CGFloat = DS.Spacing.lg
         }
     }
 

@@ -59,17 +59,17 @@ struct MemoryDetailView: View {
                             MetadataRow(label: "Source", value: snapshot.inputSource.capitalized, icon: "arrow.down.circle")
                             MetadataRow(
                                 label: "Processing",
-                                value: snapshot.processingTier == ProcessingTier.onDevice.rawValue ? "On Device" : "Cloud",
+                                value: processingLabel,
                                 icon: "cpu"
                             )
                             MetadataRow(
-                                label: "Persistence",
-                                value: "\(Int(snapshot.persistenceScore * 100))%",
+                                label: "Recall priority",
+                                value: recallPriorityLabel,
                                 icon: "chart.bar"
                             )
                             MetadataRow(
-                                label: "Confidence",
-                                value: "\(Int(snapshot.confidence * 100))%",
+                                label: "Review status",
+                                value: reviewStatusLabel,
                                 icon: "checkmark.seal"
                             )
                             MetadataRow(
@@ -182,7 +182,7 @@ struct MemoryDetailView: View {
                             isPresented: $showingArchiveConfirm,
                             titleVisibility: .visible
                         ) {
-                            Button("Archive", role: .destructive) {
+                            Button("Archive") {
                                 Task {
                                     await archiveMemory()
                                 }
@@ -222,6 +222,34 @@ struct MemoryDetailView: View {
                 }
             }
         }
+    }
+
+    private var processingLabel: String {
+        snapshot.processingTier == ProcessingTier.onDevice.rawValue ? "On Device" : "External Processing"
+    }
+
+    private var recallPriorityLabel: String {
+        if snapshot.persistenceScore >= 0.75 {
+            return "High"
+        }
+
+        if snapshot.persistenceScore >= 0.40 {
+            return "Medium"
+        }
+
+        return "Low"
+    }
+
+    private var reviewStatusLabel: String {
+        if snapshot.confidence >= 0.70 {
+            return "Looks ready"
+        }
+
+        if snapshot.confidence >= 0.50 {
+            return "Check if needed"
+        }
+
+        return "Review suggested"
     }
 
     @MainActor
@@ -301,6 +329,7 @@ struct MetadataRow: View {
             Image(systemName: icon)
                 .frame(width: DS.Spacing.lg)
                 .foregroundStyle(DS.Colours.textTertiary)
+                .accessibilityHidden(true)
             Text(label)
                 .font(DS.Typography.subheadline)
                 .foregroundStyle(DS.Colours.textSecondary)
@@ -308,6 +337,9 @@ struct MetadataRow: View {
             Text(value)
                 .font(DS.Typography.subheadline)
                 .foregroundStyle(DS.Colours.textPrimary)
+                .multilineTextAlignment(.trailing)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label), \(value)")
     }
 }

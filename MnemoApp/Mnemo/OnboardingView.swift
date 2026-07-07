@@ -3,7 +3,7 @@ import SwiftData
 import MnemoUI
 import MnemoCore
 
-/// Root onboarding container. Forward-only, 8 steps.
+/// Root onboarding container. Forward-only, V1 setup steps.
 /// Gated: main app is inaccessible until complete.
 struct OnboardingView: View {
 
@@ -76,10 +76,11 @@ struct OnboardingNavigationBar: View {
                 Button {
                     viewModel.complete(context: modelContext, appState: appState)
                 } label: {
-                    Text("Start using Mnemo")
+                    Text("Start with one memory")
                         .font(DS.Typography.headline)
                         .frame(maxWidth: .infinity)
-                        .frame(height: DS.ComponentTokens.PrimaryButton.height)
+                        .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
+                        .padding(.vertical, DS.Spacing.xs)
                         .background(DS.Colours.accent)
                         .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
@@ -93,7 +94,8 @@ struct OnboardingNavigationBar: View {
                     Text("Continue")
                         .font(DS.Typography.headline)
                         .frame(maxWidth: .infinity)
-                        .frame(height: DS.ComponentTokens.PrimaryButton.height)
+                        .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
+                        .padding(.vertical, DS.Spacing.xs)
                         .background(DS.Colours.accent)
                         .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))

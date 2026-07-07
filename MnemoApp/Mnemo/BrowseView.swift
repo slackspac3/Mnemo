@@ -8,6 +8,7 @@ import MnemoMemory
 struct BrowseView: View {
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(NavigationCoordinator.self) private var coordinator
     @Query(sort: \MemoryRecord.createdAt, order: .reverse) private var records: [MemoryRecord]
 
     @State private var searchText = ""
@@ -80,16 +81,16 @@ struct BrowseView: View {
                     }
 
                     if filteredRecords.isEmpty {
-                        EmptyBrowseView(filter: selectedFilter)
+                        EmptyBrowseView(
+                            filter: selectedFilter,
+                            searchText: searchText,
+                            onWriteMemory: {
+                                coordinator.present(.captureText)
+                            }
+                        )
                     } else {
                         ScrollView {
-                            LazyVGrid(
-                                columns: [
-                                    GridItem(.flexible()),
-                                    GridItem(.flexible())
-                                ],
-                                spacing: DS.Spacing.sm
-                            ) {
+                            LazyVStack(spacing: DS.Spacing.sm) {
                                 ForEach(filteredRecords, id: \.id) { record in
                                     Button {
                                         selectedMemory = SelectedMemory(id: record.id)
@@ -121,7 +122,7 @@ struct BrowseView: View {
                         onDeletePermanently: deleteMemoryPermanently
                     )
                 } else {
-                    EmptyBrowseView(filter: .all)
+                    MissingSourceView()
                 }
             }
         }
@@ -154,9 +155,12 @@ struct FilterChip: View {
                 .foregroundStyle(isSelected ? DS.ComponentTokens.PrimaryButton.foreground : DS.Colours.textSecondary)
                 .padding(.horizontal, DS.Spacing.md)
                 .padding(.vertical, DS.Spacing.sm)
+                .frame(minHeight: 44.0)
                 .background(isSelected ? DS.Colours.accent : DS.Colours.surfaceSecondary)
                 .clipShape(Capsule())
         }
+        .accessibilityLabel(label)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 }
 
@@ -165,29 +169,41 @@ struct MemoryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-            HStack {
+            HStack(alignment: .top, spacing: DS.Spacing.sm) {
                 MemoryTypeIcon(type: record.memoryTypeEnum ?? .fact)
-                Spacer()
-                ProcessingTierBadge(tier: record.processingTierEnum ?? .onDevice)
+                    .frame(width: DS.Spacing.xl, height: DS.Spacing.xl)
+                    .background(DS.Colours.accent.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.small))
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                    Text(record.summary)
+                        .font(DS.Typography.body)
+                        .foregroundStyle(DS.Colours.textPrimary)
+                        .lineLimit(4)
+                        .multilineTextAlignment(.leading)
+
+                    HStack(spacing: DS.Spacing.sm) {
+                        Label(sourceLabel, systemImage: sourceIcon)
+                            .font(DS.Typography.caption1)
+                            .foregroundStyle(DS.Colours.textSecondary)
+
+                        Text(record.createdAt.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
+                            .font(DS.Typography.caption1)
+                            .foregroundStyle(DS.Colours.textTertiary)
+                    }
+                    .labelStyle(.titleAndIcon)
+                }
+
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(DS.Typography.caption1)
+                    .foregroundStyle(DS.Colours.textTertiary)
+                    .accessibilityHidden(true)
             }
-
-            Text(record.summary)
-                .font(DS.Typography.subheadline)
-                .foregroundStyle(DS.Colours.textPrimary)
-                .lineLimit(3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer()
-
-            Text(record.createdAt.formatted(.dateTime.day().month()))
-                .font(DS.Typography.caption2)
-                .foregroundStyle(DS.Colours.textTertiary)
         }
         .padding(DS.Spacing.md)
-        .frame(
-            maxWidth: .infinity,
-            minHeight: DS.Spacing.xxxl + DS.Spacing.xxl + DS.Spacing.sm
-        )
+        .frame(maxWidth: .infinity, minHeight: 96.0, alignment: .leading)
         .background(DS.Colours.surface)
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
         .shadow(
@@ -196,6 +212,32 @@ struct MemoryCard: View {
             x: DS.Shadows.subtle.x,
             y: DS.Shadows.subtle.y
         )
+    }
+
+    private var sourceLabel: String {
+        switch record.inputSourceEnum {
+        case .text:
+            return "Text"
+        case .voice:
+            return "Voice"
+        case .image:
+            return "Image"
+        case .none:
+            return "Memory"
+        }
+    }
+
+    private var sourceIcon: String {
+        switch record.inputSourceEnum {
+        case .text:
+            return "text.alignleft"
+        case .voice:
+            return "mic.fill"
+        case .image:
+            return "photo"
+        case .none:
+            return "doc.text"
+        }
     }
 }
 
@@ -255,21 +297,62 @@ struct ProcessingTierBadge: View {
 
 struct EmptyBrowseView: View {
     let filter: BrowseView.FilterOption
+    let searchText: String
+    let onWriteMemory: (() -> Void)?
 
     var body: some View {
         VStack(spacing: DS.Spacing.lg) {
             Spacer()
             Image(systemName: "tray")
                 .font(DS.Typography.largeTitle)
-                .foregroundStyle(DS.Colours.textTertiary)
-            Text(filter == .all ? "No memories yet" : "No \(filter.rawValue.lowercased())")
+                .foregroundStyle(DS.ComponentTokens.EmptyState.iconForeground)
+                .frame(width: 72.0, height: 72.0)
+                .background(DS.ComponentTokens.EmptyState.iconBackground)
+                .clipShape(Circle())
+                .accessibilityHidden(true)
+            Text(title)
                 .font(DS.Typography.title3)
                 .foregroundStyle(DS.Colours.textPrimary)
-            Text("Tap + to capture your first memory")
+                .multilineTextAlignment(.center)
+            Text(subtitle)
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textSecondary)
+                .multilineTextAlignment(.center)
+
+            if let onWriteMemory {
+                Button(action: onWriteMemory) {
+                    Label("Write memory", systemImage: "square.and.pencil")
+                        .font(DS.Typography.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
+                        .padding(.vertical, DS.Spacing.xs)
+                        .background(DS.Colours.accent)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(AccessibilityID.CaptureText.open)
+            }
             Spacer()
         }
         .padding(DS.Spacing.xl)
+        .frame(maxWidth: DS.ComponentTokens.EmptyState.maxWidth)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var title: String {
+        if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "No matching memories"
+        }
+
+        return filter == .all ? "No memories yet" : "No \(filter.rawValue.lowercased())"
+    }
+
+    private var subtitle: String {
+        if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Try a name, place, item, or decision you saved."
+        }
+
+        return filter == .all ? "Save a memory and it will appear here." : "Saved memories in this category will appear here."
     }
 }

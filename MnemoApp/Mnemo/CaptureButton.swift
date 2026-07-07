@@ -68,6 +68,9 @@ struct CaptureButton: View {
                         y: DS.Shadows.medium.y
                     )
             }
+            .accessibilityLabel(expanded ? "Close capture menu" : "Add memory")
+            .accessibilityHint("Choose how to save a memory")
+            .accessibilityIdentifier(AccessibilityID.Main.capture)
         }
     }
 }
@@ -105,6 +108,24 @@ struct CaptureOptionButton: View {
                     .background(color)
                     .clipShape(Circle())
             }
+        }
+        .accessibilityLabel("\(label) memory")
+        .accessibilityHint("Open \(label.lowercased()) capture")
+        .accessibilityIdentifier(accessibilityIdentifier)
+    }
+
+    private var accessibilityIdentifier: String {
+        switch label {
+        case "Text":
+            return AccessibilityID.CaptureText.open
+        case "Voice":
+            return "capture.voice.open"
+        case "Camera":
+            return "capture.camera.open"
+        case "Photo":
+            return "capture.photo.open"
+        default:
+            return AccessibilityID.Main.capture
         }
     }
 }

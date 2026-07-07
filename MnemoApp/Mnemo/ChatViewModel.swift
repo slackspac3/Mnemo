@@ -166,7 +166,7 @@ final class ChatViewModel {
         let location = extractLocation(from: memoryText)
         let item = itemLabel(for: memoryText)
         let subject = sizeSubject(item: item, location: location, query: "", memoryText: memoryText)
-        let sentenceSubject = subject.contains("'s") ? subject : "Your \(subject)"
+        let sentenceSubject = updateConfirmationSubject(subject: subject, memoryText: memoryText)
 
         return RecallResponse(
             text: "Updated. \(sentenceSubject) is now \(displaySize).",
@@ -470,6 +470,23 @@ final class ChatViewModel {
         } else {
             return "\(item) size"
         }
+    }
+
+    private func updateConfirmationSubject(subject: String, memoryText: String) -> String {
+        if subject.contains("'s") {
+            return subject
+        }
+
+        let lowercasedMemory = memoryText.lowercased()
+        if lowercasedMemory.contains("my ") || lowercasedMemory.contains("remember that my ") {
+            return "Your \(subject)"
+        }
+
+        if subject == "size" {
+            return "That saved size"
+        }
+
+        return "That saved \(subject)"
     }
 
     private func sizeOwner(from text: String) -> String? {

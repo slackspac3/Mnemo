@@ -1,0 +1,20 @@
+# Design Polish Audit - 2026-07-07
+
+Build reviewed: `3ea0052d3488be9f65fc528105b987cece9d98c4`
+
+Scope: V1 Apple-grade UI/UX polish pass. The review intentionally excludes new AI, cloud, account, or autonomous features.
+
+| Area | Current issue | Apple/HIG principle | Recommended polish | Risk | Decision |
+| --- | --- | --- | --- | --- | --- |
+| Design tokens | Typography uses fixed point sizes and colors are mostly static light-mode values. | Dynamic Type, semantic color, dark-mode adaptation. | Move typography tokens toward semantic text styles and add reusable source/empty/lock surface tokens. | Medium visual sweep. | Implement targeted token refinements and validate smoke tests. |
+| Onboarding | First-run flow exposes future-facing concepts such as cloud assist, Memory Moments, and reminders before they are active. | Progressive disclosure, honest capability framing. | Reframe onboarding around current V1: local memories, recall with sources, App Lock/no account, optional backup, first memory. | Medium because copy and step content change. | Implement copy/content simplification only; do not add new flows. |
+| Chat landing | Empty chat still reads partly like a chat surface before teaching save-and-recall. | Clear empty states and primary action hierarchy. | Lead with “What do you want to remember?”, make Write Memory the primary action, keep Voice/Camera/Photo secondary, add local-storage note. | Low. | Implement. |
+| Text capture | Review flow shows raw confidence percentages and “Mnemo understood,” which can feel technical or overconfident. | Clear feedback, avoid exposing internal scoring. | Use “Review memory,” “Looks ready,” and “Review suggested”; add placeholder and focus behavior. | Low. | Implement. |
+| Browse | Two-column cards can feel cramped and empty states do not distinguish no memories from no search matches. | Readable lists, adaptive layout, clear empty/search states. | Move to a calmer single-column library card, show source/date metadata, tailor empty copy. | Medium visual change. | Implement with existing navigation intact. |
+| Chat source cards | Source cards are useful but need a clearer tap affordance and accessibility hint. | Visible affordance, source transparency. | Rename header to source-memory language, add chevron/tap hint semantics, preserve identifiers. | Low. | Implement. |
+| Update confirmation | “Updated. Your size is now 39.” can be wrong for cited memories about another person. | Personal data accuracy and trust. | Derive confirmation subject from cited memory owner; fall back to “that saved size” instead of “your size.” | Low. | Implement targeted wording fix. |
+| Memory detail | Internal confidence/persistence language is debug-like. | User control, meaningful metadata. | Keep details but replace raw confidence percent with user-facing readiness labels; improve row wrapping. | Low. | Implement narrowly. |
+| Settings | Future Sense rows are present and privacy copy could more clearly say no account is required. | Honest settings, inactive feature clarity. | Keep inactive rows labelled as coming later and add no-account/local copy. | Low. | Implement copy polish only. |
+| App Lock | Unlock button uses a Face ID symbol even though passcode/Touch ID may be used. | Accurate system capability language. | Use a generic unlock symbol, stronger lock-card hierarchy, no-account reassurance. | Low. | Implement. |
+| Accessibility | Several icon-only controls lack explicit labels/hints and source-card button semantics could be clearer. | VoiceOver labels, 44 pt targets, Reduce Motion. | Add labels/hints to chat controls, capture controls, source cards; avoid private data in identifiers. | Low. | Implement high-impact labels; leave broad Reduce Motion pass as design debt. |
+| Physical-device flows | Mic, camera, OCR, iCloud, notifications, real App Lock prompts, and locked-device file protection are not simulator-proven. | Honest validation. | Keep physical validation pending and do not claim those paths were verified. | Low. | Document honestly in validation. |

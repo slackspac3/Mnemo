@@ -45,9 +45,9 @@ struct OnboardingStepView: View {
         case .welcome:
             WelcomeStepContent()
         case .processingMode:
-            ProcessingModeStepContent(viewModel: viewModel)
+            RecallStepContent()
         case .notifications:
-            NotificationsStepContent(viewModel: viewModel)
+            ProtectionStepContent()
         case .backup:
             BackupStepContent(viewModel: viewModel)
         case .done:
@@ -60,7 +60,7 @@ struct OnboardingStepView: View {
         case .welcome:
             return DS.Colours.primary
         case .notifications:
-            return DS.Colours.sense
+            return DS.Colours.accent
         case .done:
             return DS.Colours.success
         case .processingMode, .backup:
@@ -75,17 +75,17 @@ struct WelcomeStepContent: View {
             FeatureRow(
                 icon: "lock.shield.fill",
                 color: DS.Colours.accent,
-                text: "Your memories are stored on this iPhone"
+                text: "Saved memories stay on this iPhone unless you choose iCloud backup"
             )
             FeatureRow(
-                icon: "magnifyingglass",
+                icon: "person.crop.circle.badge.xmark",
                 color: DS.Colours.sense,
-                text: "Recall uses your saved memory text"
+                text: "No Mnemo account, email, or sign-in required"
             )
             FeatureRow(
-                icon: "arrow.uturn.backward",
+                icon: "bookmark.fill",
                 color: DS.Colours.success,
-                text: "Shows the source memory behind each answer"
+                text: "Every answer can show the saved memory it used"
             )
         }
         .padding(DS.Spacing.md)
@@ -111,6 +111,7 @@ struct FeatureRow: View {
                 .font(DS.Typography.title2)
                 .foregroundStyle(color)
                 .frame(width: DS.Spacing.xl)
+                .accessibilityHidden(true)
             Text(text)
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textPrimary)
@@ -119,125 +120,91 @@ struct FeatureRow: View {
     }
 }
 
-struct ProcessingModeStepContent: View {
-    let viewModel: OnboardingViewModel
-
+struct RecallStepContent: View {
     var body: some View {
         VStack(spacing: DS.Spacing.md) {
-            ProcessingOptionCard(
-                icon: "lock.shield.fill",
-                title: "On-Device Only",
-                description: "Memories are stored locally, and recall uses saved memory text on this iPhone. Recommended.",
-                isSelected: viewModel.onDeviceOnly,
+            OnboardingInfoCard(
+                icon: "text.magnifyingglass",
+                title: "Local recall",
+                description: "Mnemo searches the memories you have saved and answers from that local store.",
                 color: DS.Colours.accent
-            ) {
-                viewModel.onDeviceOnly = true
-            }
-
-            ProcessingOptionCard(
-                icon: "cloud.fill",
-                title: "Future Cloud Assist",
-                description: "Cloud Assist is a future opt-in route for ambiguous captures. In this build, captures stay on this device.",
-                isSelected: !viewModel.onDeviceOnly,
+            )
+            OnboardingInfoCard(
+                icon: "bookmark.fill",
+                title: "Sources stay visible",
+                description: "When Mnemo recalls something, source cards show the memory behind the answer.",
+                color: DS.Colours.success
+            )
+            OnboardingInfoCard(
+                icon: "icloud.slash",
+                title: "No cloud AI in this build",
+                description: "Capture and recall stay local in this version. Future cloud processing would require a separate consent step.",
                 color: DS.Colours.textSecondary
-            ) {
-                viewModel.onDeviceOnly = false
-            }
-
-            if !viewModel.onDeviceOnly {
-                AICloudConsentNotice()
-            }
+            )
         }
     }
 }
 
-struct AICloudConsentNotice: View {
+struct ProtectionStepContent: View {
     var body: some View {
-        HStack(alignment: .top, spacing: DS.Spacing.sm) {
-            Image(systemName: "info.circle")
-                .font(DS.Typography.caption1)
-                .foregroundStyle(DS.Colours.accent)
-            Text("Cloud Assist is not connected to an external provider in this build. Future cloud processing will require explicit consent and can be changed in Settings.")
-                .font(DS.Typography.caption1)
-                .foregroundStyle(DS.Colours.textSecondary)
+        VStack(spacing: DS.Spacing.md) {
+            OnboardingInfoCard(
+                icon: "lock.open.fill",
+                title: "Optional App Lock",
+                description: "Ask Mnemo to unlock with Face ID, Touch ID or your device passcode when you reopen the app.",
+                color: DS.Colours.accent
+            )
+            OnboardingInfoCard(
+                icon: "person.crop.circle.badge.xmark",
+                title: "No account recovery step",
+                description: "Mnemo does not create an account, password, or remote identity for V1.",
+                color: DS.Colours.sense
+            )
+            OnboardingInfoCard(
+                icon: "checkmark.shield.fill",
+                title: "You stay in control",
+                description: "Archive or permanently delete saved memories from the memory detail screen.",
+                color: DS.Colours.success
+            )
         }
-        .padding(DS.Spacing.sm)
-        .background(DS.Colours.surfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
     }
 }
 
-struct ProcessingOptionCard: View {
+struct OnboardingInfoCard: View {
     let icon: String
     let title: String
     let description: String
-    let isSelected: Bool
     let color: Color
-    let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: DS.Spacing.md) {
-                Image(systemName: icon)
-                    .font(DS.Typography.title2)
-                    .foregroundStyle(color)
-                    .frame(width: DS.Spacing.xl)
+        HStack(alignment: .top, spacing: DS.Spacing.md) {
+            Image(systemName: icon)
+                .font(DS.Typography.title2)
+                .foregroundStyle(color)
+                .frame(width: DS.Spacing.xl)
+                .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Text(title)
-                        .font(DS.Typography.headline)
-                        .foregroundStyle(DS.Colours.textPrimary)
-                    Text(description)
-                        .font(DS.Typography.footnote)
-                        .foregroundStyle(DS.Colours.textSecondary)
-                        .multilineTextAlignment(.leading)
-                }
-
-                Spacer()
-
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(DS.Typography.title2)
-                    .foregroundStyle(isSelected ? DS.Colours.accent : DS.Colours.textTertiary)
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                Text(title)
+                    .font(DS.Typography.headline)
+                    .foregroundStyle(DS.Colours.textPrimary)
+                Text(description)
+                    .font(DS.Typography.footnote)
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .multilineTextAlignment(.leading)
             }
-            .padding(DS.Spacing.md)
-            .background(isSelected ? DS.Colours.surfaceSecondary : DS.Colours.surface)
-            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-            .selectedBorder(isSelected)
+
+            Spacer()
         }
+        .padding(DS.Spacing.md)
+        .background(DS.Colours.surface)
+        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
         .shadow(
             color: DS.Shadows.subtle.color,
             radius: DS.Shadows.subtle.radius,
             x: DS.Shadows.subtle.x,
             y: DS.Shadows.subtle.y
         )
-    }
-}
-
-struct NotificationsStepContent: View {
-    let viewModel: OnboardingViewModel
-
-    var body: some View {
-        VStack(spacing: DS.Spacing.md) {
-            ProcessingOptionCard(
-                icon: "bell.badge.fill",
-                title: "Memory Moments are coming soon",
-                description: "Smart reminders are not active in this build. They will stay off unless you explicitly turn them on later.",
-                isSelected: false,
-                color: DS.Colours.sense
-            ) {
-                viewModel.memoryMomentsEnabled = false
-            }
-
-            ProcessingOptionCard(
-                icon: "bell.slash",
-                title: "Keep reminders off",
-                description: "Mnemo will not request notification permission during this setup.",
-                isSelected: !viewModel.memoryMomentsEnabled,
-                color: DS.Colours.textTertiary
-            ) {
-                viewModel.memoryMomentsEnabled = false
-            }
-        }
     }
 }
 
@@ -252,10 +219,10 @@ struct BackupStepContent: View {
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.warning)
                 VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Text("Backup setup is optional and should be validated on your device before you rely on it for recovery.")
+                    Text("Backup is optional and should be validated on your device before you rely on it for recovery.")
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(DS.Colours.textPrimary)
-                    Text("The backup screen in Settings stores encrypted backup data in your iCloud account.")
+                    Text("The backup screen in Settings stores encrypted backup data in your iCloud account. Mnemo does not operate a backup server.")
                         .font(DS.Typography.footnote)
                         .foregroundStyle(DS.Colours.textSecondary)
                 }
@@ -285,7 +252,8 @@ struct BackupStepContent: View {
                             .font(DS.Typography.headline)
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: DS.ComponentTokens.PrimaryButton.height)
+                    .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
+                    .padding(.vertical, DS.Spacing.xs)
                     .background(DS.Colours.accent)
                     .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
@@ -307,7 +275,7 @@ struct DoneStepContent: View {
 
     var body: some View {
         VStack(spacing: DS.Spacing.md) {
-            Text("The more you tell Mnemo, the more useful it becomes. Start capturing anything you want to remember.")
+            Text("Save one detail now. Later, ask Mnemo in plain language and check the source memory it used.")
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textSecondary)
                 .multilineTextAlignment(.center)

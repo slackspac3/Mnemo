@@ -15,20 +15,14 @@ struct AppRootView: View {
             } else if !appState.onboardingComplete {
                 PlaceholderOnboardingView()
                     .accessibilityIdentifier("root.onboarding")
+            } else if appState.appLockEnabled && appState.isAppLocked {
+                AppLockView()
+                    .accessibilityIdentifier("root.locked")
             } else {
-                ZStack {
-                    PlaceholderMainView()
-                        .accessibilityIdentifier("root.main")
-
-                    if appState.appLockEnabled && appState.isAppLocked {
-                        AppLockView()
-                            .accessibilityIdentifier("root.locked")
-                            .transition(.opacity)
-                    }
-                }
+                PlaceholderMainView()
+                    .accessibilityIdentifier("root.main")
             }
         }
         .animation(DS.Animation.standard, value: appState.isInitialised)
-        .animation(DS.Animation.standard, value: appState.isAppLocked)
     }
 }

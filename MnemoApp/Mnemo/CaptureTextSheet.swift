@@ -138,25 +138,38 @@ struct TextInputView: View {
     @Binding var text: String
     let isExtracting: Bool
     let onExtract: () -> Void
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         let canSave = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
         VStack(spacing: DS.Spacing.lg) {
             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                Text("What do you want to remember?")
+                Text("What should Mnemo remember?")
                     .font(DS.Typography.headline)
                     .foregroundStyle(DS.Colours.textPrimary)
 
-                TextEditor(text: $text)
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: DS.Spacing.xxxl + DS.Spacing.xxxl)
-                    .padding(DS.Spacing.sm)
-                    .background(DS.Colours.surfaceSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-                    .accessibilityIdentifier(AccessibilityID.CaptureText.input)
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $text)
+                        .font(DS.Typography.body)
+                        .foregroundStyle(DS.Colours.textPrimary)
+                        .scrollContentBackground(.hidden)
+                        .focused($isFocused)
+                        .frame(minHeight: DS.Spacing.xxxl + DS.Spacing.xxxl)
+                        .padding(DS.Spacing.sm)
+                        .background(DS.Colours.surfaceSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                        .accessibilityIdentifier(AccessibilityID.CaptureText.input)
+
+                    if text.isEmpty {
+                        Text("Example: Mum wears size 38 shoes.")
+                            .font(DS.Typography.body)
+                            .foregroundStyle(DS.Colours.textTertiary)
+                            .padding(.horizontal, DS.Spacing.md + DS.Spacing.xs)
+                            .padding(.vertical, DS.Spacing.md)
+                            .allowsHitTesting(false)
+                    }
+                }
             }
 
             Button(action: onExtract) {
@@ -165,20 +178,25 @@ struct TextInputView: View {
                         ProgressView()
                             .tint(DS.ComponentTokens.PrimaryButton.foreground)
                     } else {
-                        Text("Save to Memory")
+                        Text("Review Memory")
                             .font(DS.Typography.headline)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: DS.ComponentTokens.PrimaryButton.height)
+                .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
+                .padding(.vertical, DS.Spacing.xs)
                 .background(canSave ? DS.Colours.accent : DS.Colours.textTertiary)
                 .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
             .disabled(!canSave || isExtracting)
+            .accessibilityLabel("Review memory")
             .accessibilityIdentifier(AccessibilityID.CaptureText.extract)
 
             Spacer()
+        }
+        .task {
+            isFocused = true
         }
     }
 }
@@ -193,7 +211,7 @@ struct ExtractionConfirmView: View {
     var body: some View {
         VStack(spacing: DS.Spacing.lg) {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("Mnemo understood:")
+                Text("Review memory")
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.textSecondary)
 
@@ -253,7 +271,8 @@ struct ExtractionConfirmView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: DS.ComponentTokens.PrimaryButton.height)
+                    .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
+                    .padding(.vertical, DS.Spacing.xs)
                     .background(DS.Colours.accent)
                     .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
@@ -265,7 +284,8 @@ struct ExtractionConfirmView: View {
                     Text("Edit")
                         .font(DS.Typography.headline)
                         .frame(maxWidth: .infinity)
-                        .frame(height: DS.ComponentTokens.SecondaryButton.height)
+                        .frame(minHeight: DS.ComponentTokens.SecondaryButton.height)
+                        .padding(.vertical, DS.Spacing.xs)
                         .background(DS.Colours.surfaceSecondary)
                         .foregroundStyle(DS.Colours.textPrimary)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
@@ -285,6 +305,10 @@ struct ExtractionConfirmView: View {
     }
 
     private var confidenceLabel: String {
-        result.confidence < 0.50 ? "Review suggested" : "\(Int(result.confidence * 100))% confident"
+        if result.confidence < 0.50 {
+            return "Review suggested"
+        }
+
+        return result.confidence > 0.70 ? "Looks ready" : "Check before saving"
     }
 }

@@ -58,7 +58,7 @@ Complete every item before submitting to App Store Review.
 - [ ] Screenshots for iPhone 6.1": required if different from 6.9"
 - [ ] App preview video (optional but recommended)
 - [ ] Description written (see pitch document for language)
-- [ ] Keywords (100 character limit): memory, recall, private, AI, notes, capture, voice, reminder, context, personal
+- [ ] Keywords (100 character limit): memory, recall, private, notes, capture, voice, reminder, context, personal, OCR
 - [ ] What's New text for version 1.0 (can be brief: "First release.")
 
 ## Final Steps

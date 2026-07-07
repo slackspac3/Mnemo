@@ -227,6 +227,7 @@ struct VoiceRecordingView: View {
     let onToggle: () -> Void
     let onDone: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pulse = false
 
     var body: some View {
@@ -243,7 +244,7 @@ struct VoiceRecordingView: View {
                         )
                         .scaleEffect(pulse ? 1.08 : 0.88)
                         .opacity(pulse ? 0.24 : 0.72)
-                        .animation(DS.Animation.slow.repeatForever(autoreverses: true), value: pulse)
+                        .animation(reduceMotion ? nil : DS.Animation.slow.repeatForever(autoreverses: true), value: pulse)
                 }
 
                 Circle()
@@ -266,7 +267,11 @@ struct VoiceRecordingView: View {
                     Image(systemName: isRecording ? "stop.fill" : "mic.fill")
                         .font(DS.Typography.largeTitle)
                         .foregroundStyle(isRecording ? DS.Colours.destructive : DS.Colours.accent)
+                        .frame(width: 80.0, height: 80.0)
                 }
+                .accessibilityLabel(isRecording ? "Stop recording" : "Record voice memory")
+                .accessibilityValue(statusText)
+                .accessibilityHint(isRecording ? "Stop recording and finish the transcript" : "Start voice capture")
             }
             .onAppear {
                 pulse = isRecording
@@ -321,6 +326,7 @@ struct VoiceRecordingView: View {
 
 struct RecordingWaveform: View {
     let isAnimating: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: DS.Spacing.xs) {
@@ -329,9 +335,9 @@ struct RecordingWaveform: View {
                     .fill(DS.Colours.destructive)
                     .frame(
                         width: DS.Spacing.xs,
-                        height: height(for: index, isRaised: isAnimating)
+                        height: height(for: index, isRaised: reduceMotion ? false : isAnimating)
                     )
-                    .animation(DS.Animation.slow.repeatForever(autoreverses: true), value: isAnimating)
+                    .animation(reduceMotion ? nil : DS.Animation.slow.repeatForever(autoreverses: true), value: isAnimating)
             }
         }
         .frame(height: DS.Spacing.lg)
@@ -393,7 +399,8 @@ struct VoiceConfirmView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: DS.ComponentTokens.PrimaryButton.height)
+                .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
+                .padding(.vertical, DS.Spacing.xs)
                 .background(transcript.isEmpty ? DS.Colours.textTertiary : DS.Colours.accent)
                 .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))

@@ -58,10 +58,21 @@ struct SettingsView: View {
                                     Image(systemName: "info.circle")
                                         .font(DS.Typography.subheadline)
                                         .foregroundStyle(DS.Colours.accent)
-                                    Text("Cloud Assist is not connected in this build. Mnemo keeps capture and recall local until a provider is configured and you opt in.")
+                                        .accessibilityHidden(true)
+                                    Text("Cloud Assist is unavailable in this build. Capture and recall stay local in this version.")
                                         .font(DS.Typography.footnote)
                                         .foregroundStyle(DS.Colours.textSecondary)
                                 }
+                            }
+
+                            HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                                Image(systemName: "person.crop.circle.badge.xmark")
+                                    .font(DS.Typography.subheadline)
+                                    .foregroundStyle(DS.Colours.accent)
+                                    .accessibilityHidden(true)
+                                Text("Mnemo works without a Mnemo account, email, or backend sign-in.")
+                                    .font(DS.Typography.footnote)
+                                    .foregroundStyle(DS.Colours.textSecondary)
                             }
                         } else {
                             Text("Privacy settings will appear after onboarding.")
@@ -128,15 +139,15 @@ struct SettingsView: View {
                         if let model = userModel {
                             SenseComingSoonRow(
                                 title: "Memory Moments",
-                                detail: model.memoryMomentsEnabled ? "Off in this build" : "Not active in this build"
+                                detail: model.memoryMomentsEnabled ? "Off in this build" : "Coming later"
                             )
                             SenseComingSoonRow(
                                 title: "Pattern Insights",
-                                detail: "Coming soon"
+                                detail: "Coming later"
                             )
                             SenseComingSoonRow(
                                 title: "Thread Suggestions",
-                                detail: "Coming soon"
+                                detail: "Coming later"
                             )
                         } else {
                             Text("Mnemo Sense settings will appear after onboarding.")
@@ -386,7 +397,7 @@ struct DeviceTierRow: View {
         case .mlxOnly:
             return "lock.shield.fill"
         case .cloudPrimary:
-            return "cloud.fill"
+            return "lock.shield.fill"
         case .unsupported:
             return "exclamationmark.triangle"
         }
@@ -397,6 +408,7 @@ struct DeviceTierRow: View {
             Image(systemName: tierIcon)
                 .font(DS.Typography.subheadline)
                 .foregroundStyle(DS.Colours.accent)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                 Text(tierLabel)
                     .font(DS.Typography.subheadline)
