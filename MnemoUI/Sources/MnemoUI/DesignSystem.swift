@@ -151,8 +151,28 @@ public enum DS {
         public static let contentTransition: SwiftUI.Animation = standard
         public static let sheetTransition: SwiftUI.Animation = standard
         public static let spring: SwiftUI.Animation = gentleSpring
+        public static let heroAppear: SwiftUI.Animation = .easeOut(duration: 0.34)
+        public static let cardAppear: SwiftUI.Animation = gentleSpring
+        public static let sourceReveal: SwiftUI.Animation = .easeOut(duration: 0.22)
+        public static let memorySaved: SwiftUI.Animation = gentleSpring
+        public static let lockAppear: SwiftUI.Animation = .easeOut(duration: 0.26)
+        public static let unlockDismiss: SwiftUI.Animation = .easeInOut(duration: 0.18)
+        public static let emptyToContent: SwiftUI.Animation = standard
+        public static let pressFeedback: SwiftUI.Animation = quick
 
         public static let scalePress: CGFloat = 0.975
+
+        public static func cardAppearTransition(reduceMotion: Bool) -> AnyTransition {
+            reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom))
+        }
+
+        public static func sourceRevealTransition(reduceMotion: Bool) -> AnyTransition {
+            reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top))
+        }
+
+        public static func lockAppearTransition(reduceMotion: Bool) -> AnyTransition {
+            reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.985))
+        }
     }
 
     // MARK: - Component Tokens

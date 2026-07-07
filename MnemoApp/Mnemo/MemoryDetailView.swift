@@ -13,6 +13,7 @@ struct MemoryDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var showingArchiveConfirm = false
     @State private var showingDeleteConfirm = false
@@ -37,13 +38,25 @@ struct MemoryDetailView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Spacing.lg) {
-                        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                            Text(snapshot.summary)
-                                .font(DS.Typography.body)
-                                .foregroundStyle(DS.Colours.textPrimary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                        ZStack(alignment: .bottomTrailing) {
+                            MnemoThreadMotif(style: .watermark, lineWidth: 1.8)
+                                .frame(width: 124.0, height: 92.0)
+                                .padding(.trailing, DS.Spacing.sm)
+
+                            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                                Label("Saved memory", systemImage: "bookmark.fill")
+                                    .font(DS.Typography.caption1.weight(.semibold))
+                                    .foregroundStyle(DS.Colours.sourceCardAccent)
+                                    .accessibilityHidden(true)
+
+                                Text(snapshot.summary)
+                                    .font(DS.Typography.body)
+                                    .foregroundStyle(DS.Colours.textPrimary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(DS.Spacing.md)
+                            .padding(.trailing, DS.Spacing.sm)
                         }
-                        .padding(DS.Spacing.md)
                         .background(DS.Colours.memoryCardSurface)
                         .overlay {
                             RoundedRectangle(cornerRadius: DS.CornerRadius.large)
@@ -56,6 +69,7 @@ struct MemoryDetailView: View {
                             x: DS.Shadows.subtle.x,
                             y: DS.Shadows.subtle.y
                         )
+                        .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
                         .accessibilityIdentifier(AccessibilityID.MemoryDetail.title)
 
                         VStack(spacing: DS.Spacing.sm) {

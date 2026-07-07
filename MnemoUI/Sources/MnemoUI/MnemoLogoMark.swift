@@ -22,7 +22,7 @@ public struct MnemoLogoMark: View {
             RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
                 .fill(background)
 
-            MnemoThreadShape()
+            MnemonicThreadShape()
                 .stroke(
                     thread,
                     style: StrokeStyle(
@@ -61,7 +61,7 @@ public struct MnemoLogoMark: View {
     }
 }
 
-private struct MnemoThreadShape: Shape {
+struct MnemonicThreadShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let w = rect.width

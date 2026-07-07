@@ -257,11 +257,12 @@ struct CitationSection: View {
     let citations: [ChatViewModel.Message.Citation]
     let fallbackCount: Int
     let onSourceTap: (UUID) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.xs) {
             Label(title, systemImage: "bookmark.fill")
-                .font(DS.Typography.caption1)
+                .font(DS.Typography.caption1.weight(.semibold))
                 .foregroundStyle(DS.Colours.sourceCardAccent)
                 .accessibilityLabel(title)
 
@@ -273,36 +274,49 @@ struct CitationSection: View {
                     .background(DS.Colours.sourceCardSurface)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             } else {
-                ForEach(citations.prefix(3)) { citation in
+                ForEach(Array(citations.prefix(3).enumerated()), id: \.element.id) { index, citation in
                     let isPrimary = citation.id == citations.first?.id
                     Button {
                         onSourceTap(citation.id)
                     } label: {
-                        HStack(alignment: .center, spacing: DS.Spacing.sm) {
-                            Image(systemName: "doc.text.magnifyingglass")
-                                .font(DS.Typography.caption1)
-                                .foregroundStyle(isPrimary ? DS.Colours.sourceCardAccent : DS.Colours.textTertiary)
-                                .frame(width: DS.Spacing.md)
-                                .accessibilityHidden(true)
-
-                            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                                Text(citation.source)
-                                    .font(DS.Typography.caption2)
-                                    .foregroundStyle(DS.Colours.textTertiary)
-                                    .accessibilityIdentifier(AccessibilityID.Chat.sourceType)
-                                Text("\"\(citation.summary)\"")
-                                    .font(DS.Typography.caption1)
-                                    .foregroundStyle(DS.Colours.textSecondary)
-                                    .lineLimit(3)
-                                    .multilineTextAlignment(.leading)
+                        ZStack(alignment: .trailing) {
+                            if isPrimary {
+                                MnemoThreadMotif(style: .source, lineWidth: 1.8)
+                                    .frame(width: 92.0, height: 72.0)
+                                    .padding(.trailing, DS.Spacing.xs)
                             }
 
-                            Spacer(minLength: DS.Spacing.xs)
+                            HStack(alignment: .center, spacing: DS.Spacing.sm) {
+                                Capsule()
+                                    .fill(isPrimary ? DS.Colours.sourceCardAccent : DS.Colours.borderStrong)
+                                    .frame(width: 3.0, height: 40.0)
+                                    .accessibilityHidden(true)
 
-                            Image(systemName: "chevron.right")
-                                .font(DS.Typography.caption1)
-                                .foregroundStyle(DS.Colours.textTertiary)
-                                .accessibilityHidden(true)
+                                Image(systemName: "doc.text.magnifyingglass")
+                                    .font(DS.Typography.caption1)
+                                    .foregroundStyle(isPrimary ? DS.Colours.sourceCardAccent : DS.Colours.textTertiary)
+                                    .frame(width: DS.Spacing.md)
+                                    .accessibilityHidden(true)
+
+                                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                                    Text(citation.source)
+                                        .font(DS.Typography.caption2.weight(.semibold))
+                                        .foregroundStyle(isPrimary ? DS.Colours.sourceCardAccent : DS.Colours.textTertiary)
+                                        .accessibilityIdentifier(AccessibilityID.Chat.sourceType)
+                                    Text("\"\(citation.summary)\"")
+                                        .font(DS.Typography.caption1)
+                                        .foregroundStyle(DS.Colours.textSecondary)
+                                        .lineLimit(4)
+                                        .multilineTextAlignment(.leading)
+                                }
+
+                                Spacer(minLength: DS.Spacing.xs)
+
+                                Image(systemName: "chevron.right")
+                                    .font(DS.Typography.caption1)
+                                    .foregroundStyle(DS.Colours.textTertiary)
+                                    .accessibilityHidden(true)
+                            }
                         }
                         .padding(DS.ComponentTokens.SourceCard.padding)
                         .background(isPrimary ? DS.ComponentTokens.SourceCard.background : DS.Colours.surfaceElevated)
@@ -313,19 +327,36 @@ struct CitationSection: View {
                         .clipShape(RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius))
                     }
                     .buttonStyle(.mnemoPressable)
-                    .accessibilityLabel("\(citation.source) source memory")
+                    .accessibilityLabel(sourceAccessibilityLabel(for: citation, index: index, isPrimary: isPrimary))
                     .accessibilityValue(citation.summary)
                     .accessibilityHint("Open source memory details")
                     .accessibilityIdentifier(citation.id == citations.first?.id ? AccessibilityID.Chat.sourceCardPrimary : AccessibilityID.Chat.sourceCard)
+                    .transition(DS.Animation.sourceRevealTransition(reduceMotion: reduceMotion))
+                }
+
+                if citations.count > 3 {
+                    Text("\(citations.count - 3) more source\(citations.count - 3 == 1 ? "" : "s") not shown")
+                        .font(DS.Typography.caption2)
+                        .foregroundStyle(DS.Colours.textTertiary)
+                        .padding(.leading, DS.Spacing.md)
                 }
             }
         }
-        .frame(maxWidth: 300.0, alignment: .leading)
-        .transition(.opacity)
+        .frame(maxWidth: 360.0, alignment: .leading)
+        .transition(DS.Animation.sourceRevealTransition(reduceMotion: reduceMotion))
     }
 
     private var title: String {
-        fallbackCount == 1 ? "Source memory" : "Source memories"
+        fallbackCount == 1 ? "Memory used" : "Sources"
+    }
+
+    private func sourceAccessibilityLabel(
+        for citation: ChatViewModel.Message.Citation,
+        index: Int,
+        isPrimary: Bool
+    ) -> String {
+        let sourcePosition = isPrimary ? "Primary source" : "Source \(index + 1) of \(min(citations.count, 3))"
+        return "\(sourcePosition). \(citation.source) source memory"
     }
 }
 
@@ -337,6 +368,7 @@ struct MissingSourceView: View {
                 Image(systemName: "exclamationmark.magnifyingglass")
                     .font(DS.Typography.largeTitle)
                     .foregroundStyle(DS.Colours.textTertiary)
+                    .accessibilityHidden(true)
 
                 Text("Memory not found")
                     .font(DS.Typography.headline)
@@ -391,25 +423,57 @@ struct EmptyChatLanding: View {
         GridItem(.flexible(), spacing: DS.Spacing.sm),
         GridItem(.flexible(), spacing: DS.Spacing.sm),
     ]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            HStack(alignment: .top, spacing: DS.Spacing.md) {
-                MnemoLogoMark(size: 44.0, style: .subtle)
-                    .accessibilityHidden(true)
+            ZStack(alignment: .topTrailing) {
+                MnemoThreadMotif(style: .hero, lineWidth: 2.0)
+                    .frame(width: 170.0, height: 130.0)
+                    .offset(x: DS.Spacing.lg, y: -DS.Spacing.md)
 
-                VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                    Text("What do you want to remember?")
-                        .font(DS.Typography.title1)
-                        .foregroundStyle(DS.Colours.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                    HStack(alignment: .top, spacing: DS.Spacing.md) {
+                        MnemoLogoMark(size: 48.0, style: .subtle)
+                            .accessibilityHidden(true)
 
-                    Text("Save a thought, detail, decision or reminder. Ask Mnemo about it later in plain language.")
-                        .font(DS.Typography.subheadline)
-                        .foregroundStyle(DS.Colours.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                            Text("What do you want to remember?")
+                                .font(DS.Typography.title1)
+                                .foregroundStyle(DS.Colours.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Text("Save a thought, detail, decision or reminder. Ask Mnemo about it later in plain language.")
+                                .font(DS.Typography.subheadline)
+                                .foregroundStyle(DS.Colours.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    Label("Private on this iPhone", systemImage: "lock.shield.fill")
+                        .font(DS.Typography.caption1.weight(.semibold))
+                        .foregroundStyle(DS.Colours.privateBadgeText)
+                        .padding(.horizontal, DS.Spacing.sm)
+                        .padding(.vertical, DS.Spacing.xs)
+                        .background(DS.Colours.privateBadgeSurface)
+                        .clipShape(Capsule())
                 }
+                .padding(DS.Spacing.md)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .background(DS.Colours.surfaceElevated)
+            .overlay {
+                RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge)
+                    .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge))
+            .shadow(
+                color: DS.Shadows.subtle.color,
+                radius: DS.Shadows.subtle.radius,
+                x: DS.Shadows.subtle.x,
+                y: DS.Shadows.subtle.y
+            )
+            .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
 
             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
                 Text("Save a memory")
@@ -638,7 +702,7 @@ struct LandingActionButton: View {
     }
 
     private var subtitleColor: Color {
-        prominence == .primary ? DS.Colours.brandThreadSoft : DS.Colours.textSecondary
+        prominence == .primary ? DS.Colours.textOnAccent.opacity(0.88) : DS.Colours.textSecondary
     }
 }
 
@@ -699,7 +763,7 @@ struct ChatInputBar: View {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 24.0, weight: .semibold))
                     .foregroundStyle(DS.Colours.accent)
-                    .frame(width: 40.0, height: 44.0)
+                    .frame(width: 44.0, height: 44.0)
             }
             .buttonStyle(.mnemoPressable)
             .accessibilityLabel("Add memory")
@@ -711,7 +775,7 @@ struct ChatInputBar: View {
                     .font(.system(size: 24.0, weight: .semibold))
                     .foregroundStyle(DS.Colours.accent)
                     .frame(
-                        width: 40.0,
+                        width: 44.0,
                         height: 44.0
                     )
             }

@@ -10,7 +10,7 @@ public struct MnemoPressableButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? DS.Animation.scalePress : 1.0))
             .opacity(configuration.isPressed ? 0.92 : 1.0)
-            .animation(reduceMotion ? DS.Animation.fade : DS.Animation.quick, value: configuration.isPressed)
+            .animation(reduceMotion ? DS.Animation.fade : DS.Animation.pressFeedback, value: configuration.isPressed)
     }
 }
 

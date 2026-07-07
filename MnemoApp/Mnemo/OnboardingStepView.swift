@@ -12,7 +12,11 @@ struct OnboardingStepView: View {
             VStack(spacing: DS.Spacing.xl) {
                 Spacer(minLength: DS.Spacing.xl)
 
-                stepMark
+                ZStack {
+                    MnemoThreadMotif(style: .hero, lineWidth: 2.0)
+                        .frame(width: 144.0, height: 112.0)
+                    stepMark
+                }
 
                 VStack(spacing: DS.Spacing.sm) {
                     Text(step.title)

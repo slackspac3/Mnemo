@@ -160,6 +160,8 @@ struct TextInputView: View {
                         .background(DS.Colours.surfaceSecondary)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                         .accessibilityIdentifier(AccessibilityID.CaptureText.input)
+                        .accessibilityLabel("Memory text")
+                        .accessibilityHint("Type what Mnemo should remember")
 
                     if text.isEmpty {
                         Text("Example: Mum wears size 38 shoes.")
@@ -168,6 +170,7 @@ struct TextInputView: View {
                             .padding(.horizontal, DS.Spacing.md + DS.Spacing.xs)
                             .padding(.vertical, DS.Spacing.md)
                             .allowsHitTesting(false)
+                            .accessibilityHidden(true)
                     }
                 }
             }
@@ -208,6 +211,7 @@ struct ExtractionConfirmView: View {
     let onConfirm: () -> Void
     let onEdit: () -> Void
     let onDiscard: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: DS.Spacing.lg) {
@@ -216,24 +220,32 @@ struct ExtractionConfirmView: View {
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.textSecondary)
 
-                Text(result.summary)
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                    .padding(DS.Spacing.md)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(DS.Colours.memoryCardSurface)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                            .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-                    .shadow(
-                        color: DS.Shadows.subtle.color,
-                        radius: DS.Shadows.subtle.radius,
-                        x: DS.Shadows.subtle.x,
-                        y: DS.Shadows.subtle.y
-                    )
-                    .accessibilityIdentifier(AccessibilityID.CaptureText.review)
+                ZStack(alignment: .bottomTrailing) {
+                    MnemoThreadMotif(style: .watermark, lineWidth: 1.8)
+                        .frame(width: 120.0, height: 92.0)
+                        .padding(.trailing, DS.Spacing.xs)
+
+                    Text(result.summary)
+                        .font(DS.Typography.body)
+                        .foregroundStyle(DS.Colours.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(DS.Spacing.md)
+                        .padding(.trailing, DS.Spacing.sm)
+                }
+                .background(DS.Colours.memoryCardSurface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                        .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
+                .shadow(
+                    color: DS.Shadows.subtle.color,
+                    radius: DS.Shadows.subtle.radius,
+                    x: DS.Shadows.subtle.x,
+                    y: DS.Shadows.subtle.y
+                )
+                .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
+                .accessibilityIdentifier(AccessibilityID.CaptureText.review)
 
                 HStack(spacing: DS.Spacing.sm) {
                     Label(result.memoryType.rawValue.capitalized, systemImage: "tag")
@@ -243,9 +255,13 @@ struct ExtractionConfirmView: View {
                     Spacer()
 
                     Text(confidenceLabel)
-                        .font(DS.Typography.caption1)
+                        .font(DS.Typography.caption1.weight(.semibold))
                         .foregroundStyle(result.confidence > 0.70 ? DS.Colours.success : DS.Colours.warning)
-                }
+                        .padding(.horizontal, DS.Spacing.sm)
+                        .padding(.vertical, DS.Spacing.xs)
+                        .background(result.confidence > 0.70 ? DS.Colours.successSoft : DS.Colours.warningSoft)
+                        .clipShape(Capsule())
+                    }
 
                 if !result.tags.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {

@@ -9,6 +9,7 @@ struct BrowseView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(NavigationCoordinator.self) private var coordinator
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: \MemoryRecord.createdAt, order: .reverse) private var records: [MemoryRecord]
 
     @State private var searchText = ""
@@ -70,8 +71,12 @@ struct BrowseView: View {
                                     label: filter.rawValue,
                                     isSelected: selectedFilter == filter
                                 ) {
-                                    withAnimation(DS.Animation.quick) {
+                                    if reduceMotion {
                                         selectedFilter = filter
+                                    } else {
+                                        withAnimation(DS.Animation.quick) {
+                                            selectedFilter = filter
+                                        }
                                     }
                                 }
                             }
@@ -167,9 +172,14 @@ struct FilterChip: View {
 
 struct MemoryCard: View {
     let record: MemoryRecord
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+        ZStack(alignment: .trailing) {
+            MnemoThreadMotif(style: .watermark, lineWidth: 1.4)
+                .frame(width: 96.0, height: 72.0)
+                .padding(.trailing, DS.Spacing.sm)
+
             HStack(alignment: .top, spacing: DS.Spacing.sm) {
                 MemoryTypeIcon(type: record.memoryTypeEnum ?? .fact)
                     .frame(width: DS.Spacing.xl, height: DS.Spacing.xl)
@@ -210,6 +220,12 @@ struct MemoryCard: View {
             RoundedRectangle(cornerRadius: DS.CornerRadius.large)
                 .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
         }
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(DS.Colours.accentSoft)
+                .frame(width: 4.0)
+                .padding(.vertical, DS.Spacing.md)
+        }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
         .shadow(
             color: DS.Shadows.subtle.color,
@@ -217,6 +233,7 @@ struct MemoryCard: View {
             x: DS.Shadows.subtle.x,
             y: DS.Shadows.subtle.y
         )
+        .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
     }
 
     private var sourceLabel: String {
@@ -308,12 +325,17 @@ struct EmptyBrowseView: View {
     var body: some View {
         VStack(spacing: DS.Spacing.lg) {
             Spacer()
-            MnemoLogoMark(size: 72.0, style: .subtle)
-                .accessibilityHidden(true)
+            ZStack {
+                MnemoThreadMotif(style: .hero, lineWidth: 2.0)
+                    .frame(width: 150.0, height: 112.0)
+                MnemoLogoMark(size: 72.0, style: .subtle)
+                    .accessibilityHidden(true)
+            }
             Text(title)
                 .font(DS.Typography.title3)
                 .foregroundStyle(DS.Colours.textPrimary)
                 .multilineTextAlignment(.center)
+                .accessibilityAddTraits(.isHeader)
             Text(subtitle)
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textSecondary)
