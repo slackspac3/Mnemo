@@ -175,6 +175,15 @@ public struct RecallEngine {
             return answer
         }
 
+        if isParkingQuery(query),
+           let memory = matches.first?.memory,
+           let parkingLocation = extractParkingLocation(from: searchableText(for: memory)) {
+            return ResponseDraft(
+                text: "\(parkingLocation).",
+                citedMemories: [memory]
+            )
+        }
+
         if lowercasedQuery.contains("where"),
            let memory = matches.first?.memory,
            let location = extractLocation(from: searchableText(for: memory)) {
@@ -467,6 +476,41 @@ public struct RecallEngine {
         return nil
     }
 
+    private func extractParkingLocation(from text: String) -> String? {
+        let patterns = [
+            #"\bparking spot at [^.,;\n]+ was ([^.;\n]+)"#,
+            #"\bparked at [^.,;\n]+ in ([^.;\n]+)"#,
+            #"\bparking was ([^.;\n]+)"#,
+            #"\bspot was ([^.;\n]+)"#,
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(
+                pattern: pattern,
+                options: [.caseInsensitive]
+            ) else { continue }
+
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            guard let match = regex.firstMatch(in: text, range: range),
+                  match.numberOfRanges > 1,
+                  let matchRange = Range(match.range(at: 1), in: text)
+            else { continue }
+
+            let detail = cleanParkingLocation(String(text[matchRange]))
+            if !detail.isEmpty {
+                return detail
+            }
+        }
+
+        return nil
+    }
+
+    private func cleanParkingLocation(_ phrase: String) -> String {
+        String(phrase)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"'?.!"))
+    }
+
     private func cleanLocationPhrase(_ phrase: String) -> String {
         let stopMarkers = [" is ", " was ", " were ", " for ", " because ", " when ", " that "]
         let lowercased = phrase.lowercased()
@@ -517,6 +561,13 @@ public struct RecallEngine {
             lowercased.contains("clothes") ||
             lowercased.contains("clothing") ||
             lowercased.contains("wear")
+    }
+
+    private func isParkingQuery(_ query: String) -> Bool {
+        let lowercased = query.lowercased()
+        return lowercased.contains("park") ||
+            lowercased.contains("parking") ||
+            lowercased.contains("car")
     }
 
     private func birthdaySubject(in query: String) -> String? {

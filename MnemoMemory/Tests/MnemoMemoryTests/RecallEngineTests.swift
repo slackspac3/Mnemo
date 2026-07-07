@@ -161,6 +161,26 @@ struct RecallEngineTests {
         #expect(result.text.localizedCaseInsensitiveContains("dishwasher tablets"))
     }
 
+    @Test("Parking query extracts the parking detail instead of broad venue")
+    @MainActor
+    func parkingQueryExtractsSpecificSpot() {
+        let memory = Self.makeMemory(
+            "The parking spot at Dubai Mall was P3, row C18.",
+            type: .fact,
+            source: .image,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "Where did I park at Dubai Mall?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("P3, row C18"))
+        #expect(!result.text.localizedCaseInsensitiveContains("It was in Dubai Mall"))
+    }
+
     @MainActor
     private static func launchMemories(referenceDate: Date) -> [MemoryRecord] {
         [
