@@ -14,13 +14,7 @@ struct AppLockView: View {
                 Spacer()
 
                 VStack(spacing: DS.Spacing.md) {
-                    Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 54, weight: .semibold))
-                        .foregroundStyle(DS.ComponentTokens.LockState.iconForeground)
-                        .frame(width: 96.0, height: 96.0)
-                        .background(DS.ComponentTokens.LockState.iconBackground)
-                        .clipShape(Circle())
-                        .accessibilityHidden(true)
+                    MnemoLogoMark(size: 96.0, style: .filled)
 
                     Text("Mnemo is locked")
                         .font(DS.Typography.largeTitle)
@@ -35,7 +29,7 @@ struct AppLockView: View {
                 }
                 .padding(DS.ComponentTokens.LockState.cardPadding)
                 .frame(maxWidth: 360.0)
-                .background(DS.Colours.surface)
+                .background(DS.Colours.appLockSurface)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge))
                 .shadow(
                     color: DS.Shadows.subtle.color,

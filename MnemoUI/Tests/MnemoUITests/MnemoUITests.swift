@@ -7,6 +7,23 @@ struct MnemoUITests {
     func designSystemColours() {
         let _ = DS.Colours.primary
         let _ = DS.Colours.accent
+        let _ = DS.Colours.accentSoft
+        let _ = DS.Colours.accentPressed
+        let _ = DS.Colours.backgroundPrimary
+        let _ = DS.Colours.backgroundSecondary
+        let _ = DS.Colours.surfacePrimary
+        let _ = DS.Colours.surfaceSecondary
+        let _ = DS.Colours.surfaceElevated
+        let _ = DS.Colours.borderSubtle
+        let _ = DS.Colours.sourceCardSurface
+        let _ = DS.Colours.sourceCardBorder
+        let _ = DS.Colours.appLockSurface
+        let _ = DS.Colours.privateBadgeSurface
         let _ = DS.Colours.sense
+    }
+
+    @Test("Logo mark is available to app surfaces")
+    func logoMark() {
+        let _ = MnemoLogoMark(size: 48.0, style: .subtle)
     }
 }

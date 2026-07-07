@@ -389,16 +389,21 @@ struct EmptyChatLanding: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                Text("What do you want to remember?")
-                    .font(DS.Typography.title1)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .top, spacing: DS.Spacing.md) {
+                MnemoLogoMark(size: 44.0, style: .subtle)
+                    .accessibilityHidden(true)
 
-                Text("Save a thought, detail, decision or reminder. Ask Mnemo about it later in plain language.")
-                    .font(DS.Typography.subheadline)
-                    .foregroundStyle(DS.Colours.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                    Text("What do you want to remember?")
+                        .font(DS.Typography.title1)
+                        .foregroundStyle(DS.Colours.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Save a thought, detail, decision or reminder. Ask Mnemo about it later in plain language.")
+                        .font(DS.Typography.subheadline)
+                        .foregroundStyle(DS.Colours.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
@@ -421,7 +426,7 @@ struct EmptyChatLanding: View {
                         title: "Voice",
                         subtitle: "Speak",
                         icon: "mic.fill",
-                        tint: DS.Colours.primary,
+                        tint: DS.Colours.accent,
                         prominence: .secondary,
                         accessibilityIdentifier: "capture.voice.open",
                         action: onVoice

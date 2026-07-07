@@ -56,3 +56,45 @@ Results:
 - Physical-device validation remains required for real Face ID/Touch ID/passcode prompts, microphone, Speech recognition, camera, photo library, OCR quality, iCloud backup/restore, notifications, file protection while locked, and app-switcher privacy.
 - Browse and Memory Detail could later move further toward native `List`/`Form` section styling if needed, but this pass intentionally avoided a navigation rewrite.
 - Floating capture positioning still uses the existing overlay pattern; no behavior change was made in this polish pass.
+
+## Brand Identity Addendum
+
+Build context: local working tree after `6304302088cde202165e7205d1136608305a1630`.
+
+Brand pass: Mnemo Brand Identity and Visual System Pass.
+
+| Review Area | Decision / Change | Validation Method | Outcome | Notes |
+| --- | --- | --- | --- | --- |
+| Logo and icon review | Chose the Mnemonic Thread direction and added reusable `MnemoLogoMark`. | Source review, MnemoUI package build, XcodeBuildMCP simulator build/run. | Pass | The mark avoids chat, brain, robot, sparkle, vault, and generic AI-network symbols. |
+| AppIcon review | Documented AppIcon direction and added `MnemoApp/Design/MnemoLogoMark.svg`; did not replace production AppIcon assets. | Source audit. | Pass | Final AppIcon export remains a dedicated visual QA task. |
+| Colour contrast review | Shifted identity to Ink and Sage: deep ink primary, sage accent, semantic source/privacy surfaces. | Source review plus light/dark simulator screenshots. | Pass | Dark-mode review caught the Voice landing icon using ink as foreground; it was changed to the sage accent. |
+| Light mode review | Existing system backgrounds retained; brand colours applied through semantic tokens. | XcodeBuildMCP screenshot and simulator UI smoke script. | Pass | Landing, capture actions, and tab tint remained readable. |
+| Dark mode review | Existing semantic system backgrounds retained; no fixed pale full-screen surfaces introduced. | XcodeBuildMCP appearance switch and screenshot. | Pass | In-app filled logo adapts to a deeper sage in dark mode for better visibility. |
+| Dynamic Type review | System typography retained; no custom fonts introduced. | Source audit. | Pass with known debt | Full large accessibility-size visual inspection remains manual design debt. |
+| App Store screenshot readiness | Splash, onboarding, App Lock, Settings, Chat landing, and Browse empty state now carry a consistent Mnemo mark. | Simulator screenshot and source review. | Pass | Screenshot credibility improved without adding product claims. |
+
+No sign-up, Apple Sign In, backend identity, Foundation Models, MLX inference, cloud LLM fallback, autonomous actions, or new product features were added in the brand pass.
+
+Additional commands run for the brand pass:
+
+```sh
+swift test --quiet # in MnemoUI
+xcodebuildmcp build_run_sim # workspace MnemoApp/Mnemo.xcworkspace, scheme Mnemo, iPhone 17 Pro simulator
+xcodebuildmcp snapshot_ui
+xcodebuildmcp screenshot
+xcodebuildmcp simulator-management set-appearance --simulator-id 8F8259E7-F4C0-472A-833D-CD9BCD443425 --mode dark --output text
+xcodebuildmcp screenshot
+xcodebuildmcp simulator-management set-appearance --simulator-id 8F8259E7-F4C0-472A-833D-CD9BCD443425 --mode light --output text
+Scripts/run_local_checks.sh fast
+Scripts/run_local_checks.sh efficiency
+MNEMO_SIMULATOR_ID=8F8259E7-F4C0-472A-833D-CD9BCD443425 Scripts/run_local_checks.sh ui
+```
+
+Results:
+
+- `MnemoUI` package tests: passed.
+- XcodeBuildMCP simulator build/run: passed, zero warnings/errors.
+- Light and dark simulator screenshots: passed after one dark-mode contrast fix.
+- `Scripts/run_local_checks.sh fast`: passed across all Swift packages and `git diff --check`.
+- `Scripts/run_local_checks.sh efficiency`: passed.
+- `Scripts/run_local_checks.sh ui`: passed.

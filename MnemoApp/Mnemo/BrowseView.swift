@@ -172,7 +172,7 @@ struct MemoryCard: View {
             HStack(alignment: .top, spacing: DS.Spacing.sm) {
                 MemoryTypeIcon(type: record.memoryTypeEnum ?? .fact)
                     .frame(width: DS.Spacing.xl, height: DS.Spacing.xl)
-                    .background(DS.Colours.accent.opacity(0.08))
+                    .background(DS.Colours.accentSoft)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.small))
                     .accessibilityHidden(true)
 
@@ -274,7 +274,7 @@ struct MemoryTypeIcon: View {
         case .event, .instruction:
             return DS.Colours.accent
         case .fact:
-            return DS.Colours.primary
+            return DS.Colours.accent
         }
     }
 
@@ -303,12 +303,7 @@ struct EmptyBrowseView: View {
     var body: some View {
         VStack(spacing: DS.Spacing.lg) {
             Spacer()
-            Image(systemName: "tray")
-                .font(DS.Typography.largeTitle)
-                .foregroundStyle(DS.ComponentTokens.EmptyState.iconForeground)
-                .frame(width: 72.0, height: 72.0)
-                .background(DS.ComponentTokens.EmptyState.iconBackground)
-                .clipShape(Circle())
+            MnemoLogoMark(size: 72.0, style: .subtle)
                 .accessibilityHidden(true)
             Text(title)
                 .font(DS.Typography.title3)

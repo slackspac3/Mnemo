@@ -12,15 +12,12 @@ struct OnboardingStepView: View {
             VStack(spacing: DS.Spacing.xl) {
                 Spacer(minLength: DS.Spacing.xl)
 
-                Image(systemName: step.icon)
-                    .font(DS.Typography.largeTitle)
-                    .foregroundStyle(iconColor)
-                    .symbolRenderingMode(.hierarchical)
+                stepMark
 
                 VStack(spacing: DS.Spacing.sm) {
                     Text(step.title)
                         .font(DS.Typography.title1)
-                        .foregroundStyle(DS.Colours.primary)
+                        .foregroundStyle(DS.Colours.textPrimary)
                         .multilineTextAlignment(.center)
 
                     Text(step.subtitle)
@@ -65,6 +62,25 @@ struct OnboardingStepView: View {
             return DS.Colours.success
         case .processingMode, .backup:
             return DS.Colours.accent
+        }
+    }
+
+    @ViewBuilder
+    private var stepMark: some View {
+        switch step {
+        case .welcome:
+            MnemoLogoMark(size: 88.0, style: .filled)
+        case .done:
+            MnemoLogoMark(size: 76.0, style: .subtle)
+        default:
+            Image(systemName: step.icon)
+                .font(DS.Typography.largeTitle)
+                .foregroundStyle(iconColor)
+                .symbolRenderingMode(.hierarchical)
+                .frame(width: 88.0, height: 88.0)
+                .background(DS.Colours.privateBadgeSurface)
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge, style: .continuous))
+                .accessibilityHidden(true)
         }
     }
 }

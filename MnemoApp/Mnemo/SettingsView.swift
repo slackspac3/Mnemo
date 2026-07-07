@@ -32,6 +32,17 @@ struct SettingsView: View {
 
                 List {
                     Section {
+                        SettingsBrandHeader()
+                            .listRowInsets(EdgeInsets(
+                                top: DS.Spacing.md,
+                                leading: DS.Spacing.md,
+                                bottom: DS.Spacing.md,
+                                trailing: DS.Spacing.md
+                            ))
+                            .listRowBackground(DS.Colours.surface)
+                    }
+
+                    Section {
                         DeviceTierRow(capability: appState.deviceCapability)
                             .listRowBackground(DS.Colours.surface)
                     } header: {
@@ -337,6 +348,27 @@ struct SettingsView: View {
             model.updatedAt = previousUpdatedAt
             throw error
         }
+    }
+}
+
+struct SettingsBrandHeader: View {
+    var body: some View {
+        HStack(alignment: .center, spacing: DS.Spacing.md) {
+            MnemoLogoMark(size: 52.0, style: .filled)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                Text("Mnemo")
+                    .font(DS.Typography.headline)
+                    .foregroundStyle(DS.Colours.textPrimary)
+                Text("Private memory on this iPhone. No Mnemo account required.")
+                    .font(DS.Typography.caption1)
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Mnemo. Private memory on this iPhone. No Mnemo account required.")
     }
 }
 

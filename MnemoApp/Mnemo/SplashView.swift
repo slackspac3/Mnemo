@@ -7,9 +7,11 @@ struct SplashView: View {
         ZStack {
             DS.Colours.background.ignoresSafeArea()
             VStack(spacing: DS.Spacing.lg) {
-                Text("mnemo")
+                MnemoLogoMark(size: 88.0, style: .filled)
+
+                Text("Mnemo")
                     .font(DS.Typography.largeTitle)
-                    .foregroundStyle(DS.Colours.primary)
+                    .foregroundStyle(DS.Colours.textPrimary)
                 Text("remembering what matters")
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.textSecondary)

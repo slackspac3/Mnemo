@@ -6,8 +6,10 @@ public enum DS {
 
     /// Shared color palette for brand, surfaces, text, states, and Mnemo Sense features.
     public enum Colours {
-        public static let primary: Color = Color(.sRGB, red: 27.0 / 255.0, green: 58.0 / 255.0, blue: 107.0 / 255.0, opacity: 1.0)
-        public static let accent: Color = Color(.sRGB, red: 46.0 / 255.0, green: 117.0 / 255.0, blue: 182.0 / 255.0, opacity: 1.0)
+        public static let primary: Color = Color(.sRGB, red: 23.0 / 255.0, green: 35.0 / 255.0, blue: 52.0 / 255.0, opacity: 1.0)
+        public static let accent: Color = Color(.sRGB, red: 47.0 / 255.0, green: 111.0 / 255.0, blue: 91.0 / 255.0, opacity: 1.0)
+        public static let accentPressed: Color = Color(.sRGB, red: 36.0 / 255.0, green: 87.0 / 255.0, blue: 71.0 / 255.0, opacity: 1.0)
+        public static let accentSoft: Color = accent.opacity(0.14)
         #if os(iOS)
         public static let background: Color = Color(uiColor: .systemGroupedBackground)
         public static let surface: Color = Color(uiColor: .secondarySystemGroupedBackground)
@@ -20,14 +22,23 @@ public enum DS {
         public static let textPrimary: Color = .primary
         public static let textSecondary: Color = .secondary
         public static let textTertiary: Color = .secondary.opacity(0.82)
+        public static let backgroundPrimary: Color = background
+        public static let backgroundSecondary: Color = surface
+        public static let surfacePrimary: Color = surface
+        public static let surfaceElevated: Color = surface
+        public static let borderSubtle: Color = textTertiary.opacity(0.18)
+        public static let sourceCardSurface: Color = surface
+        public static let sourceCardBorder: Color = accent.opacity(0.22)
+        public static let appLockSurface: Color = surface
+        public static let privateBadgeSurface: Color = accentSoft
         public static let success: Color = Color(.sRGB, red: 6.0 / 255.0, green: 78.0 / 255.0, blue: 59.0 / 255.0, opacity: 1.0)
         public static let successLight: Color = Color(.sRGB, red: 236.0 / 255.0, green: 253.0 / 255.0, blue: 245.0 / 255.0, opacity: 1.0)
         public static let warning: Color = Color(.sRGB, red: 120.0 / 255.0, green: 53.0 / 255.0, blue: 15.0 / 255.0, opacity: 1.0)
         public static let warningLight: Color = Color(.sRGB, red: 255.0 / 255.0, green: 251.0 / 255.0, blue: 235.0 / 255.0, opacity: 1.0)
         public static let destructive: Color = Color(.sRGB, red: 127.0 / 255.0, green: 29.0 / 255.0, blue: 29.0 / 255.0, opacity: 1.0)
         public static let destructiveLight: Color = Color(.sRGB, red: 254.0 / 255.0, green: 242.0 / 255.0, blue: 242.0 / 255.0, opacity: 1.0)
-        public static let sense: Color = Color(.sRGB, red: 76.0 / 255.0, green: 29.0 / 255.0, blue: 149.0 / 255.0, opacity: 1.0)
-        public static let senseLight: Color = Color(.sRGB, red: 237.0 / 255.0, green: 233.0 / 255.0, blue: 254.0 / 255.0, opacity: 1.0)
+        public static let sense: Color = Color(.sRGB, red: 65.0 / 255.0, green: 83.0 / 255.0, blue: 72.0 / 255.0, opacity: 1.0)
+        public static let senseLight: Color = accentSoft
     }
 
     // MARK: - Typography
@@ -137,20 +148,20 @@ public enum DS {
         }
 
         public enum SourceCard {
-            public static let background: Color = DS.Colours.surface
-            public static let border: Color = DS.Colours.accent.opacity(0.16)
+            public static let background: Color = DS.Colours.sourceCardSurface
+            public static let border: Color = DS.Colours.sourceCardBorder
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let padding: CGFloat = DS.Spacing.md
         }
 
         public enum EmptyState {
-            public static let iconBackground: Color = DS.Colours.accent.opacity(0.10)
+            public static let iconBackground: Color = DS.Colours.accentSoft
             public static let iconForeground: Color = DS.Colours.accent
             public static let maxWidth: CGFloat = 360.0
         }
 
         public enum LockState {
-            public static let iconBackground: Color = DS.Colours.accent.opacity(0.12)
+            public static let iconBackground: Color = DS.Colours.privateBadgeSurface
             public static let iconForeground: Color = DS.Colours.accent
             public static let cardPadding: CGFloat = DS.Spacing.lg
         }
