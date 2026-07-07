@@ -354,7 +354,7 @@ struct SettingsView: View {
 struct SettingsBrandHeader: View {
     var body: some View {
         HStack(alignment: .center, spacing: DS.Spacing.md) {
-            MnemoLogoMark(size: 52.0, style: .filled)
+            MnemoLogoMark(size: 52.0, style: .subtle)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: DS.Spacing.xs) {

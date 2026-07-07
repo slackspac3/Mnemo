@@ -9,6 +9,20 @@ struct CaptureButton: View {
     @State private var expanded = false
 
     var body: some View {
+        Group {
+            if #available(iOS 26.0, *) {
+                GlassEffectContainer(spacing: 12.0) {
+                    buttonContent
+                }
+            } else {
+                buttonContent
+            }
+        }
+        .animation(reduceMotion ? DS.Animation.fade : DS.Animation.gentleSpring, value: expanded)
+    }
+
+    @ViewBuilder
+    private var buttonContent: some View {
         VStack(spacing: DS.Spacing.sm) {
             if expanded {
                 VStack(spacing: DS.Spacing.xs) {
@@ -61,25 +75,35 @@ struct CaptureButton: View {
                     expanded.toggle()
                 }
             } label: {
-                Image(systemName: expanded ? "xmark" : "plus")
-                    .font(DS.Typography.title2)
-                    .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                    .frame(width: DS.Spacing.xxxl, height: DS.Spacing.xxxl)
-                    .background(DS.Colours.accent)
-                    .clipShape(Circle())
-                    .shadow(
-                        color: DS.Shadows.medium.color,
-                        radius: DS.Shadows.medium.radius,
-                        x: DS.Shadows.medium.x,
-                        y: DS.Shadows.medium.y
-                    )
+                fabLabel
             }
             .buttonStyle(.mnemoPressable)
             .accessibilityLabel(expanded ? "Close capture menu" : "Add memory")
             .accessibilityHint("Choose how to save a memory")
             .accessibilityIdentifier(AccessibilityID.Main.capture)
         }
-        .animation(reduceMotion ? DS.Animation.fade : DS.Animation.gentleSpring, value: expanded)
+    }
+
+    @ViewBuilder
+    private var fabLabel: some View {
+        let label = Image(systemName: expanded ? "xmark" : "plus")
+            .font(DS.Typography.title2)
+            .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
+            .frame(width: DS.Spacing.xxxl, height: DS.Spacing.xxxl)
+            .background(DS.Colours.accent)
+            .clipShape(Circle())
+            .shadow(
+                color: DS.Colours.accent.opacity(0.35),
+                radius: DS.Shadows.medium.radius,
+                y: DS.Shadows.medium.y
+            )
+
+        if #available(iOS 26.0, *) {
+            label
+                .glassEffect(.regular.tint(DS.Colours.accent).interactive(), in: .circle)
+        } else {
+            label
+        }
     }
 }
 
