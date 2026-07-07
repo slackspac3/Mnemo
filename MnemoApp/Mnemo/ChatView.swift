@@ -103,6 +103,8 @@ struct ChatView: View {
                     ChatInputBar(
                         text: $viewModel.inputText,
                         isProcessing: viewModel.isProcessing,
+                        showsCaptureShortcuts: !viewModel.messages.isEmpty,
+                        placeholder: activeRecords.isEmpty && viewModel.messages.isEmpty ? "Ask after saving a memory..." : "Ask about a saved memory...",
                         onText: {
                             coordinator.present(.captureText)
                         },
@@ -125,20 +127,27 @@ struct ChatView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: DS.Spacing.xs) {
-                        Button {
-                            withAnimation(DS.Animation.standard) {
-                                viewModel.resetConversation()
+                    HStack(spacing: DS.Spacing.sm) {
+                        if !viewModel.messages.isEmpty {
+                            Button {
+                                if reduceMotion {
+                                    viewModel.resetConversation()
+                                } else {
+                                    withAnimation(DS.Animation.standard) {
+                                        viewModel.resetConversation()
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: "house")
+                                    .font(DS.Typography.headline)
+                                    .foregroundStyle(DS.Colours.accent)
+                                    .frame(width: 44.0, height: 44.0)
                             }
-                        } label: {
-                            Image(systemName: "house.fill")
-                                .font(DS.Typography.headline)
-                                .foregroundStyle(DS.Colours.accent)
-                                .frame(width: 44.0, height: 44.0)
+                            .accessibilityLabel("Home")
+                            .accessibilityHint("Return to the memory landing screen")
+                            .accessibilityIdentifier("chat.homeButton")
+                            .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
                         }
-                        .accessibilityLabel("Home")
-                        .accessibilityHint("Return to the memory landing screen")
-                        .accessibilityIdentifier("chat.homeButton")
 
                         Button {
                             coordinator.present(.settings)
@@ -154,15 +163,18 @@ struct ChatView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        coordinator.present(.captureText)
-                    } label: {
-                        Image(systemName: "square.and.pencil")
-                            .font(DS.Typography.headline)
-                            .foregroundStyle(DS.Colours.accent)
+                    if !viewModel.messages.isEmpty {
+                        Button {
+                            coordinator.present(.captureText)
+                        } label: {
+                            Image(systemName: "square.and.pencil")
+                                .font(DS.Typography.headline)
+                                .foregroundStyle(DS.Colours.accent)
+                                .frame(width: 44.0, height: 44.0)
+                        }
+                        .accessibilityLabel("Write memory")
+                        .accessibilityIdentifier(AccessibilityID.CaptureText.open)
                     }
-                    .accessibilityLabel("Write memory")
-                    .accessibilityIdentifier(AccessibilityID.CaptureText.open)
                 }
             }
             .sheet(item: $selectedSourceMemory) { selected in
@@ -292,12 +304,6 @@ struct CitationSection: View {
                                     .frame(width: 3.0, height: 40.0)
                                     .accessibilityHidden(true)
 
-                                Image(systemName: "doc.text.magnifyingglass")
-                                    .font(DS.Typography.caption1)
-                                    .foregroundStyle(isPrimary ? DS.Colours.sourceCardAccent : DS.Colours.textTertiary)
-                                    .frame(width: DS.Spacing.md)
-                                    .accessibilityHidden(true)
-
                                 VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                                     Text(citation.source)
                                         .font(DS.Typography.caption2.weight(.semibold))
@@ -342,7 +348,7 @@ struct CitationSection: View {
                 }
             }
         }
-        .frame(maxWidth: 360.0, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .transition(DS.Animation.sourceRevealTransition(reduceMotion: reduceMotion))
     }
 
@@ -407,6 +413,7 @@ struct TypingIndicator: View {
                 )
             Spacer(minLength: DS.Spacing.xxxl)
         }
+        .accessibilityLabel("Looking through saved memories")
     }
 }
 
@@ -419,67 +426,58 @@ struct EmptyChatLanding: View {
     let onPhoto: () -> Void
     let onExample: (String) -> Void
 
-    private let columns = [
+    private let compactColumns = [
+        GridItem(.flexible(), spacing: DS.Spacing.sm),
         GridItem(.flexible(), spacing: DS.Spacing.sm),
         GridItem(.flexible(), spacing: DS.Spacing.sm),
     ]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var secondaryColumns: [GridItem] {
+        dynamicTypeSize.isAccessibilitySize
+            ? [GridItem(.flexible(), spacing: DS.Spacing.sm)]
+            : compactColumns
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            ZStack(alignment: .topTrailing) {
-                MnemoThreadMotif(style: .hero, lineWidth: 2.0)
-                    .frame(width: 170.0, height: 130.0)
-                    .offset(x: DS.Spacing.lg, y: -DS.Spacing.md)
-
-                VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                    HStack(alignment: .top, spacing: DS.Spacing.md) {
-                        MnemoLogoMark(size: 48.0, style: .subtle)
-                            .accessibilityHidden(true)
-
-                        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                            Text("What do you want to remember?")
-                                .font(DS.Typography.title1)
-                                .foregroundStyle(DS.Colours.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Text("Save a thought, detail, decision or reminder. Ask Mnemo about it later in plain language.")
-                                .font(DS.Typography.subheadline)
-                                .foregroundStyle(DS.Colours.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+        VStack(alignment: .leading, spacing: DS.Spacing.lg) {
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                HStack(alignment: .top, spacing: DS.Spacing.md) {
+                    ZStack {
+                        MnemoThreadMotif(style: .watermark, lineWidth: 1.5)
+                            .frame(width: 64.0, height: 52.0)
+                        MnemoLogoMark(size: 42.0, style: .subtle)
                     }
+                    .accessibilityHidden(true)
 
-                    Label("Private on this iPhone", systemImage: "lock.shield.fill")
-                        .font(DS.Typography.caption1.weight(.semibold))
-                        .foregroundStyle(DS.Colours.privateBadgeText)
-                        .padding(.horizontal, DS.Spacing.sm)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .background(DS.Colours.privateBadgeSurface)
-                        .clipShape(Capsule())
+                    VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                        Text("What should Mnemo remember?")
+                            .font(DS.Typography.title2)
+                            .foregroundStyle(DS.Colours.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
+
+                        Text("Save a detail, decision or reminder. Ask for it later and see the source.")
+                            .font(DS.Typography.subheadline)
+                            .foregroundStyle(DS.Colours.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier(AccessibilityID.Chat.landing)
+                    }
                 }
-                .padding(DS.Spacing.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Label("Private on this iPhone", systemImage: "lock.shield.fill")
+                    .font(DS.Typography.caption1.weight(.semibold))
+                    .foregroundStyle(DS.Colours.privateBadgeText)
+                    .padding(.horizontal, DS.Spacing.sm)
+                    .padding(.vertical, DS.Spacing.xs)
+                    .background(DS.Colours.privateBadgeSurface)
+                    .clipShape(Capsule())
             }
-            .background(DS.Colours.surfaceElevated)
-            .overlay {
-                RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge)
-                    .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge))
-            .shadow(
-                color: DS.Shadows.subtle.color,
-                radius: DS.Shadows.subtle.radius,
-                x: DS.Shadows.subtle.x,
-                y: DS.Shadows.subtle.y
-            )
+            .padding(.horizontal, DS.Spacing.xs)
             .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
 
             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                Text("Save a memory")
-                    .font(DS.Typography.headline)
-                    .foregroundStyle(DS.Colours.textPrimary)
-
                 LandingActionButton(
                     title: "Write memory",
                     subtitle: "Type a detail, decision or reminder",
@@ -490,31 +488,31 @@ struct EmptyChatLanding: View {
                     action: onText
                 )
 
-                LazyVGrid(columns: columns, spacing: DS.Spacing.sm) {
+                LazyVGrid(columns: secondaryColumns, spacing: DS.Spacing.sm) {
                     LandingActionButton(
                         title: "Voice",
-                        subtitle: "Speak",
+                        subtitle: "",
                         icon: "mic.fill",
                         tint: DS.Colours.accent,
-                        prominence: .secondary,
+                        prominence: .compact,
                         accessibilityIdentifier: "capture.voice.open",
                         action: onVoice
                     )
                     LandingActionButton(
                         title: "Camera",
-                        subtitle: "Capture",
+                        subtitle: "",
                         icon: "camera.fill",
-                        tint: DS.Colours.success,
-                        prominence: .secondary,
+                        tint: DS.Colours.accent,
+                        prominence: .compact,
                         accessibilityIdentifier: "capture.camera.open",
                         action: onCamera
                     )
                     LandingActionButton(
                         title: "Photo",
-                        subtitle: "Choose",
+                        subtitle: "",
                         icon: "photo.on.rectangle",
-                        tint: DS.Colours.warning,
-                        prominence: .secondary,
+                        tint: DS.Colours.accent,
+                        prominence: .compact,
                         accessibilityIdentifier: "capture.photo.open",
                         action: onPhoto
                     )
@@ -544,12 +542,9 @@ struct EmptyChatLanding: View {
                 }
             } else {
                 VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Label("Save your first memory to unlock recall.", systemImage: "arrow.turn.down.right")
+                    Label("Save your first memory, then ask naturally.", systemImage: "arrow.turn.down.right")
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(DS.Colours.textSecondary)
-                    Label("Stored locally on this iPhone.", systemImage: "lock.shield")
-                        .font(DS.Typography.footnote)
-                        .foregroundStyle(DS.Colours.textTertiary)
                 }
             }
         }
@@ -557,7 +552,6 @@ struct EmptyChatLanding: View {
         .padding(.top, DS.Spacing.md)
         .padding(.bottom, DS.Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityIdentifier(AccessibilityID.Chat.landing)
     }
 }
 
@@ -640,6 +634,7 @@ struct LandingActionButton: View {
     enum Prominence {
         case primary
         case secondary
+        case compact
     }
 
     let title: String
@@ -652,45 +647,74 @@ struct LandingActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: DS.Spacing.sm) {
-                Image(systemName: icon)
-                    .font(DS.Typography.title2)
-                    .foregroundStyle(iconColor)
-                    .frame(width: DS.Spacing.xl, alignment: .leading)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Text(title)
+            if prominence == .compact {
+                VStack(spacing: DS.Spacing.xs) {
+                    Image(systemName: icon)
                         .font(DS.Typography.headline)
-                        .foregroundStyle(titleColor)
-                    Text(subtitle)
-                        .font(DS.Typography.caption1)
-                        .foregroundStyle(subtitleColor)
-                        .lineLimit(2)
-                }
+                        .foregroundStyle(iconColor)
+                        .accessibilityHidden(true)
 
-                Spacer(minLength: 0)
+                    Text(title)
+                        .font(DS.Typography.caption1)
+                        .foregroundStyle(titleColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .frame(maxWidth: .infinity, minHeight: 52.0)
+                .padding(.horizontal, DS.Spacing.sm)
+                .padding(.vertical, DS.Spacing.xs)
+                .background(backgroundColor)
+                .overlay {
+                    RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                        .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+            } else {
+                HStack(spacing: DS.Spacing.sm) {
+                    Image(systemName: icon)
+                        .font(DS.Typography.title3)
+                        .foregroundStyle(iconColor)
+                        .frame(width: DS.Spacing.xl, alignment: .leading)
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                        Text(title)
+                            .font(DS.Typography.headline)
+                            .foregroundStyle(titleColor)
+                        Text(subtitle)
+                            .font(DS.Typography.caption1)
+                            .foregroundStyle(subtitleColor)
+                            .lineLimit(2)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: "chevron.right")
+                        .font(DS.Typography.caption1.weight(.semibold))
+                        .foregroundStyle(iconColor.opacity(0.86))
+                        .accessibilityHidden(true)
+                }
+                .frame(maxWidth: .infinity, minHeight: prominence == .primary ? 60.0 : 56.0, alignment: .leading)
+                .padding(.horizontal, DS.Spacing.md)
+                .padding(.vertical, DS.Spacing.sm)
+                .background(backgroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
+                .shadow(
+                    color: prominence == .primary ? DS.Shadows.subtle.color : Color.clear,
+                    radius: prominence == .primary ? DS.Shadows.subtle.radius : 0.0,
+                    x: DS.Shadows.subtle.x,
+                    y: DS.Shadows.subtle.y
+                )
             }
-            .frame(maxWidth: .infinity, minHeight: prominence == .primary ? 72.0 : 76.0, alignment: .leading)
-            .padding(.horizontal, DS.Spacing.md)
-            .padding(.vertical, DS.Spacing.sm)
-            .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-            .shadow(
-                color: DS.Shadows.subtle.color,
-                radius: DS.Shadows.subtle.radius,
-                x: DS.Shadows.subtle.x,
-                y: DS.Shadows.subtle.y
-            )
         }
         .buttonStyle(.mnemoPressable)
         .accessibilityLabel(title)
-        .accessibilityHint(subtitle)
+        .accessibilityHint(subtitle.isEmpty ? "Save a \(title.lowercased()) memory" : subtitle)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 
     private var backgroundColor: Color {
-        prominence == .primary ? DS.Colours.accent : DS.Colours.memoryCardSurface
+        prominence == .primary ? DS.Colours.accent : DS.Colours.surfaceElevated
     }
 
     private var iconColor: Color {
@@ -735,11 +759,14 @@ struct ChatInputBar: View {
 
     @Binding var text: String
     let isProcessing: Bool
+    let showsCaptureShortcuts: Bool
+    let placeholder: String
     let onText: () -> Void
     let onCamera: () -> Void
     let onPhoto: () -> Void
     let onSend: () -> Void
     let onVoice: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var canSend: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isProcessing
@@ -747,44 +774,54 @@ struct ChatInputBar: View {
 
     var body: some View {
         HStack(spacing: DS.Spacing.xs) {
-            Menu {
-                Button(action: onCamera) {
-                    Label("Take Photo", systemImage: "camera")
-                }
+            if showsCaptureShortcuts {
+                Menu {
+                    Button(action: onText) {
+                        Label("Write Memory", systemImage: "square.and.pencil")
+                    }
 
-                Button(action: onPhoto) {
-                    Label("Choose Photo", systemImage: "photo")
-                }
+                    if dynamicTypeSize.isAccessibilitySize {
+                        Button(action: onVoice) {
+                            Label("Record Voice", systemImage: "mic.fill")
+                        }
+                    }
 
-                Button(action: onText) {
-                    Label("Write Memory", systemImage: "square.and.pencil")
+                    Button(action: onCamera) {
+                        Label("Take Photo", systemImage: "camera")
+                    }
+
+                    Button(action: onPhoto) {
+                        Label("Choose Photo", systemImage: "photo")
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24.0, weight: .semibold))
+                        .foregroundStyle(DS.Colours.accent)
+                        .frame(width: 44.0, height: 44.0)
                 }
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 24.0, weight: .semibold))
-                    .foregroundStyle(DS.Colours.accent)
-                    .frame(width: 44.0, height: 44.0)
+                .buttonStyle(.mnemoPressable)
+                .accessibilityLabel("Add memory")
+                .accessibilityHint("Choose how to save a memory")
+                .accessibilityIdentifier(AccessibilityID.Main.capture)
             }
-            .buttonStyle(.mnemoPressable)
-            .accessibilityLabel("Add memory")
-            .accessibilityHint("Choose how to save a memory")
-            .accessibilityIdentifier(AccessibilityID.Main.capture)
 
-            Button(action: onVoice) {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 24.0, weight: .semibold))
-                    .foregroundStyle(DS.Colours.accent)
-                    .frame(
-                        width: 44.0,
-                        height: 44.0
-                    )
+            if showsCaptureShortcuts && !dynamicTypeSize.isAccessibilitySize {
+                Button(action: onVoice) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 24.0, weight: .semibold))
+                        .foregroundStyle(DS.Colours.accent)
+                        .frame(
+                            width: 44.0,
+                            height: 44.0
+                        )
+                }
+                .buttonStyle(.mnemoPressable)
+                .accessibilityLabel("Record voice memory")
+                .accessibilityHint("Open voice capture")
+                .accessibilityIdentifier("capture.voice.open")
             }
-            .buttonStyle(.mnemoPressable)
-            .accessibilityLabel("Record voice memory")
-            .accessibilityHint("Open voice capture")
-            .accessibilityIdentifier("capture.voice.open")
 
-            TextField("Ask about a saved memory...", text: $text, axis: .vertical)
+            TextField(placeholder, text: $text, axis: .vertical)
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textPrimary)
                 .lineLimit(1...4)

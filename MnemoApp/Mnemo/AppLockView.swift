@@ -11,49 +11,32 @@ struct AppLockView: View {
         ZStack {
             DS.Colours.appLockBackground.ignoresSafeArea()
 
-            MnemoThreadMotif(style: .lock, lineWidth: 2.4)
-                .frame(width: 300.0, height: 240.0)
-                .offset(y: -DS.Spacing.xxxl)
-
             ScrollView {
                 VStack(spacing: DS.Spacing.xl) {
-                    ZStack(alignment: .topTrailing) {
-                        MnemoThreadMotif(style: .watermark, lineWidth: 1.8)
-                            .frame(width: 140.0, height: 108.0)
-                            .padding(.top, DS.Spacing.sm)
-                            .padding(.trailing, DS.Spacing.sm)
+                    VStack(spacing: DS.Spacing.md) {
+                        MnemoLogoMark(size: 76.0, style: .filled)
+                            .accessibilityHidden(true)
 
-                        VStack(spacing: DS.Spacing.md) {
-                            MnemoLogoMark(size: 96.0, style: .filled)
-                                .accessibilityHidden(true)
+                        Text("Mnemo is locked")
+                            .font(DS.Typography.title1)
+                            .foregroundStyle(DS.Colours.textPrimary)
+                            .multilineTextAlignment(.center)
+                            .accessibilityAddTraits(.isHeader)
 
-                            Text("Mnemo is locked")
-                                .font(DS.Typography.largeTitle)
-                                .foregroundStyle(DS.Colours.textPrimary)
-                                .multilineTextAlignment(.center)
-                                .accessibilityAddTraits(.isHeader)
-
-                            Text("Use Face ID, Touch ID or your device passcode to unlock.")
-                                .font(DS.Typography.body)
-                                .foregroundStyle(DS.Colours.textSecondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, DS.Spacing.lg)
-                        }
-                        .padding(DS.ComponentTokens.LockState.cardPadding)
-                        .frame(maxWidth: 360.0)
+                        Text("Use Face ID, Touch ID or your device passcode to unlock.")
+                            .font(DS.Typography.body)
+                            .foregroundStyle(DS.Colours.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, DS.Spacing.md)
                     }
+                    .padding(DS.ComponentTokens.LockState.cardPadding)
+                    .frame(maxWidth: 360.0)
                     .background(DS.Colours.appLockSurface)
                     .overlay {
                         RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge)
                             .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge))
-                    .shadow(
-                        color: DS.Shadows.subtle.color,
-                        radius: DS.Shadows.subtle.radius,
-                        x: DS.Shadows.subtle.x,
-                        y: DS.Shadows.subtle.y
-                    )
                     .transition(DS.Animation.lockAppearTransition(reduceMotion: reduceMotion))
 
                     if let message = appState.appLockErrorMessage {

@@ -175,43 +175,37 @@ struct MemoryCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        ZStack(alignment: .trailing) {
-            MnemoThreadMotif(style: .watermark, lineWidth: 1.4)
-                .frame(width: 96.0, height: 72.0)
-                .padding(.trailing, DS.Spacing.sm)
+        HStack(alignment: .top, spacing: DS.Spacing.sm) {
+            MemoryTypeIcon(type: record.memoryTypeEnum ?? .fact)
+                .frame(width: DS.Spacing.xl, height: DS.Spacing.xl)
+                .background(DS.Colours.surfaceSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.small))
+                .accessibilityHidden(true)
 
-            HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                MemoryTypeIcon(type: record.memoryTypeEnum ?? .fact)
-                    .frame(width: DS.Spacing.xl, height: DS.Spacing.xl)
-                    .background(DS.Colours.accentSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.small))
-                    .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                Text(record.summary)
+                    .font(DS.Typography.body)
+                    .foregroundStyle(DS.Colours.textPrimary)
+                    .lineLimit(4)
+                    .multilineTextAlignment(.leading)
 
-                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Text(record.summary)
-                        .font(DS.Typography.body)
-                        .foregroundStyle(DS.Colours.textPrimary)
-                        .lineLimit(4)
-                        .multilineTextAlignment(.leading)
+                HStack(spacing: DS.Spacing.sm) {
+                    Label(sourceLabel, systemImage: sourceIcon)
+                        .font(DS.Typography.caption1)
+                        .foregroundStyle(DS.Colours.textSecondary)
 
-                    HStack(spacing: DS.Spacing.sm) {
-                        Label(sourceLabel, systemImage: sourceIcon)
-                            .font(DS.Typography.caption1)
-                            .foregroundStyle(DS.Colours.textSecondary)
-
-                        Text(record.createdAt.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
-                            .font(DS.Typography.caption1)
-                            .foregroundStyle(DS.Colours.textTertiary)
-                    }
-                    .labelStyle(.titleAndIcon)
+                    Text(record.createdAt.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
+                        .font(DS.Typography.caption1)
+                        .foregroundStyle(DS.Colours.textTertiary)
                 }
-
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(DS.Typography.caption1)
-                    .foregroundStyle(DS.Colours.textTertiary)
-                    .accessibilityHidden(true)
+                .labelStyle(.titleAndIcon)
             }
+
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(DS.Typography.caption1)
+                .foregroundStyle(DS.Colours.textTertiary)
+                .accessibilityHidden(true)
         }
         .padding(DS.Spacing.md)
         .frame(maxWidth: .infinity, minHeight: 96.0, alignment: .leading)
@@ -220,19 +214,7 @@ struct MemoryCard: View {
             RoundedRectangle(cornerRadius: DS.CornerRadius.large)
                 .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
         }
-        .overlay(alignment: .leading) {
-            Capsule()
-                .fill(DS.Colours.accentSoft)
-                .frame(width: 4.0)
-                .padding(.vertical, DS.Spacing.md)
-        }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-        .shadow(
-            color: DS.Shadows.subtle.color,
-            radius: DS.Shadows.subtle.radius,
-            x: DS.Shadows.subtle.x,
-            y: DS.Shadows.subtle.y
-        )
         .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
     }
 
