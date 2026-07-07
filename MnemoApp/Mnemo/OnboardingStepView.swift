@@ -6,6 +6,8 @@ struct OnboardingStepView: View {
 
     let step: OnboardingViewModel.Step
     let viewModel: OnboardingViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var contentAppeared = false
 
     var body: some View {
         ScrollView {
@@ -17,27 +19,41 @@ struct OnboardingStepView: View {
                         .frame(width: 144.0, height: 112.0)
                     stepMark
                 }
+                .onboardingStaggered(appeared: contentAppeared, delay: 0.0, reduceMotion: reduceMotion)
 
                 VStack(spacing: DS.Spacing.sm) {
                     Text(step.title)
                         .font(DS.Typography.title1)
                         .foregroundStyle(DS.Colours.textPrimary)
                         .multilineTextAlignment(.center)
+                        .onboardingStaggered(appeared: contentAppeared, delay: 0.08, reduceMotion: reduceMotion)
 
                     Text(step.subtitle)
                         .font(DS.Typography.body)
                         .foregroundStyle(DS.Colours.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, DS.Spacing.md)
+                        .onboardingStaggered(appeared: contentAppeared, delay: 0.14, reduceMotion: reduceMotion)
                 }
 
                 stepContent
+                    .onboardingStaggered(appeared: contentAppeared, delay: 0.22, reduceMotion: reduceMotion)
 
                 Spacer(minLength: DS.Spacing.xxxl)
             }
             .padding(.horizontal, DS.Spacing.xl)
         }
         .scrollBounceBehavior(.basedOnSize)
+        .onAppear {
+            revealContent()
+        }
+        .onChange(of: step.rawValue) {
+            contentAppeared = false
+            revealContent()
+        }
+        .onDisappear {
+            contentAppeared = false
+        }
     }
 
     @ViewBuilder
@@ -87,26 +103,50 @@ struct OnboardingStepView: View {
                 .accessibilityHidden(true)
         }
     }
+
+    private func revealContent() {
+        withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.gentleSpring) {
+            contentAppeared = true
+        }
+    }
 }
 
 struct WelcomeStepContent: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
+
+    private let features: [(icon: String, color: Color, text: String)] = [
+        (
+            icon: "lock.shield.fill",
+            color: DS.Colours.accent,
+            text: "Saved memories stay on this iPhone unless you choose iCloud backup"
+        ),
+        (
+            icon: "person.crop.circle.badge.xmark",
+            color: DS.Colours.sense,
+            text: "No Mnemo account, email, or sign-in required"
+        ),
+        (
+            icon: "bookmark.fill",
+            color: DS.Colours.success,
+            text: "Every answer can show the saved memory it used"
+        ),
+    ]
+
     var body: some View {
         VStack(spacing: DS.Spacing.md) {
-            FeatureRow(
-                icon: "lock.shield.fill",
-                color: DS.Colours.accent,
-                text: "Saved memories stay on this iPhone unless you choose iCloud backup"
-            )
-            FeatureRow(
-                icon: "person.crop.circle.badge.xmark",
-                color: DS.Colours.sense,
-                text: "No Mnemo account, email, or sign-in required"
-            )
-            FeatureRow(
-                icon: "bookmark.fill",
-                color: DS.Colours.success,
-                text: "Every answer can show the saved memory it used"
-            )
+            ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
+                FeatureRow(
+                    icon: feature.icon,
+                    color: feature.color,
+                    text: feature.text
+                )
+                .onboardingStaggered(
+                    appeared: appeared,
+                    delay: Double(index) * 0.06,
+                    reduceMotion: reduceMotion
+                )
+            }
         }
         .padding(DS.Spacing.md)
         .background(DS.Colours.memoryCardSurface)
@@ -121,6 +161,14 @@ struct WelcomeStepContent: View {
             x: DS.Shadows.subtle.x,
             y: DS.Shadows.subtle.y
         )
+        .onAppear {
+            withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.gentleSpring) {
+                appeared = true
+            }
+        }
+        .onDisappear {
+            appeared = false
+        }
     }
 }
 
@@ -134,7 +182,9 @@ struct FeatureRow: View {
             Image(systemName: icon)
                 .font(DS.Typography.title2)
                 .foregroundStyle(color)
-                .frame(width: DS.Spacing.xl)
+                .frame(width: 40.0, height: 40.0)
+                .background(color.opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.small))
                 .accessibilityHidden(true)
             Text(text)
                 .font(DS.Typography.body)
@@ -314,6 +364,17 @@ struct DoneStepContent: View {
 }
 
 private extension View {
+    func onboardingStaggered(appeared: Bool, delay: Double, reduceMotion: Bool) -> some View {
+        opacity(appeared ? 1.0 : 0.0)
+            .offset(y: reduceMotion || appeared ? 0.0 : 12.0)
+            .animation(
+                reduceMotion
+                    ? DS.Animation.fade
+                    : DS.Animation.gentleSpring.delay(delay),
+                value: appeared
+            )
+    }
+
     @ViewBuilder
     func selectedBorder(_ isSelected: Bool) -> some View {
         if isSelected {

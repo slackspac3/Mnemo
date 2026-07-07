@@ -17,6 +17,7 @@ struct CaptureTextSheet: View {
     @State private var isExtracting = false
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var savedSummary: String?
 
     private let handler = TextCaptureHandler()
     private let engine = ExtractionEngine()
@@ -69,12 +70,20 @@ struct CaptureTextSheet: View {
                     .accessibilityIdentifier(AccessibilityID.CaptureText.dismiss)
                 }
             }
+            .overlay {
+                if let savedSummary {
+                    MemorySavedOverlay(summary: savedSummary) {
+                        dismiss()
+                    }
+                }
+            }
         }
         .accessibilityIdentifier("capture.text.sheet")
     }
 
     private func extract() {
         guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        HapticManager.impact(.light)
         isExtracting = true
         errorMessage = nil
 
@@ -93,6 +102,7 @@ struct CaptureTextSheet: View {
                 }
             } catch {
                 await MainActor.run {
+                    HapticManager.error()
                     errorMessage = "Could not extract memory. Try again."
                     isExtracting = false
                 }
@@ -122,7 +132,8 @@ struct CaptureTextSheet: View {
             do {
                 try await MemoryCRUD.insertAndIndex(record, into: modelContext)
                 await MainActor.run {
-                    dismiss()
+                    HapticManager.success()
+                    savedSummary = result.summary
                 }
             } catch {
                 await MainActor.run {

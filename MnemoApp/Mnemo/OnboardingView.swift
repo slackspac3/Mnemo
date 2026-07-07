@@ -76,6 +76,7 @@ struct OnboardingNavigationBar: View {
             switch viewModel.currentStep {
             case .done:
                 Button {
+                    HapticManager.success()
                     viewModel.complete(context: modelContext, appState: appState)
                 } label: {
                     Text("Start with one memory")
@@ -92,6 +93,7 @@ struct OnboardingNavigationBar: View {
 
             default:
                 Button {
+                    HapticManager.selection()
                     viewModel.advance()
                 } label: {
                     Text("Continue")

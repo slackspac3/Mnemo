@@ -15,6 +15,7 @@ struct BrowseView: View {
     @State private var searchText = ""
     @State private var selectedFilter: FilterOption = .all
     @State private var selectedMemory: SelectedMemory?
+    @State private var appeared = false
 
     enum FilterOption: String, CaseIterable {
         case all = "All"
@@ -71,6 +72,8 @@ struct BrowseView: View {
                                     label: filter.rawValue,
                                     isSelected: selectedFilter == filter
                                 ) {
+                                    guard selectedFilter != filter else { return }
+                                    HapticManager.selection()
                                     if reduceMotion {
                                         selectedFilter = filter
                                     } else {
@@ -96,7 +99,7 @@ struct BrowseView: View {
                     } else {
                         ScrollView {
                             LazyVStack(spacing: DS.Spacing.sm) {
-                                ForEach(filteredRecords, id: \.id) { record in
+                                ForEach(Array(filteredRecords.enumerated()), id: \.element.id) { index, record in
                                     Button {
                                         selectedMemory = SelectedMemory(id: record.id)
                                     } label: {
@@ -106,11 +109,56 @@ struct BrowseView: View {
                                     .accessibilityLabel(record.summary)
                                     .accessibilityHint("Open memory details")
                                     .accessibilityIdentifier(AccessibilityID.Browse.memoryCell)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            Task {
+                                                do {
+                                                    try await archiveMemory(id: record.id)
+                                                    HapticManager.impact(.medium)
+                                                } catch {
+                                                    HapticManager.error()
+                                                }
+                                            }
+                                        } label: {
+                                            Label("Archive", systemImage: "archivebox")
+                                        }
+                                        .tint(DS.Colours.warning)
+                                    }
+                                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                        Button {
+                                            Task { @MainActor in
+                                                if let found = records.first(where: { $0.id == record.id }) {
+                                                    found.isDone = true
+                                                    found.updatedAt = Date()
+                                                    do {
+                                                        try modelContext.save()
+                                                        HapticManager.success()
+                                                    } catch {
+                                                        HapticManager.error()
+                                                    }
+                                                }
+                                            }
+                                        } label: {
+                                            Label("Done", systemImage: "checkmark.circle.fill")
+                                        }
+                                        .tint(DS.Colours.success)
+                                    }
+                                    .opacity(appeared ? 1.0 : 0.0)
+                                    .offset(y: reduceMotion || appeared ? 0.0 : 10.0)
+                                    .animation(
+                                        reduceMotion
+                                            ? DS.Animation.fade
+                                            : DS.Animation.cardAppear.delay(Double(min(index, 12)) * 0.04),
+                                        value: appeared
+                                    )
                                 }
                             }
                             .padding(.horizontal, DS.Spacing.md)
                             .padding(.top, DS.Spacing.sm)
                             .padding(.bottom, DS.Spacing.xxxl)
+                        }
+                        .onAppear {
+                            appeared = true
                         }
                     }
                 }
@@ -148,6 +196,21 @@ private struct SelectedMemory: Identifiable {
     let id: UUID
 }
 
+private func typeAccentColour(for type: MemoryType) -> Color {
+    switch type {
+    case .preference, .intention:
+        return DS.Colours.sense.opacity(0.8)
+    case .list:
+        return DS.Colours.success.opacity(0.8)
+    case .credential:
+        return DS.Colours.warning.opacity(0.8)
+    case .event:
+        return DS.Colours.accent.opacity(0.8)
+    case .fact, .instruction:
+        return DS.Colours.brandSage.opacity(0.6)
+    }
+}
+
 struct FilterChip: View {
     let label: String
     let isSelected: Bool
@@ -175,10 +238,19 @@ struct MemoryCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let memoryType = record.memoryTypeEnum ?? .fact
+        let accent = typeAccentColour(for: memoryType)
+
         HStack(alignment: .top, spacing: DS.Spacing.sm) {
-            MemoryTypeIcon(type: record.memoryTypeEnum ?? .fact)
+            Capsule()
+                .fill(accent)
+                .frame(width: 3.0)
+                .frame(maxHeight: .infinity)
+                .accessibilityHidden(true)
+
+            MemoryTypeIcon(type: memoryType)
                 .frame(width: DS.Spacing.xl, height: DS.Spacing.xl)
-                .background(DS.Colours.surfaceSecondary)
+                .background(accent.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.small))
                 .accessibilityHidden(true)
 

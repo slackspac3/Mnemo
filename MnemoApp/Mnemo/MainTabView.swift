@@ -51,11 +51,12 @@ struct MainTabView: View {
                 ThreadProposalPlaceholderView(threadId: id)
             }
         }
-        .overlay(alignment: .bottom) {
+        .overlay(alignment: .bottomTrailing) {
             if coordinator.activeTab != .chat {
                 CaptureButton()
                     .environment(coordinator)
-                    .padding(.bottom, DS.Spacing.xxxl + DS.Spacing.xxxl + DS.Spacing.md)
+                    .padding(.trailing, DS.Spacing.md)
+                    .padding(.bottom, DS.Spacing.xxxl + DS.Spacing.lg)
                     .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
             }
         }

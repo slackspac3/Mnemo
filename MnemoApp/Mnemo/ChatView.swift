@@ -94,6 +94,9 @@ struct ChatView: View {
                         }
                         .scrollDismissesKeyboard(.interactively)
                         .onChange(of: viewModel.messages.count) {
+                            if viewModel.messages.last?.role == .assistant {
+                                HapticManager.impact(.soft)
+                            }
                             withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.standard) {
                                 proxy.scrollTo(ChatScrollAnchor.bottom, anchor: .bottom)
                             }
@@ -115,6 +118,7 @@ struct ChatView: View {
                             coordinator.present(.captureImage(.photoLibrary))
                         },
                         onSend: {
+                            HapticManager.impact(.light)
                             Task { await viewModel.send(context: modelContext) }
                         },
                         onVoice: {
@@ -392,14 +396,26 @@ struct MissingSourceView: View {
 }
 
 struct TypingIndicator: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var animating = false
+
     var body: some View {
         HStack {
             HStack(spacing: DS.Spacing.xs) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Looking through memories")
-                    .font(DS.Typography.footnote)
-                    .foregroundStyle(DS.Colours.textSecondary)
+                if reduceMotion {
+                    dot
+                } else {
+                    ForEach(0..<3, id: \.self) { index in
+                        dot
+                            .offset(y: animating ? -6.0 : 0.0)
+                            .animation(
+                                Animation.easeInOut(duration: 0.45)
+                                    .repeatForever(autoreverses: true)
+                                    .delay(Double(index) * 0.15),
+                                value: animating
+                            )
+                    }
+                }
             }
             .padding(.horizontal, DS.Spacing.md)
             .padding(.vertical, DS.Spacing.sm)
@@ -414,6 +430,15 @@ struct TypingIndicator: View {
             Spacer(minLength: DS.Spacing.xxxl)
         }
         .accessibilityLabel("Looking through saved memories")
+        .onAppear {
+            animating = true
+        }
+    }
+
+    private var dot: some View {
+        Circle()
+            .fill(DS.Colours.textTertiary)
+            .frame(width: 8.0, height: 8.0)
     }
 }
 
@@ -767,6 +792,8 @@ struct ChatInputBar: View {
     let onSend: () -> Void
     let onVoice: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var sendIsActive = false
 
     private var canSend: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isProcessing
@@ -808,12 +835,12 @@ struct ChatInputBar: View {
             if showsCaptureShortcuts && !dynamicTypeSize.isAccessibilitySize {
                 Button(action: onVoice) {
                     Image(systemName: "mic.fill")
-                        .font(.system(size: 24.0, weight: .semibold))
+                        .font(.system(size: 20.0, weight: .semibold))
                         .foregroundStyle(DS.Colours.accent)
-                        .frame(
-                            width: 44.0,
-                            height: 44.0
-                        )
+                        .frame(width: 36.0, height: 36.0)
+                        .background(DS.Colours.accentSoft)
+                        .clipShape(Circle())
+                        .frame(width: 44.0, height: 44.0)
                 }
                 .buttonStyle(.mnemoPressable)
                 .accessibilityLabel("Record voice memory")
@@ -828,7 +855,11 @@ struct ChatInputBar: View {
                 .padding(.horizontal, DS.Spacing.md)
                 .padding(.vertical, DS.Spacing.sm)
                 .background(DS.Colours.surfaceSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.full))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DS.CornerRadius.large)
+                        .stroke(DS.Colours.borderSubtle, lineWidth: 0.8)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                 .onSubmit {
                     onSend()
                 }
@@ -838,8 +869,9 @@ struct ChatInputBar: View {
             Button(action: onSend) {
                 Image(systemName: isProcessing ? "ellipsis" : "arrow.up.circle.fill")
                     .font(.system(size: 32.0, weight: .semibold))
-                    .foregroundStyle(canSend ? DS.Colours.accent : DS.Colours.textTertiary)
+                    .foregroundStyle(sendIsActive ? DS.Colours.accent : DS.Colours.textTertiary)
                     .frame(width: 44.0, height: 44.0)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .disabled(!canSend)
             .buttonStyle(.mnemoPressable)
@@ -849,11 +881,25 @@ struct ChatInputBar: View {
         }
         .padding(.horizontal, DS.Spacing.md)
         .padding(.vertical, DS.Spacing.sm)
-        .background(DS.Colours.surfaceElevated)
+        .background {
+            if #available(iOS 15.0, *) {
+                Rectangle().fill(.ultraThinMaterial)
+            } else {
+                Rectangle().fill(DS.Colours.surfaceElevated)
+            }
+        }
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(DS.Colours.borderSubtle)
                 .frame(height: DS.Spacing.xs / DS.Spacing.xs)
+        }
+        .onAppear {
+            sendIsActive = canSend
+        }
+        .onChange(of: canSend) { _, newValue in
+            withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.quick) {
+                sendIsActive = newValue
+            }
         }
     }
 }

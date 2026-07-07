@@ -20,6 +20,7 @@ struct MemoryDetailView: View {
     @State private var isArchiving = false
     @State private var isDeleting = false
     @State private var errorMessage: String?
+    @State private var summaryAppeared = false
 
     init(
         record: MemoryRecord,
@@ -38,25 +39,35 @@ struct MemoryDetailView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Spacing.lg) {
-                        ZStack(alignment: .bottomTrailing) {
-                            MnemoThreadMotif(style: .watermark, lineWidth: 1.8)
-                                .frame(width: 124.0, height: 92.0)
+                        HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                            Capsule()
+                                .fill(typeAccentColour(for: memoryTypeEnum))
+                                .frame(width: 3.0)
+                                .frame(maxHeight: .infinity)
+                                .accessibilityHidden(true)
+
+                            ZStack(alignment: .bottomTrailing) {
+                                MnemoThreadMotif(style: .watermark, lineWidth: 1.8)
+                                    .frame(width: 124.0, height: 92.0)
+                                    .padding(.trailing, DS.Spacing.sm)
+
+                                VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                                    Label("Saved memory", systemImage: "bookmark.fill")
+                                        .font(DS.Typography.caption1.weight(.semibold))
+                                        .foregroundStyle(DS.Colours.sourceCardAccent)
+                                        .accessibilityHidden(true)
+
+                                    Text(snapshot.summary)
+                                        .font(DS.Typography.body)
+                                        .lineSpacing(4.0)
+                                        .foregroundStyle(DS.Colours.textPrimary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .padding(DS.Spacing.md)
                                 .padding(.trailing, DS.Spacing.sm)
-
-                            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                                Label("Saved memory", systemImage: "bookmark.fill")
-                                    .font(DS.Typography.caption1.weight(.semibold))
-                                    .foregroundStyle(DS.Colours.sourceCardAccent)
-                                    .accessibilityHidden(true)
-
-                                Text(snapshot.summary)
-                                    .font(DS.Typography.body)
-                                    .foregroundStyle(DS.Colours.textPrimary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .padding(DS.Spacing.md)
-                            .padding(.trailing, DS.Spacing.sm)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .background(DS.Colours.memoryCardSurface)
                         .overlay {
                             RoundedRectangle(cornerRadius: DS.CornerRadius.large)
@@ -70,30 +81,42 @@ struct MemoryDetailView: View {
                             y: DS.Shadows.subtle.y
                         )
                         .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
+                        .opacity(summaryAppeared ? 1.0 : 0.0)
+                        .offset(y: reduceMotion || summaryAppeared ? 0.0 : 8.0)
+                        .scaleEffect(reduceMotion ? 1.0 : (summaryAppeared ? 1.0 : 0.98))
+                        .animation(reduceMotion ? DS.Animation.fade : DS.Animation.cardAppear, value: summaryAppeared)
+                        .onAppear {
+                            summaryAppeared = true
+                        }
                         .accessibilityIdentifier(AccessibilityID.MemoryDetail.title)
 
                         VStack(spacing: DS.Spacing.sm) {
                             MetadataRow(label: "Type", value: snapshot.memoryType.capitalized, icon: "tag")
                             MetadataRow(label: "Source", value: snapshot.inputSource.capitalized, icon: "arrow.down.circle")
                             MetadataRow(
+                                label: "Captured",
+                                value: snapshot.createdAt.formatted(.dateTime.day().month().year()),
+                                icon: "calendar"
+                            )
+                            Divider()
+                                .overlay(DS.Colours.borderSubtle)
+                            MetadataRow(
                                 label: "Processing",
                                 value: processingLabel,
-                                icon: "cpu"
+                                icon: "cpu",
+                                isSecondary: true
                             )
                             MetadataRow(
                                 label: "Recall priority",
                                 value: recallPriorityLabel,
-                                icon: "chart.bar"
+                                icon: "chart.bar",
+                                isSecondary: true
                             )
                             MetadataRow(
                                 label: "Review status",
                                 value: reviewStatusLabel,
-                                icon: "checkmark.seal"
-                            )
-                            MetadataRow(
-                                label: "Captured",
-                                value: snapshot.createdAt.formatted(.dateTime.day().month().year()),
-                                icon: "calendar"
+                                icon: "checkmark.seal",
+                                isSecondary: true
                             )
                         }
                         .padding(DS.Spacing.md)
@@ -292,6 +315,10 @@ struct MemoryDetailView: View {
         return "Review suggested"
     }
 
+    private var memoryTypeEnum: MemoryType {
+        MemoryType(rawValue: snapshot.memoryType) ?? .fact
+    }
+
     @MainActor
     private func archiveMemory() async {
         isArchiving = true
@@ -359,10 +386,26 @@ private struct MemoryDetailSnapshot {
     }
 }
 
+private func typeAccentColour(for type: MemoryType) -> Color {
+    switch type {
+    case .preference, .intention:
+        return DS.Colours.sense.opacity(0.8)
+    case .list:
+        return DS.Colours.success.opacity(0.8)
+    case .credential:
+        return DS.Colours.warning.opacity(0.8)
+    case .event:
+        return DS.Colours.accent.opacity(0.8)
+    case .fact, .instruction:
+        return DS.Colours.brandSage.opacity(0.6)
+    }
+}
+
 struct MetadataRow: View {
     let label: String
     let value: String
     let icon: String
+    var isSecondary = false
 
     var body: some View {
         HStack(spacing: DS.Spacing.sm) {
@@ -371,15 +414,23 @@ struct MetadataRow: View {
                 .foregroundStyle(DS.Colours.textTertiary)
                 .accessibilityHidden(true)
             Text(label)
-                .font(DS.Typography.subheadline)
+                .font(labelFont)
                 .foregroundStyle(DS.Colours.textSecondary)
             Spacer()
             Text(value)
-                .font(DS.Typography.subheadline)
+                .font(valueFont)
                 .foregroundStyle(DS.Colours.textPrimary)
                 .multilineTextAlignment(.trailing)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label), \(value)")
+    }
+
+    private var labelFont: Font {
+        isSecondary ? DS.Typography.caption1 : DS.Typography.subheadline
+    }
+
+    private var valueFont: Font {
+        isSecondary ? DS.Typography.caption1 : DS.Typography.subheadline
     }
 }

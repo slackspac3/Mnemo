@@ -110,6 +110,7 @@ struct CaptureVoiceSheet: View {
             isTranscribing = false
             do {
                 try voiceHandler.startRecording()
+                HapticManager.impact(.heavy)
             } catch {
                 errorMessage = "Could not start recording: \(error.localizedDescription)"
             }
@@ -118,6 +119,7 @@ struct CaptureVoiceSheet: View {
 
     private func finishRecording() {
         isTranscribing = true
+        HapticManager.impact(.medium)
 
         Task {
             if let capture = await voiceHandler.stopRecordingAndTranscribe() {
@@ -207,6 +209,7 @@ struct CaptureVoiceSheet: View {
                 )
                 try await MemoryCRUD.insertAndIndex(record, into: modelContext)
                 await MainActor.run {
+                    HapticManager.success()
                     dismiss()
                 }
             } catch {
@@ -342,11 +345,17 @@ struct RecordingWaveform: View {
                         width: DS.Spacing.xs,
                         height: height(for: index, isRaised: reduceMotion ? false : isAnimating)
                     )
-                    .animation(reduceMotion ? nil : DS.Animation.slow.repeatForever(autoreverses: true), value: isAnimating)
+                    .animation(reduceMotion ? nil : waveformAnimation(for: index), value: isAnimating)
             }
         }
         .frame(height: DS.Spacing.lg)
         .accessibilityHidden(true)
+    }
+
+    private func waveformAnimation(for index: Int) -> Animation {
+        Animation.easeInOut(duration: 0.50)
+            .repeatForever(autoreverses: true)
+            .delay(Double(index) * 0.10)
     }
 
     private func height(for index: Int, isRaised: Bool) -> CGFloat {

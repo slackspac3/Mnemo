@@ -17,6 +17,7 @@ struct CaptureButton: View {
                         label: "Camera",
                         color: DS.Colours.success
                     ) {
+                        HapticManager.impact(.light)
                         expanded = false
                         coordinator.present(.captureImage(.camera))
                     }
@@ -26,6 +27,7 @@ struct CaptureButton: View {
                         label: "Photo",
                         color: DS.Colours.warning
                     ) {
+                        HapticManager.impact(.light)
                         expanded = false
                         coordinator.present(.captureImage(.photoLibrary))
                     }
@@ -35,6 +37,7 @@ struct CaptureButton: View {
                         label: "Voice",
                         color: DS.Colours.accent
                     ) {
+                        HapticManager.impact(.light)
                         expanded = false
                         coordinator.present(.captureVoice)
                     }
@@ -44,6 +47,7 @@ struct CaptureButton: View {
                         label: "Text",
                         color: DS.Colours.brandInk
                     ) {
+                        HapticManager.impact(.light)
                         expanded = false
                         coordinator.present(.captureText)
                     }
@@ -52,6 +56,7 @@ struct CaptureButton: View {
             }
 
             Button {
+                HapticManager.impact(expanded ? .light : .medium)
                 withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.gentleSpring) {
                     expanded.toggle()
                 }
