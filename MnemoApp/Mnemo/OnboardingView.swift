@@ -74,6 +74,57 @@ struct OnboardingNavigationBar: View {
             }
 
             switch viewModel.currentStep {
+            case .capturePreference, .captureList, .captureCredential:
+                HStack(spacing: DS.Spacing.sm) {
+                    Button("Skip") {
+                        HapticManager.selection()
+                        viewModel.skipCapture()
+                    }
+                    .font(DS.Typography.body)
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: DS.ComponentTokens.SecondaryButton.height)
+                    .padding(.vertical, DS.Spacing.xs)
+                    .background(DS.Colours.surfaceSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                            .stroke(DS.Colours.borderSubtle, lineWidth: 0.5)
+                    }
+                    .buttonStyle(.mnemoPressable)
+
+                    Button {
+                        Task {
+                            await viewModel.confirmCapture(context: modelContext)
+                        }
+                    } label: {
+                        Group {
+                            if viewModel.isCapturing {
+                                ProgressView()
+                                    .tint(DS.ComponentTokens.PrimaryButton.foreground)
+                            } else {
+                                Text("Save & Continue")
+                                    .font(DS.Typography.headline)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
+                    .padding(.vertical, DS.Spacing.xs)
+                    .background(
+                        viewModel.captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ? DS.Colours.accentDisabled
+                            : DS.ComponentTokens.PrimaryButton.background
+                    )
+                    .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                    .disabled(
+                        viewModel.captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                            viewModel.isCapturing
+                    )
+                    .buttonStyle(.mnemoPressable)
+                }
+
             case .done:
                 Button {
                     HapticManager.success()

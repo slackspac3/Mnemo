@@ -24,6 +24,7 @@ struct CaptureImageSheet: View {
     @State private var clarifyingAnswer = ""
     @State private var isProcessing = false
     @State private var errorMessage: String?
+    @State private var savedSummary: String?
 
     private let handler = ImageCaptureHandler()
     private let engine = ExtractionEngine()
@@ -87,6 +88,13 @@ struct CaptureImageSheet: View {
             .fullScreenCover(isPresented: $isShowingCamera) {
                 CameraImagePicker(image: $cameraImage)
                     .ignoresSafeArea()
+            }
+            .overlay {
+                if let savedSummary {
+                    MemorySavedOverlay(summary: savedSummary) {
+                        dismiss()
+                    }
+                }
             }
         }
     }
@@ -180,7 +188,8 @@ struct CaptureImageSheet: View {
 
                 try await MemoryCRUD.insertAndIndex(record, into: modelContext)
                 await MainActor.run {
-                    dismiss()
+                    HapticManager.success()
+                    savedSummary = result.summary
                 }
             } catch {
                 await MainActor.run {

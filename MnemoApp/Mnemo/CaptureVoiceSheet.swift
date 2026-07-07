@@ -20,6 +20,7 @@ struct CaptureVoiceSheet: View {
     @State private var isTranscribing = false
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var savedSummary: String?
 
     private let engine = ExtractionEngine()
 
@@ -97,6 +98,13 @@ struct CaptureVoiceSheet: View {
             .onChange(of: voiceHandler.recognitionErrorMessage) { _, message in
                 guard let message, !message.isEmpty else { return }
                 errorMessage = recognitionFailureMessage(message)
+            }
+            .overlay {
+                if let savedSummary {
+                    MemorySavedOverlay(summary: savedSummary) {
+                        dismiss()
+                    }
+                }
             }
         }
     }
@@ -210,7 +218,7 @@ struct CaptureVoiceSheet: View {
                 try await MemoryCRUD.insertAndIndex(record, into: modelContext)
                 await MainActor.run {
                     HapticManager.success()
-                    dismiss()
+                    savedSummary = result.summary
                 }
             } catch {
                 await MainActor.run {
