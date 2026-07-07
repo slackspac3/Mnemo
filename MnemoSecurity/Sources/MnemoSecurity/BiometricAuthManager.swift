@@ -8,31 +8,21 @@ public final class BiometricAuthManager: Sendable {
 
     public init() {}
 
+    public func canAuthenticate() -> Bool {
+        let context = LAContext()
+        var error: NSError?
+        return context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+    }
+
     public func authenticate(reason: String) async throws -> Bool {
         let context = LAContext()
         var error: NSError?
 
-        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
-            // Fall back to device passcode
-            return try await authenticateWithPasscode(reason: reason, context: context)
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
+            throw MnemoError.securityError(error?.localizedDescription ?? "Device authentication is unavailable.")
         }
 
         return try await withCheckedThrowingContinuation { continuation in
-            context.evaluatePolicy(
-                .deviceOwnerAuthenticationWithBiometrics,
-                localizedReason: reason
-            ) { success, error in
-                if let error {
-                    continuation.resume(throwing: MnemoError.securityError(error.localizedDescription))
-                } else {
-                    continuation.resume(returning: success)
-                }
-            }
-        }
-    }
-
-    private func authenticateWithPasscode(reason: String, context: LAContext) async throws -> Bool {
-        try await withCheckedThrowingContinuation { continuation in
             context.evaluatePolicy(
                 .deviceOwnerAuthentication,
                 localizedReason: reason

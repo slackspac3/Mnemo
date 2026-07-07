@@ -18,6 +18,7 @@ public final class UserModel {
     public var onboardingComplete: Bool
     public var cloudFallbackEnabled: Bool
     public var onDeviceOnly: Bool
+    public var appLockEnabled: Bool = false
     public var memoryMomentsEnabled: Bool
     public var patternInsightsEnabled: Bool
     public var threadSuggestionsEnabled: Bool
@@ -28,6 +29,7 @@ public final class UserModel {
         onboardingComplete: Bool = false,
         cloudFallbackEnabled: Bool = false,
         onDeviceOnly: Bool = true,
+        appLockEnabled: Bool = false,
         memoryMomentsEnabled: Bool = false,
         patternInsightsEnabled: Bool = true,
         threadSuggestionsEnabled: Bool = true
@@ -43,10 +45,32 @@ public final class UserModel {
         self.onboardingComplete = onboardingComplete
         self.cloudFallbackEnabled = cloudFallbackEnabled
         self.onDeviceOnly = onDeviceOnly
+        self.appLockEnabled = appLockEnabled
         self.memoryMomentsEnabled = memoryMomentsEnabled
         self.patternInsightsEnabled = patternInsightsEnabled
         self.threadSuggestionsEnabled = threadSuggestionsEnabled
         self.updatedAt = Date()
+    }
+
+    public convenience init(
+        id: UUID,
+        onboardingComplete: Bool,
+        cloudFallbackEnabled: Bool,
+        onDeviceOnly: Bool,
+        memoryMomentsEnabled: Bool,
+        patternInsightsEnabled: Bool,
+        threadSuggestionsEnabled: Bool
+    ) {
+        self.init(
+            id: id,
+            onboardingComplete: onboardingComplete,
+            cloudFallbackEnabled: cloudFallbackEnabled,
+            onDeviceOnly: onDeviceOnly,
+            appLockEnabled: false,
+            memoryMomentsEnabled: memoryMomentsEnabled,
+            patternInsightsEnabled: patternInsightsEnabled,
+            threadSuggestionsEnabled: threadSuggestionsEnabled
+        )
     }
 
     public func decodedModalityThresholdProfile() -> ModalityThresholdProfile {

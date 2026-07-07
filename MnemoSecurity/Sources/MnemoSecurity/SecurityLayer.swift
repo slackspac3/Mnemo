@@ -54,6 +54,10 @@ public final class SecurityLayer: Sendable {
 
     // MARK: - Biometric
 
+    public func canAuthenticateWithBiometrics() -> Bool {
+        biometric.canAuthenticate()
+    }
+
     public func authenticateWithBiometrics(reason: String) async throws -> Bool {
         try await biometric.authenticate(reason: reason)
     }

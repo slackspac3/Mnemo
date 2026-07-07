@@ -17,6 +17,9 @@ The codebase contains routing hooks for Apple Foundation Models and a future MLX
 BACKUP
 CloudKit backup uses the user's own iCloud account. Mnemo does not operate a server for backup storage.
 
+APP LOCK / BIOMETRICS
+Optional App Lock uses iOS LocalAuthentication only, using Face ID, Touch ID, or the device passcode where available. Mnemo does not receive, store, or upload biometric data, biometric templates, passcodes, account credentials, or backend identity data.
+
 PERMISSIONS
 The app does not require microphone, camera, or photo library permissions to function.
 These are requested contextually only when the user first uses each feature:
@@ -33,8 +36,8 @@ TESTING THE APP
 6. Settings shows privacy controls, backup/restore, inactive Sense feature labels, and delete-all-data controls.
 
 SANDBOX / TEST ACCOUNT
-No account is required. The app works without authentication.
-iCloud backup requires a signed-in iCloud account for testing.
+No Mnemo account, sign-up, login, or test credentials are required. The app does not create a backend identity.
+The app is usable without iCloud. Optional iCloud backup uses the reviewer's signed-in Apple ID/iCloud account only; Mnemo does not operate an account server.
 
 BUNDLE ID: com.thinkact.mnemo
 DEVELOPER: Think Act Management Consulting L.L.C

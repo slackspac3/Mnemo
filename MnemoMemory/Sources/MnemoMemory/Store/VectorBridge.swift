@@ -74,9 +74,7 @@ public actor VectorBridge {
             throw VectorBridgeError.executionFailed("secure delete")
         }
 
-        #if targetEnvironment(simulator)
-        return
-        #else
+        #if os(iOS) && !targetEnvironment(simulator)
         let fileManager = FileManager.default
         for url in vectorFileURLs where fileManager.fileExists(atPath: url.path) {
             try SecurityLayer.shared.applyFileProtection(to: url)

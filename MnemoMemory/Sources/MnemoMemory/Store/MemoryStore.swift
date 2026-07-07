@@ -67,9 +67,7 @@ public final class MemoryStore {
     }
 
     private static func applyFileProtectionToStoreFiles() throws {
-        #if targetEnvironment(simulator)
-        return
-        #else
+        #if os(iOS) && !targetEnvironment(simulator)
         let fileManager = FileManager.default
         for url in storeFileURLs where fileManager.fileExists(atPath: url.path) {
             try SecurityLayer.shared.applyFileProtection(to: url)

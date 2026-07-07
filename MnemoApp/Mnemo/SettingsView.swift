@@ -3,6 +3,7 @@ import SwiftData
 import MnemoUI
 import MnemoCore
 import MnemoMemory
+import MnemoSecurity
 
 /// Settings: processing mode, feature toggles, personalisation index, backup, and delete all data.
 struct SettingsView: View {
@@ -14,6 +15,10 @@ struct SettingsView: View {
 
     @State private var showingDeleteAllConfirm = false
     @State private var destructiveErrorMessage: String?
+    @State private var appLockErrorMessage: String?
+    @State private var appLockUnavailableMessage: String?
+    @State private var canUseAppLock = true
+    @State private var isChangingAppLock = false
 
     private var userModel: UserModel? {
         userModels.first
@@ -64,6 +69,55 @@ struct SettingsView: View {
                         }
                     } header: {
                         SettingsSectionHeader("Privacy")
+                    }
+                    .listRowBackground(DS.Colours.surface)
+
+                    Section {
+                        if let model = userModel {
+                            Toggle(isOn: Binding(
+                                get: { model.appLockEnabled },
+                                set: { enabled in
+                                    Task {
+                                        await updateAppLock(enabled, model: model)
+                                    }
+                                }
+                            )) {
+                                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                                    Text("Require Face ID to Open Mnemo")
+                                        .font(DS.Typography.body)
+                                        .foregroundStyle(DS.Colours.textPrimary)
+                                    Text("When enabled, Mnemo asks for Face ID, Touch ID or your device passcode when you reopen the app.")
+                                        .font(DS.Typography.caption1)
+                                        .foregroundStyle(DS.Colours.textSecondary)
+                                }
+                            }
+                            .tint(DS.Colours.accent)
+                            .disabled((!canUseAppLock && !model.appLockEnabled) || isChangingAppLock)
+
+                            if isChangingAppLock {
+                                Text("Waiting for device authentication...")
+                                    .font(DS.Typography.footnote)
+                                    .foregroundStyle(DS.Colours.textSecondary)
+                            }
+
+                            if let appLockUnavailableMessage {
+                                Text(appLockUnavailableMessage)
+                                    .font(DS.Typography.footnote)
+                                    .foregroundStyle(DS.Colours.textSecondary)
+                            }
+
+                            if let appLockErrorMessage {
+                                Text(appLockErrorMessage)
+                                    .font(DS.Typography.footnote)
+                                    .foregroundStyle(DS.Colours.destructive)
+                            }
+                        } else {
+                            Text("App Lock settings will appear after onboarding.")
+                                .font(DS.Typography.footnote)
+                                .foregroundStyle(DS.Colours.textSecondary)
+                        }
+                    } header: {
+                        SettingsSectionHeader("Security")
                     }
                     .listRowBackground(DS.Colours.surface)
 
@@ -169,6 +223,9 @@ struct SettingsView: View {
                 }
             }
         }
+        .task {
+            refreshAppLockAvailability()
+        }
     }
 
     @MainActor
@@ -183,11 +240,68 @@ struct SettingsView: View {
             try modelContext.delete(model: PersonSubject.self)
             try modelContext.save()
             NavigationCoordinator.shared.dismiss()
-            appState.onboardingComplete = false
+            appState.resetAfterDeleteAllData()
             dismiss()
         } catch {
             destructiveErrorMessage = "Could not delete all data. Try again before removing the app."
         }
+    }
+
+    @MainActor
+    private func refreshAppLockAvailability() {
+        canUseAppLock = SecurityLayer.shared.canAuthenticateWithBiometrics()
+        appLockUnavailableMessage = canUseAppLock ? nil : "Face ID, Touch ID or a device passcode is not available on this device."
+    }
+
+    @MainActor
+    private func updateAppLock(_ enabled: Bool, model: UserModel) async {
+        guard enabled != model.appLockEnabled else { return }
+        guard canUseAppLock else {
+            if !enabled, model.appLockEnabled {
+                model.appLockEnabled = false
+                model.updatedAt = Date()
+                do {
+                    try modelContext.save()
+                    appState.setAppLockEnabled(false)
+                    appLockErrorMessage = nil
+                } catch {
+                    appLockErrorMessage = "App Lock is still on. Try again when you are ready."
+                }
+                return
+            }
+
+            appLockErrorMessage = "Set up Face ID, Touch ID or a device passcode before enabling App Lock."
+            return
+        }
+        guard !isChangingAppLock else { return }
+
+        isChangingAppLock = true
+        appLockErrorMessage = nil
+
+        do {
+            let reason = enabled
+                ? "Authenticate to enable App Lock for Mnemo."
+                : "Authenticate to turn off App Lock for Mnemo."
+            let success = try await SecurityLayer.shared.authenticateWithBiometrics(reason: reason)
+            guard success else {
+                appLockErrorMessage = enabled
+                    ? "App Lock was not enabled. Try again when you are ready."
+                    : "App Lock is still on. Try again when you are ready."
+                isChangingAppLock = false
+                return
+            }
+
+            model.appLockEnabled = enabled
+            model.updatedAt = Date()
+            try modelContext.save()
+            appState.setAppLockEnabled(enabled)
+        } catch {
+            appLockErrorMessage = enabled
+                ? "App Lock was not enabled. Try again when you are ready."
+                : "App Lock is still on. Try again when you are ready."
+        }
+
+        isChangingAppLock = false
     }
 }
 

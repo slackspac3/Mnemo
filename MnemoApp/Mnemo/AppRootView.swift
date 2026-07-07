@@ -14,9 +14,17 @@ struct AppRootView: View {
             } else if !appState.onboardingComplete {
                 PlaceholderOnboardingView()
             } else {
-                PlaceholderMainView()
+                ZStack {
+                    PlaceholderMainView()
+
+                    if appState.appLockEnabled && appState.isAppLocked {
+                        AppLockView()
+                            .transition(.opacity)
+                    }
+                }
             }
         }
         .animation(DS.Animation.standard, value: appState.isInitialised)
+        .animation(DS.Animation.standard, value: appState.isAppLocked)
     }
 }

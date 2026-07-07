@@ -9,6 +9,7 @@ public final class FileProtectionManager: Sendable {
     public init() {}
 
     public func apply(to url: URL) throws {
+        #if os(iOS)
         do {
             try (url as NSURL).setResourceValue(
                 URLFileProtection.complete,
@@ -17,5 +18,8 @@ public final class FileProtectionManager: Sendable {
         } catch {
             throw MnemoError.securityError("File protection application failed: \(error.localizedDescription)")
         }
+        #else
+        _ = url
+        #endif
     }
 }

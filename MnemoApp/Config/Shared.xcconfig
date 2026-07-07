@@ -30,6 +30,7 @@ INFOPLIST_KEY_NSMicrophoneUsageDescription = Mnemo uses your microphone to captu
 INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = Mnemo uses speech recognition to transcribe your voice notes for memory capture.
 INFOPLIST_KEY_NSCameraUsageDescription = Mnemo uses your camera to capture images for memory extraction. Photos are processed on your device.
 INFOPLIST_KEY_NSPhotoLibraryUsageDescription = Mnemo reads photos from your library to extract memory information. Images are processed on your device.
+INFOPLIST_KEY_NSFaceIDUsageDescription = Mnemo uses Face ID, Touch ID, or your device passcode only when you enable local App Lock.
 
 // ==========================================
 // Entitlements

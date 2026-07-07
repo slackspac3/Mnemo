@@ -58,4 +58,32 @@ struct MnemoSecurityTests {
         try manager.delete(fileURL: tempURL)
         #expect(!FileManager.default.fileExists(atPath: tempURL.path))
     }
+
+    @Test("AppLockPolicy only locks after onboarding when enabled")
+    func appLockPolicyLaunch() {
+        let policy = AppLockPolicy()
+        #expect(policy.shouldLockOnLaunch(appLockEnabled: false, onboardingComplete: true) == false)
+        #expect(policy.shouldLockOnLaunch(appLockEnabled: true, onboardingComplete: false) == false)
+        #expect(policy.shouldLockOnLaunch(appLockEnabled: true, onboardingComplete: true) == true)
+    }
+
+    @Test("AppLockPolicy supports background grace period")
+    func appLockPolicyBackgroundGracePeriod() {
+        let policy = AppLockPolicy(backgroundGracePeriod: 30)
+        let backgroundedAt = Date(timeIntervalSince1970: 1_000)
+
+        #expect(policy.shouldLockAfterBackground(
+            appLockEnabled: true,
+            onboardingComplete: true,
+            backgroundedAt: backgroundedAt,
+            now: backgroundedAt.addingTimeInterval(10)
+        ) == false)
+
+        #expect(policy.shouldLockAfterBackground(
+            appLockEnabled: true,
+            onboardingComplete: true,
+            backgroundedAt: backgroundedAt,
+            now: backgroundedAt.addingTimeInterval(30)
+        ) == true)
+    }
 }

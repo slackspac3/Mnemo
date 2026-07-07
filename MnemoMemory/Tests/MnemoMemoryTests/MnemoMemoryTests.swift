@@ -98,11 +98,26 @@ struct MnemoMemoryTests {
 
         #expect(model.onDeviceOnly == true)
         #expect(model.onboardingComplete == false)
+        #expect(model.appLockEnabled == false)
         #expect(model.preferredSurface == "chat")
 
         let profile = model.decodedModalityThresholdProfile()
         #expect(profile.textThreshold == 0.90)
         #expect(profile.voiceThreshold == 0.75)
+    }
+
+    @Test("UserModel app lock setting persists locally")
+    @MainActor
+    func userModelAppLockPersists() throws {
+        let container = try MemoryStore.makeTestContainer()
+        let context = ModelContext(container)
+
+        let model = UserModel(appLockEnabled: true)
+        context.insert(model)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<UserModel>()).first
+        #expect(fetched?.appLockEnabled == true)
     }
 
     @Test("VectorBridge mock returns empty results")

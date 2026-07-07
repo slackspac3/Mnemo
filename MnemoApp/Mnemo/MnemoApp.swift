@@ -8,6 +8,7 @@ import MnemoIntelligence
 struct MnemoApp: App {
 
     @State private var appState = AppState()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -15,6 +16,9 @@ struct MnemoApp: App {
                 .environment(appState)
                 .task {
                     await appState.initialise()
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    appState.handleScenePhase(newPhase)
                 }
         }
         .modelContainer(MemoryStore.shared.container)
