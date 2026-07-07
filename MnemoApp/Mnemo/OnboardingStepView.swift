@@ -252,10 +252,10 @@ struct BackupStepContent: View {
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.warning)
                 VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Text("Without a backup, if you lose your iPhone you lose your memories.")
+                    Text("Backup setup is optional and should be validated on your device before you rely on it for recovery.")
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(DS.Colours.textPrimary)
-                    Text("The backup screen in Settings performs the real encrypted iCloud backup flow.")
+                    Text("The backup screen in Settings stores encrypted backup data in your iCloud account.")
                         .font(DS.Typography.footnote)
                         .foregroundStyle(DS.Colours.textSecondary)
                 }

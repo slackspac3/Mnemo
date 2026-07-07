@@ -2,8 +2,8 @@ import Foundation
 import MnemoCore
 
 /// Applies NSFileProtectionComplete to files on disk.
-/// Files with this protection class are inaccessible when the device is locked,
-/// even to forensic extraction tools.
+/// Files with this protection class should be inaccessible while the device is locked,
+/// subject to iOS file-protection behavior on physical hardware.
 public final class FileProtectionManager: Sendable {
 
     public init() {}

@@ -84,6 +84,7 @@ struct OnboardingNavigationBar: View {
                         .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+                .accessibilityIdentifier(AccessibilityID.Onboarding.completeButton)
 
             default:
                 Button {
@@ -97,6 +98,7 @@ struct OnboardingNavigationBar: View {
                         .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
+                .accessibilityIdentifier(AccessibilityID.Onboarding.continueButton)
             }
         }
     }

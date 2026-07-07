@@ -28,6 +28,8 @@ final class AppState {
         // Open the vector store early so semantic search is ready for capture/recall.
         try? await VectorBridge.shared.open()
 
+        await applyUITestingLaunchArgumentsIfNeeded()
+
         let settings = await MainActor.run {
             let context = MemoryStore.shared.container.mainContext
             let descriptor = FetchDescriptor<UserModel>()
@@ -129,4 +131,47 @@ final class AppState {
         isAppLocked = true
         appLockErrorMessage = nil
     }
+
+    @MainActor
+    private func applyUITestingLaunchArgumentsIfNeeded() async {
+        #if DEBUG
+        guard UITestingLaunchArguments.isUITesting else { return }
+
+        let context = MemoryStore.shared.container.mainContext
+
+        if UITestingLaunchArguments.resetDataOnLaunch {
+            try? await VectorBridge.shared.wipe()
+            try? context.delete(model: MemoryRecord.self)
+            try? context.delete(model: MemoryThread.self)
+            try? context.delete(model: UserModel.self)
+            try? context.delete(model: ConflictRecord.self)
+            try? context.delete(model: PersonSubject.self)
+            try? context.save()
+            NavigationCoordinator.shared.dismiss()
+        }
+
+        if UITestingLaunchArguments.skipOnboardingIfNeeded {
+            let descriptor = FetchDescriptor<UserModel>()
+            let userModel = (try? context.fetch(descriptor))?.first
+
+            if let userModel {
+                userModel.onboardingComplete = true
+                userModel.appLockEnabled = false
+                userModel.updatedAt = Date()
+            } else {
+                context.insert(UserModel(onboardingComplete: true, appLockEnabled: false))
+            }
+
+            try? context.save()
+        }
+        #endif
+    }
 }
+
+#if DEBUG
+private enum UITestingLaunchArguments {
+    static let isUITesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+    static let resetDataOnLaunch = ProcessInfo.processInfo.arguments.contains("--reset-data-on-launch")
+    static let skipOnboardingIfNeeded = ProcessInfo.processInfo.arguments.contains("--skip-onboarding-if-needed")
+}
+#endif

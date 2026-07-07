@@ -66,9 +66,11 @@ struct CaptureTextSheet: View {
                         dismiss()
                     }
                     .foregroundStyle(DS.Colours.textSecondary)
+                    .accessibilityIdentifier(AccessibilityID.CaptureText.dismiss)
                 }
             }
         }
+        .accessibilityIdentifier("capture.text.sheet")
     }
 
     private func extract() {
@@ -154,6 +156,7 @@ struct TextInputView: View {
                     .padding(DS.Spacing.sm)
                     .background(DS.Colours.surfaceSecondary)
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                    .accessibilityIdentifier(AccessibilityID.CaptureText.input)
             }
 
             Button(action: onExtract) {
@@ -173,6 +176,7 @@ struct TextInputView: View {
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
             .disabled(!canSave || isExtracting)
+            .accessibilityIdentifier(AccessibilityID.CaptureText.extract)
 
             Spacer()
         }
@@ -206,6 +210,7 @@ struct ExtractionConfirmView: View {
                         x: DS.Shadows.subtle.x,
                         y: DS.Shadows.subtle.y
                     )
+                    .accessibilityIdentifier(AccessibilityID.CaptureText.review)
 
                 HStack(spacing: DS.Spacing.sm) {
                     Label(result.memoryType.rawValue.capitalized, systemImage: "tag")
@@ -254,6 +259,7 @@ struct ExtractionConfirmView: View {
                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
                 .disabled(isSaving)
+                .accessibilityIdentifier(AccessibilityID.CaptureText.save)
 
                 Button(action: onEdit) {
                     Text("Edit")

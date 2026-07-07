@@ -37,9 +37,9 @@ final class OnboardingViewModel {
         var subtitle: String {
             switch self {
             case .welcome:
-                return "A private memory companion for your iPhone. Everything stays on your device."
+                return "A private memory companion for your iPhone. Saved memories stay in your local Mnemo store."
             case .processingMode:
-                return "Mnemo processes everything on your device by default. Nothing leaves your iPhone unless you say so."
+                return "Mnemo stores memories and runs recall locally in this build. System services such as Speech recognition follow Apple's device settings."
             case .notifications:
                 return "Smart reminders are being prepared. They stay off in this build."
             case .backup:

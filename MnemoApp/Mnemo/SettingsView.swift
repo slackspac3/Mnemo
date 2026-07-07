@@ -94,6 +94,7 @@ struct SettingsView: View {
                             }
                             .tint(DS.Colours.accent)
                             .disabled((!canUseAppLock && !model.appLockEnabled) || isChangingAppLock)
+                            .accessibilityIdentifier(AccessibilityID.Settings.appLockToggle)
 
                             if isChangingAppLock {
                                 Text("Waiting for device authentication...")
@@ -121,6 +122,7 @@ struct SettingsView: View {
                         SettingsSectionHeader("Security")
                     }
                     .listRowBackground(DS.Colours.surface)
+                    .accessibilityIdentifier(AccessibilityID.Settings.securitySection)
 
                     Section {
                         if let model = userModel {
@@ -192,6 +194,7 @@ struct SettingsView: View {
                                     .foregroundStyle(DS.Colours.destructive)
                             }
                         }
+                        .accessibilityIdentifier(AccessibilityID.Settings.deleteAllData)
                         .confirmationDialog(
                             "Delete all data?",
                             isPresented: $showingDeleteAllConfirm,

@@ -64,6 +64,14 @@ If XcodeBuildMCP is installed, the app smoke build can also be run from the repo
 MNEMO_SIMULATOR_ID=<simulator-udid> Scripts/run_local_checks.sh app
 ```
 
+Run the simulator UI smoke hook with DEBUG test launch arguments:
+
+```sh
+MNEMO_SIMULATOR_ID=<simulator-udid> Scripts/run_local_checks.sh ui
+```
+
+This builds and launches the app on Simulator, resets local test data for that DEBUG run, skips onboarding, and captures a semantic UI snapshot. It does not validate real Face ID, microphone, camera, OCR, iCloud, notifications, or locked-device behavior.
+
 ## Development Notes
 
 - Prefer small, package-scoped changes with package builds before app builds.

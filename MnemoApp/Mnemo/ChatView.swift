@@ -137,6 +137,7 @@ struct ChatView: View {
                         }
                         .accessibilityLabel("Home")
                         .accessibilityHint("Return to the memory landing screen")
+                        .accessibilityIdentifier("chat.homeButton")
 
                         Button {
                             coordinator.present(.settings)
@@ -147,6 +148,7 @@ struct ChatView: View {
                                 .frame(width: 44.0, height: 44.0)
                         }
                         .accessibilityLabel("Settings")
+                        .accessibilityIdentifier(AccessibilityID.Main.settings)
                     }
                 }
 
@@ -159,6 +161,7 @@ struct ChatView: View {
                             .foregroundStyle(DS.Colours.accent)
                     }
                     .accessibilityLabel("Write memory")
+                    .accessibilityIdentifier(AccessibilityID.CaptureText.open)
                 }
             }
             .sheet(item: $selectedSourceMemory) { selected in
@@ -238,6 +241,7 @@ struct MessageBubble: View {
                 Spacer(minLength: DS.Spacing.xxxl)
             }
         }
+        .accessibilityIdentifier(isUser ? AccessibilityID.Chat.messageUser : AccessibilityID.Chat.messageAssistant)
     }
 }
 
@@ -279,6 +283,7 @@ struct CitationSection: View {
                                 Text(citation.source)
                                     .font(DS.Typography.caption2)
                                     .foregroundStyle(DS.Colours.textTertiary)
+                                    .accessibilityIdentifier(AccessibilityID.Chat.sourceType)
                                 Text("\"\(citation.summary)\"")
                                     .font(DS.Typography.caption1)
                                     .foregroundStyle(DS.Colours.textSecondary)
@@ -297,6 +302,7 @@ struct CitationSection: View {
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(citation.id == citations.first?.id ? AccessibilityID.Chat.sourceCardPrimary : AccessibilityID.Chat.sourceCard)
                 }
             }
         }
@@ -395,6 +401,7 @@ struct EmptyChatLanding: View {
                         subtitle: "Type a fact",
                         icon: "square.and.pencil",
                         tint: DS.Colours.accent,
+                        accessibilityIdentifier: AccessibilityID.CaptureText.open,
                         action: onText
                     )
                     LandingActionButton(
@@ -402,6 +409,7 @@ struct EmptyChatLanding: View {
                         subtitle: "Speak it",
                         icon: "mic.fill",
                         tint: DS.Colours.primary,
+                        accessibilityIdentifier: "capture.voice.open",
                         action: onVoice
                     )
                     LandingActionButton(
@@ -409,6 +417,7 @@ struct EmptyChatLanding: View {
                         subtitle: "Capture now",
                         icon: "camera.fill",
                         tint: DS.Colours.success,
+                        accessibilityIdentifier: "capture.camera.open",
                         action: onCamera
                     )
                     LandingActionButton(
@@ -416,6 +425,7 @@ struct EmptyChatLanding: View {
                         subtitle: "Choose image",
                         icon: "photo.on.rectangle",
                         tint: DS.Colours.warning,
+                        accessibilityIdentifier: "capture.photo.open",
                         action: onPhoto
                     )
                 }
@@ -454,6 +464,7 @@ struct EmptyChatLanding: View {
         .padding(.top, DS.Spacing.md)
         .padding(.bottom, DS.Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier(AccessibilityID.Chat.landing)
     }
 }
 
@@ -533,6 +544,7 @@ struct LandingActionButton: View {
     let subtitle: String
     let icon: String
     let tint: Color
+    let accessibilityIdentifier: String
     let action: () -> Void
 
     var body: some View {
@@ -568,6 +580,7 @@ struct LandingActionButton: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 
@@ -627,6 +640,7 @@ struct ChatInputBar: View {
                     .frame(width: 40.0, height: 44.0)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.Main.capture)
 
             Button(action: onVoice) {
                 Image(systemName: "mic.fill")
@@ -638,6 +652,7 @@ struct ChatInputBar: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("capture.voice.open")
 
             TextField("Ask Mnemo about a memory...", text: $text, axis: .vertical)
                 .font(DS.Typography.body)
@@ -650,6 +665,7 @@ struct ChatInputBar: View {
                 .onSubmit {
                     onSend()
                 }
+                .accessibilityIdentifier(AccessibilityID.Chat.input)
 
             Button(action: onSend) {
                 Image(systemName: isProcessing ? "ellipsis" : "arrow.up.circle.fill")
@@ -659,6 +675,7 @@ struct ChatInputBar: View {
             }
             .disabled(text.isEmpty || isProcessing)
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.Chat.send)
         }
         .padding(.horizontal, DS.Spacing.md)
         .padding(.vertical, DS.Spacing.sm)

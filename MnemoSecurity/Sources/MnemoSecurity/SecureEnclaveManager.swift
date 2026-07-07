@@ -3,8 +3,7 @@ import MnemoCore
 import Security
 
 /// Manages keys generated in the iOS Secure Enclave.
-/// Secure Enclave keys are non-exportable — they cannot be extracted
-/// from the device under any circumstances.
+/// Secure Enclave private keys are created as non-exportable device keys.
 public final class SecureEnclaveManager: Sendable {
 
     public init() {}

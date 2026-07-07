@@ -11,14 +11,18 @@ struct AppRootView: View {
         Group {
             if !appState.isInitialised {
                 SplashView()
+                    .accessibilityIdentifier("root.splash")
             } else if !appState.onboardingComplete {
                 PlaceholderOnboardingView()
+                    .accessibilityIdentifier("root.onboarding")
             } else {
                 ZStack {
                     PlaceholderMainView()
+                        .accessibilityIdentifier("root.main")
 
                     if appState.appLockEnabled && appState.isAppLocked {
                         AppLockView()
+                            .accessibilityIdentifier("root.locked")
                             .transition(.opacity)
                     }
                 }

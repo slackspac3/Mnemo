@@ -36,6 +36,7 @@ struct AppLockView: View {
                         .foregroundStyle(DS.Colours.destructive)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, DS.Spacing.lg)
+                        .accessibilityIdentifier(AccessibilityID.AppLock.errorMessage)
                 }
 
                 Button {
@@ -61,6 +62,7 @@ struct AppLockView: View {
                 }
                 .disabled(appState.isAuthenticatingAppLock)
                 .padding(.horizontal, DS.Spacing.xl)
+                .accessibilityIdentifier(AccessibilityID.AppLock.unlockButton)
 
                 Spacer()
 
@@ -70,5 +72,6 @@ struct AppLockView: View {
                     .padding(.bottom, DS.Spacing.lg)
             }
         }
+        .accessibilityIdentifier(AccessibilityID.AppLock.screen)
     }
 }

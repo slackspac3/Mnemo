@@ -2,8 +2,8 @@ import Foundation
 import MnemoCore
 
 /// Handles secure deletion of files and databases.
-/// Simply removing a file reference is insufficient — data must be
-/// overwritten before deletion so it cannot be recovered forensically.
+/// Mnemo overwrites local files before deletion as a best-effort safeguard.
+/// Filesystem, flash storage, and backup behavior can still affect recoverability.
 public final class SecureDeletionManager: Sendable {
 
     public init() {}

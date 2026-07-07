@@ -109,7 +109,7 @@ struct BackupRestoreView: View {
                             Image(systemName: "lock.shield")
                                 .font(DS.Typography.subheadline)
                                 .foregroundStyle(DS.Colours.success)
-                            Text("Your backup is encrypted on your device before being stored in your iCloud. Mnemo cannot access your backup data.")
+                            Text("Backups are encrypted before being stored in your iCloud account. Restore currently requires this device's local backup key, so validate recovery before relying on it for lost-device protection.")
                                 .font(DS.Typography.footnote)
                                 .foregroundStyle(DS.Colours.textSecondary)
                         }

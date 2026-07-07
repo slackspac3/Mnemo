@@ -16,11 +16,12 @@ PACKAGES=(
 
 usage() {
   cat <<'USAGE'
-Usage: Scripts/run_local_checks.sh [fast|efficiency|app|physical-pending]
+Usage: Scripts/run_local_checks.sh [fast|efficiency|app|ui|physical-pending]
 
 fast              Run Swift package tests and git diff whitespace checks.
 efficiency        Run MnemoMemory efficiency baseline tests.
 app               Build and run the app with XcodeBuildMCP if MNEMO_SIMULATOR_ID is set.
+ui                Build/run a simulator UI smoke state and capture a semantic UI snapshot.
 physical-pending  Print V1 flows that still need physical-device validation.
 USAGE
 }
@@ -60,6 +61,29 @@ run_app_smoke() {
     --output json
 }
 
+run_ui_smoke() {
+  if ! command -v xcodebuildmcp >/dev/null 2>&1; then
+    echo "xcodebuildmcp is not installed; cannot run simulator UI smoke."
+    return 127
+  fi
+
+  if [[ -z "${MNEMO_SIMULATOR_ID:-}" ]]; then
+    echo "Set MNEMO_SIMULATOR_ID to run simulator UI smoke."
+    return 64
+  fi
+
+  xcodebuildmcp simulator build-and-run \
+    --workspace-path "${ROOT_DIR}/MnemoApp/Mnemo.xcworkspace" \
+    --scheme Mnemo \
+    --simulator-id "${MNEMO_SIMULATOR_ID}" \
+    --launch-args '["--ui-testing","--reset-data-on-launch","--skip-onboarding-if-needed"]' \
+    --output json
+
+  xcodebuildmcp simulator snapshot-ui \
+    --simulator-id "${MNEMO_SIMULATOR_ID}" \
+    --output json
+}
+
 case "${MODE}" in
   fast)
     run_package_tests
@@ -70,6 +94,9 @@ case "${MODE}" in
     ;;
   app)
     run_app_smoke
+    ;;
+  ui)
+    run_ui_smoke
     ;;
   physical-pending)
     cat <<'PENDING'

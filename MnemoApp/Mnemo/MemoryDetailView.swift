@@ -52,6 +52,7 @@ struct MemoryDetailView: View {
                             x: DS.Shadows.subtle.x,
                             y: DS.Shadows.subtle.y
                         )
+                        .accessibilityIdentifier(AccessibilityID.MemoryDetail.title)
 
                         VStack(spacing: DS.Spacing.sm) {
                             MetadataRow(label: "Type", value: snapshot.memoryType.capitalized, icon: "tag")
@@ -160,6 +161,7 @@ struct MemoryDetailView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                             }
                             .disabled(isArchiving || isDeleting)
+                            .accessibilityIdentifier(AccessibilityID.MemoryDetail.archive)
 
                             Button {
                                 showingDeleteConfirm = true
@@ -173,6 +175,7 @@ struct MemoryDetailView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                             }
                             .disabled(isDeleting)
+                            .accessibilityIdentifier(AccessibilityID.MemoryDetail.delete)
                         }
                         .confirmationDialog(
                             "Archive this memory?",

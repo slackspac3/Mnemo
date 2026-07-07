@@ -99,6 +99,7 @@ struct BrowseView: View {
                                     .buttonStyle(.plain)
                                     .accessibilityLabel(record.summary)
                                     .accessibilityHint("Open memory details")
+                                    .accessibilityIdentifier(AccessibilityID.Browse.memoryCell)
                                 }
                             }
                             .padding(.horizontal, DS.Spacing.md)
@@ -111,6 +112,7 @@ struct BrowseView: View {
             .navigationTitle("Browse")
             .navigationBarTitleDisplayMode(.large)
             .searchable(text: $searchText, prompt: "Search memories")
+            .accessibilityIdentifier(AccessibilityID.Browse.screen)
             .sheet(item: $selectedMemory) { selected in
                 if let record = records.first(where: { $0.id == selected.id }) {
                     MemoryDetailView(

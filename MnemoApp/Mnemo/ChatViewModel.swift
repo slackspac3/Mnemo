@@ -162,12 +162,14 @@ final class ChatViewModel {
         await reindex(memories: sizeMemories)
 
         let firstMemory = sizeMemories[0]
-        let location = extractLocation(from: searchableText(for: firstMemory))
-        let item = itemLabel(for: searchableText(for: firstMemory))
-        let subject = sizeSubject(item: item, location: location)
+        let memoryText = searchableText(for: firstMemory)
+        let location = extractLocation(from: memoryText)
+        let item = itemLabel(for: memoryText)
+        let subject = sizeSubject(item: item, location: location, query: "", memoryText: memoryText)
+        let sentenceSubject = subject.contains("'s") ? subject : "Your \(subject)"
 
         return RecallResponse(
-            text: "Updated. Your \(subject) is now \(displaySize).",
+            text: "Updated. \(sentenceSubject) is now \(displaySize).",
             citedMemoryIds: sizeMemories.map(\.id),
             citations: citations(for: sizeMemories)
         )
@@ -452,6 +454,13 @@ final class ChatViewModel {
             return "Mum's size"
         }
 
+        if let owner = sizeOwner(from: memoryText) {
+            if combinedText.contains("shoe") {
+                return "\(owner)'s shoe size"
+            }
+            return "\(owner)'s size"
+        }
+
         if let location, item == "size" {
             return "\(location) size"
         } else if let location {
@@ -461,6 +470,38 @@ final class ChatViewModel {
         } else {
             return "\(item) size"
         }
+    }
+
+    private func sizeOwner(from text: String) -> String? {
+        let patterns = [
+            #"\b(mum|mom|mother|dad|father|[A-Z][a-z]+)\s+(?:wears|wear|has)\s+(?:a\s+)?(?:shoe\s+)?size\b"#,
+            #"\b(mum|mom|mother|dad|father|[A-Z][a-z]+)'s\s+(?:shoe\s+)?size\b"#,
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(
+                pattern: pattern,
+                options: []
+            ) else { continue }
+
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            guard let match = regex.firstMatch(in: text, range: range),
+                  match.numberOfRanges > 1,
+                  let ownerRange = Range(match.range(at: 1), in: text)
+            else { continue }
+
+            let owner = String(text[ownerRange])
+            switch owner.lowercased() {
+            case "mom", "mother":
+                return "Mum"
+            case "dad", "father":
+                return "Dad"
+            default:
+                return owner.prefix(1).uppercased() + String(owner.dropFirst())
+            }
+        }
+
+        return nil
     }
 
     private func extractSizeFact(from text: String, memory: MemoryRecord) -> SizeFact? {

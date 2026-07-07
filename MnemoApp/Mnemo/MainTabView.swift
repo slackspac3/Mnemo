@@ -11,23 +11,27 @@ struct MainTabView: View {
 
         TabView(selection: $coordinator.activeTab) {
             ChatView()
+                .accessibilityIdentifier(AccessibilityID.Main.chatTab)
                 .tabItem {
                     Label(NavigationCoordinator.Tab.chat.rawValue, systemImage: NavigationCoordinator.Tab.chat.icon)
                 }
                 .tag(NavigationCoordinator.Tab.chat)
 
             BrowseView()
+                .accessibilityIdentifier(AccessibilityID.Main.browseTab)
                 .tabItem {
                     Label(NavigationCoordinator.Tab.browse.rawValue, systemImage: NavigationCoordinator.Tab.browse.icon)
                 }
                 .tag(NavigationCoordinator.Tab.browse)
 
             ThreadsView()
+                .accessibilityIdentifier(AccessibilityID.Main.threadsTab)
                 .tabItem {
                     Label(NavigationCoordinator.Tab.threads.rawValue, systemImage: NavigationCoordinator.Tab.threads.icon)
                 }
                 .tag(NavigationCoordinator.Tab.threads)
         }
+        .accessibilityIdentifier(AccessibilityID.Main.tabView)
         .tint(DS.Colours.accent)
         .environment(coordinator)
         .sheet(item: $coordinator.activeSheet) { sheet in

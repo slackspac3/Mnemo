@@ -1,17 +1,14 @@
 import Foundation
 import MnemoCore
 
-/// Strips or hashes PII from text before any cloud escalation.
-/// Applied to ALL cloud payloads without exception.
-/// Uses consistent hashing so the LLM can still reason about relationships
-/// between entities without seeing the actual values.
+/// Redacts selected obvious identifiers before a future cloud escalation path.
+/// No cloud provider is configured in the current build.
 public struct AnonymisationLayer: Sendable {
 
     public init() {}
 
-    /// Anonymise text for cloud transmission.
-    /// Detects and replaces: email addresses, phone numbers, URLs,
-    /// and common name patterns. Consistent hashing preserves relationships.
+    /// Redact email addresses, phone numbers, and URLs.
+    /// This is a safeguard, not a complete anonymisation guarantee.
     public func anonymise(_ text: String) -> String {
         var result = text
 
