@@ -65,13 +65,32 @@ Physical device discovery found:
 - OS: `26.6`
 - UDID: `FFE5C4A6-31E5-580B-83D3-CD05172A8F2D`
 
-Physical build-and-run was attempted with XcodeBuildMCP. It was blocked by local signing configuration:
+Physical iPhone validation passed after enabling the MLX package plugin and adding the DEBUG launch argument locally in Xcode:
 
 ```text
-Signing for "Mnemo" requires a development team.
+--run-mlx-runtime-smoke
 ```
 
-No signing settings, entitlements, provisioning profiles, or local signing stashes were changed or committed. The physical MLX runtime operation remains pending until a local development team is configured outside git.
+The app built, signed locally, installed, launched on the physical iPhone, and ran a real MLX operation successfully:
+
+```text
+MLX runtime smoke: linked=true passed=true durationMs=718.17 preview="1 + 2 = 3.0" error="none"
+Type: stdio
+```
+
+The operation was:
+
+1. Create `MLXArray(1.0)`.
+2. Create `MLXArray(2.0)`.
+3. Add them.
+4. Call `eval()`.
+5. Read the scalar result with `item(Float.self)`.
+
+Duration was `718.17 ms`.
+
+This proves MLX Swift linked and executed a tiny runtime operation inside the Mnemo app target on device. It still does not load a model, generate embeddings, replace deterministic recall, or make any TestFlight-facing AI claim.
+
+The simulator runtime operation remains guarded off because of the previous libc++ assertion described above. Signing changes, package plugin approval, and the DEBUG launch argument were local-only validation steps and were not committed.
 
 ## Build Validation
 
