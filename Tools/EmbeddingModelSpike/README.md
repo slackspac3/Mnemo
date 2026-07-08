@@ -67,6 +67,24 @@ python3 -m pip install transformers tokenizers
 
 Do not commit Hugging Face caches or generated logs. A tiny hand-verified tokenizer metadata fixture may be committed under package tests.
 
+## Reference Embedding Output
+
+Run:
+
+```text
+Tools/EmbeddingModelSpike/scripts/reference_minilm_embedding.py --text "The waterfall I loved was in Guam."
+```
+
+This uses `transformers.AutoModel` plus the SentenceTransformers pooling config to print token embedding shape, mean-pooling settings, normalisation behaviour, embedding dimension, norm, and the first 10 embedding values.
+
+If dependencies are missing, install them outside the repo:
+
+```text
+python3 -m pip install sentence-transformers torch transformers
+```
+
+Model files are loaded through the local Hugging Face cache. Do not commit downloaded weights, caches, or full embedding dumps.
+
 ## Prepare Local Files
 
 Run:

@@ -37,6 +37,20 @@ struct MiniLMTokenizerParityTests {
         #expect(output.tokens.contains(where: { $0.hasPrefix("##") }))
     }
 
+    @Test("MiniLM embedding reference fixtures align with tokenizer fixtures")
+    func embeddingReferenceFixturesAlignWithTokenizerFixtures() throws {
+        try Self.assertEmbeddingReference(
+            named: "minilm_waterfall_embedding_reference.json",
+            matches: "minilm_waterfall_tokens.json",
+            expectedNorm: 4.942253589630127
+        )
+        try Self.assertEmbeddingReference(
+            named: "minilm_wordpiece_embedding_reference.json",
+            matches: "minilm_wordpiece_tokens.json",
+            expectedNorm: 4.416421413421631
+        )
+    }
+
     private static var fixtureDirectory: URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -47,6 +61,33 @@ struct MiniLMTokenizerParityTests {
         let fixtureURL = fixtureDirectory.appendingPathComponent(filename)
         let data = try Data(contentsOf: fixtureURL)
         return try JSONDecoder().decode(MiniLMTokenFixture.self, from: data)
+    }
+
+    private static func loadEmbeddingReference(named filename: String) throws -> MiniLMEmbeddingReference {
+        let fixtureURL = fixtureDirectory.appendingPathComponent(filename)
+        let data = try Data(contentsOf: fixtureURL)
+        return try JSONDecoder().decode(MiniLMEmbeddingReference.self, from: data)
+    }
+
+    private static func assertEmbeddingReference(
+        named embeddingFilename: String,
+        matches tokenFilename: String,
+        expectedNorm: Double
+    ) throws {
+        let embedding = try loadEmbeddingReference(named: embeddingFilename)
+        let tokens = try loadFixture(named: tokenFilename)
+
+        #expect(embedding.model == "sentence-transformers/paraphrase-MiniLM-L3-v2")
+        #expect(embedding.inputIDs == tokens.inputIDs)
+        #expect(embedding.attentionMask == tokens.attentionMask)
+        #expect(embedding.tokenTypeIDs == tokens.tokenTypeIDs)
+        #expect(embedding.tokenEmbeddingsShape == [1, tokens.inputIDs.count, 384])
+        #expect(embedding.poolingStrategy == "mean_tokens")
+        #expect(embedding.normaliseEmbeddings == false)
+        #expect(embedding.sentenceEmbeddingDimensions == 384)
+        #expect(abs(embedding.sentenceEmbeddingNorm - expectedNorm) < 0.000001)
+        #expect(embedding.first10Values.count == 10)
+        #expect(embedding.note == "Numeric reference only. No model weights or embeddings are committed.")
     }
 }
 
@@ -68,6 +109,34 @@ private struct MiniLMTokenFixture: Decodable {
         case attentionMask = "attention_mask"
         case tokens
         case hasWordPieceContinuation = "has_wordpiece_continuation"
+        case note
+    }
+}
+
+private struct MiniLMEmbeddingReference: Decodable {
+    let model: String
+    let inputIDs: [Int]
+    let tokenTypeIDs: [Int]
+    let attentionMask: [Int]
+    let tokenEmbeddingsShape: [Int]
+    let poolingStrategy: String
+    let normaliseEmbeddings: Bool
+    let sentenceEmbeddingDimensions: Int
+    let sentenceEmbeddingNorm: Double
+    let first10Values: [Double]
+    let note: String
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case inputIDs = "input_ids"
+        case tokenTypeIDs = "token_type_ids"
+        case attentionMask = "attention_mask"
+        case tokenEmbeddingsShape = "token_embeddings_shape"
+        case poolingStrategy = "pooling_strategy"
+        case normaliseEmbeddings = "normalise_embeddings"
+        case sentenceEmbeddingDimensions = "sentence_embedding_dimensions"
+        case sentenceEmbeddingNorm = "sentence_embedding_norm"
+        case first10Values = "first_10_values"
         case note
     }
 }
