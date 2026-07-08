@@ -169,6 +169,7 @@ struct RecallEngineTests {
         let result = RecallEngine().recall(query: "What is my passport number?", memories: memories)
 
         #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
         #expect(result.text.localizedCaseInsensitiveContains("could not find"))
     }
 
@@ -190,6 +191,7 @@ struct RecallEngineTests {
         #expect(result.text.localizedCaseInsensitiveContains("do not have a passport number saved"))
         #expect(!result.text.localizedCaseInsensitiveContains("drawer 2"))
         #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
     }
 
     @Test("Birthday query requires the requested person and birthday in one memory")
@@ -217,6 +219,7 @@ struct RecallEngineTests {
 
         #expect(result.text.localizedCaseInsensitiveContains("do not have Ahmed's birthday saved"))
         #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
     }
 
     @Test("Home Wi-Fi query does not confidently answer with beach house password")
@@ -285,7 +288,147 @@ struct RecallEngineTests {
         )
 
         #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
         #expect(result.text.localizedCaseInsensitiveContains("do not have Tania's size saved"))
+    }
+
+    @Test("Fuzzy size correction does not rewrite non-size show query")
+    @MainActor
+    func fuzzySizeCorrectionDoesNotRewriteShowQuery() {
+        let memory = Self.makeMemory(
+            "The theatre show starts at 8 PM.",
+            type: .event,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "Show me what I saved recently",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("theatre show"))
+    }
+
+    @Test("Fuzzy size correction does not rewrite non-size quit query")
+    @MainActor
+    func fuzzySizeCorrectionDoesNotRewriteQuitQuery() {
+        let memory = Self.makeMemory(
+            "I decided to quit the gym membership.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What did I decide to quit?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("quit the gym"))
+    }
+
+    @Test("Missing person size wording avoids user ownership")
+    @MainActor
+    func missingPersonSizeWordingAvoidsUserOwnership() {
+        let memory = Self.makeMemory(
+            "My Zara T-shirt size is M.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is Tania's shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
+        #expect(result.text.localizedCaseInsensitiveContains("I do not have Tania's shoe size saved"))
+        #expect(!result.text.localizedCaseInsensitiveContains("your Tania"))
+    }
+
+    @Test("Missing brand shoe size wording uses user ownership")
+    @MainActor
+    func missingBrandShoeSizeWordingUsesUserOwnership() {
+        let memory = Self.makeMemory(
+            "Cole Haan shoe size is 7.5.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my New Balance shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
+        #expect(result.text.localizedCaseInsensitiveContains("I do not have your New Balance shoe size saved"))
+    }
+
+    @Test("Missing generic size wording stays natural")
+    @MainActor
+    func missingGenericSizeWordingStaysNatural() {
+        let memory = Self.makeMemory(
+            "Ahmed prefers quiet restaurants.",
+            type: .preference,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
+        #expect(result.text.localizedCaseInsensitiveContains("I do not have your size saved"))
+    }
+
+    @Test("Non-matching item size does not cite same-brand clothing memory")
+    @MainActor
+    func nonMatchingItemSizeDoesNotCiteSameBrandClothingMemory() {
+        let memory = Self.makeMemory(
+            "My Zara T-shirt size is M.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my Zara shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
+        #expect(result.text.localizedCaseInsensitiveContains("I do not have your Zara shoe size saved"))
+    }
+
+    @Test("Non-matching person item size does not cite same-person shirt memory")
+    @MainActor
+    func nonMatchingPersonItemSizeDoesNotCiteSamePersonShirtMemory() {
+        let memory = Self.makeMemory(
+            "Mum's shirt size is M.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is Mum's shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
+        #expect(result.text.localizedCaseInsensitiveContains("I do not have Mum's shoe size saved"))
     }
 
     @Test("Person size query still answers when that person's size exists")
@@ -387,6 +530,110 @@ struct RecallEngineTests {
         #expect(result.text.localizedCaseInsensitiveContains("the lining is thin"))
         #expect(!result.citedMemoryIds.contains(otherShoe.id))
         #expect(!result.citedMemoryIds.contains(otherClothing.id))
+    }
+
+    @Test("Non-matching brand does not cite unrelated conditional shoe memory")
+    @MainActor
+    func nonMatchingBrandDoesNotCiteUnrelatedConditionalShoeMemory() {
+        let memory = Self.makeMemory(
+            "New Balance shoe size is 42 if lining is thick, 41 if lining is thin.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my Adidas shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
+        #expect(result.text.localizedCaseInsensitiveContains("I do not have your Adidas shoe size saved"))
+    }
+
+    @Test("Conditional extraction requires size context")
+    @MainActor
+    func conditionalExtractionRequiresSizeContext() {
+        let memory = Self.makeMemory(
+            "New Balance shoes arrive in 42 days if shipping is delayed.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my New Balance shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
+        #expect(result.text.localizedCaseInsensitiveContains("I do not have your New Balance shoe size saved"))
+    }
+
+    @Test("Conditional answer cites conditional memory when regular size also exists")
+    @MainActor
+    func conditionalAnswerCitesConditionalMemory() {
+        let regular = Self.makeMemory(
+            "New Balance shoe size is 42.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+        let conditional = Self.makeMemory(
+            "New Balance shoe size is 42 if lining is thick, 41 if lining is thin.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(60)
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my New Balance shoe size?",
+            memories: [regular, conditional]
+        )
+
+        #expect(result.citedMemoryIds == [conditional.id])
+        #expect(result.text.localizedCaseInsensitiveContains("42 if the lining is thick"))
+        #expect(result.text.localizedCaseInsensitiveContains("41 if the lining is thin"))
+    }
+
+    @Test("Single conditional size keeps its condition")
+    @MainActor
+    func singleConditionalSizeKeepsCondition() {
+        let memory = Self.makeMemory(
+            "New Balance shoe size is 42 if lining is thick.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my New Balance shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("42 if the lining is thick"))
+    }
+
+    @Test("Decimal shoe sizes are preserved")
+    @MainActor
+    func decimalShoeSizesArePreserved() {
+        let memory = Self.makeMemory(
+            "Cole Haan shoe size is 7.5.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my Cole Haan shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("7.5"))
     }
 
     private func assert(

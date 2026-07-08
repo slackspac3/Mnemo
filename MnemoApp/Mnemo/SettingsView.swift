@@ -58,10 +58,10 @@ struct SettingsView: View {
                                     .accessibilityHidden(true)
 
                                 VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                                    Text("On-Device Only")
+                                    Text("Local Capture & Recall")
                                         .font(DS.Typography.body)
                                         .foregroundStyle(DS.Colours.textPrimary)
-                                    Text("Capture and recall stay local on this iPhone. Cloud Assist is coming soon.")
+                                    Text("Capture and recall stay on this iPhone. Optional iCloud Backup stores encrypted backups in your iCloud account; no cloud AI is enabled in this build.")
                                         .font(DS.Typography.footnote)
                                         .foregroundStyle(DS.Colours.textSecondary)
                                 }

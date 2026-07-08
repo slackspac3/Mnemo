@@ -109,7 +109,7 @@ struct BackupRestoreView: View {
                             Image(systemName: "lock.shield")
                                 .font(DS.Typography.subheadline)
                                 .foregroundStyle(DS.Colours.success)
-                            Text("Backups are encrypted before being stored in your private iCloud account. Mnemo does not operate a backup server. Restore currently requires this iPhone's local Keychain backup key. Restore on a new or replacement iPhone is coming soon.")
+                            Text("Backups are encrypted before being stored in your iCloud account. Mnemo does not operate a backup server. Restore currently requires this iPhone's local Keychain backup key, so restore on a new or replacement iPhone is not available in this build.")
                                 .font(DS.Typography.footnote)
                                 .foregroundStyle(DS.Colours.textSecondary)
                         }

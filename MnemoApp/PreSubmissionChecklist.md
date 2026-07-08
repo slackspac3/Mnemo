@@ -20,7 +20,7 @@ Complete every item before submitting to App Store Review.
 - [ ] Support URL entered in App Store Connect
 
 ## Privacy Nutrition Label (App Store Connect -> App Privacy)
-- [ ] User Content declared: typed text, voice transcripts, and image OCR text stored locally, not linked to user, app functionality only
+- [ ] User Content declared: typed text, voice transcripts, and image OCR text stored locally, and optionally stored as encrypted iCloud backups when the user enables backup; not linked to user, app functionality only
 - [ ] Product Interaction declared: usage patterns, on-device only, not linked to user, app functionality
 - [ ] No other data types collected
 - [ ] If cloud fallback enabled: User Content also declared for cloud processing (not linked to user)
