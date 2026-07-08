@@ -51,6 +51,14 @@ This uses `transformers.AutoTokenizer` for:
 The waterfall I loved was in Guam.
 ```
 
+To produce a reference for another sentence:
+
+```text
+Tools/EmbeddingModelSpike/scripts/reference_minilm_tokens.py --text "The hyperpersonalised memory resurfaced unexpectedly."
+```
+
+The output includes `has_wordpiece_continuation`, which is useful when creating fixtures that must exercise `##` WordPiece continuations.
+
 If dependencies are missing, install them outside the repo:
 
 ```text

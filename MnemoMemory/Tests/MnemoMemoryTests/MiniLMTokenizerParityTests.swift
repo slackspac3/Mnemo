@@ -6,7 +6,7 @@ struct MiniLMTokenizerParityTests {
 
     @Test("MiniLM WordPiece tokenizer matches Hugging Face waterfall fixture")
     func waterfallTokenizationMatchesHuggingFaceFixture() throws {
-        let fixture = try Self.loadFixture()
+        let fixture = try Self.loadFixture(named: "minilm_waterfall_tokens.json")
         let vocabURL = Self.fixtureDirectory.appendingPathComponent("minilm_vocab.txt")
         let tokenizer = try TestMiniLMWordPieceTokenizer(vocabURL: vocabURL)
 
@@ -20,14 +20,31 @@ struct MiniLMTokenizerParityTests {
         #expect(output.tokens == fixture.tokens)
     }
 
+    @Test("MiniLM WordPiece tokenizer matches Hugging Face multi-piece fixture")
+    func wordPieceTokenizationMatchesHuggingFaceFixture() throws {
+        let fixture = try Self.loadFixture(named: "minilm_wordpiece_tokens.json")
+        let vocabURL = Self.fixtureDirectory.appendingPathComponent("minilm_vocab.txt")
+        let tokenizer = try TestMiniLMWordPieceTokenizer(vocabURL: vocabURL)
+
+        let output = tokenizer.tokenize(fixture.text)
+
+        #expect(fixture.model == "sentence-transformers/paraphrase-MiniLM-L3-v2")
+        #expect(fixture.hasWordPieceContinuation == true)
+        #expect(output.inputIDs == fixture.inputIDs)
+        #expect(output.attentionMask == fixture.attentionMask)
+        #expect(output.tokenTypeIDs == fixture.tokenTypeIDs)
+        #expect(output.tokens == fixture.tokens)
+        #expect(output.tokens.contains(where: { $0.hasPrefix("##") }))
+    }
+
     private static var fixtureDirectory: URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("Fixtures")
     }
 
-    private static func loadFixture() throws -> MiniLMTokenFixture {
-        let fixtureURL = fixtureDirectory.appendingPathComponent("minilm_waterfall_tokens.json")
+    private static func loadFixture(named filename: String) throws -> MiniLMTokenFixture {
+        let fixtureURL = fixtureDirectory.appendingPathComponent(filename)
         let data = try Data(contentsOf: fixtureURL)
         return try JSONDecoder().decode(MiniLMTokenFixture.self, from: data)
     }
@@ -40,6 +57,7 @@ private struct MiniLMTokenFixture: Decodable {
     let tokenTypeIDs: [Int]
     let attentionMask: [Int]
     let tokens: [String]
+    let hasWordPieceContinuation: Bool?
     let note: String
 
     enum CodingKeys: String, CodingKey {
@@ -49,6 +67,7 @@ private struct MiniLMTokenFixture: Decodable {
         case tokenTypeIDs = "token_type_ids"
         case attentionMask = "attention_mask"
         case tokens
+        case hasWordPieceContinuation = "has_wordpiece_continuation"
         case note
     }
 }
