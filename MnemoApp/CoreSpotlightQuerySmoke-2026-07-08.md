@@ -52,7 +52,7 @@ This supersedes the earlier simulator output format by adding `sourceCardResolve
 
 ## Physical iPhone Result
 
-Physical iPhone validation passed for the earlier smoke format on:
+Physical iPhone validation passed for the updated `sourceCardResolved` smoke format on:
 
 - Device: `Mr B`
 - OS: iOS 26.6
@@ -67,22 +67,22 @@ The smoke was run from Xcode with:
 Captured Xcode console output:
 
 ```text
-Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true archivedRejected=true deletedRejected=true cleared=true durationMs=324.23 error="none"
-Type: stdio
+Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true sourceCardResolved=true archivedRejected=true deletedRejected=true cleared=true durationMs=295.06 error="none"
 ```
 
-All earlier smoke checks passed on device:
+All updated smoke checks passed on device:
 
 - `indexed=true`
 - `queried=true`
 - `found=true`
 - `sourceValidated=true`
+- `sourceCardResolved=true`
 - `archivedRejected=true`
 - `deletedRejected=true`
 - `cleared=true`
 - `error="none"`
 
-Physical iPhone validation for the new `sourceCardResolved` smoke format has not been rerun yet.
+This was captured from the Xcode console. The previous physical iPhone smoke output for the older format is superseded, not invalidated.
 
 The smoke harness archives, permanently deletes, and clears its own test artefact. No seeded memory or Spotlight item was intentionally left behind.
 
@@ -106,12 +106,11 @@ Foundation Models and `SpotlightSearchTool` need source-card validation, archive
 
 ## Remaining Risks
 
-- Real Core Spotlight query latency and consistency have simulator validation for the new source-card format and one physical iPhone pass for the previous format.
-- Physical iPhone validation is pending for the `sourceCardResolved` output format.
+- Real Core Spotlight query latency and consistency have one simulator pass and one physical iPhone pass for the updated `sourceCardResolved` format.
 - User-facing settings and copy are required before enabling indexing outside internal builds.
 - The query syntax may need refinement after real-world search smoke data.
 - The system search privacy posture must be reviewed before release exposure.
 
 ## Next Recommended Spike
 
-Rerun the updated `sourceCardResolved` smoke on a physical iPhone, then design the Foundation Models custom tool contract without wiring it into Chat.
+Design the Foundation Models custom tool contract without wiring it into Chat.

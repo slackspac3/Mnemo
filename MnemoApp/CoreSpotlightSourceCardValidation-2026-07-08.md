@@ -84,7 +84,13 @@ Simulator result, iPhone 17 Pro simulator on iOS 26.5:
 Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true sourceCardResolved=true archivedRejected=true deletedRejected=true cleared=true durationMs=4132.39 error="none"
 ```
 
-The earlier simulator and physical iPhone smoke results remain valid for the old format. Physical iPhone validation is still pending for the new `sourceCardResolved` format.
+Physical iPhone result, `Mr B` on iOS 26.6:
+
+```text
+Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true sourceCardResolved=true archivedRejected=true deletedRejected=true cleared=true durationMs=295.06 error="none"
+```
+
+The physical iPhone result was captured from the Xcode console. All checks passed, including `sourceCardResolved=true`, and no seeded memory or Spotlight item was intentionally left behind.
 
 ## Why Chat Recall Is Unchanged
 
@@ -105,10 +111,9 @@ This pass addresses only source ID validation and payload safety.
 ## Remaining Risks
 
 - The resolver is package-tested but not wired into a user flow.
-- The resolver has simulator smoke coverage after a real Core Spotlight query.
-- A physical iPhone smoke pass is still needed for the new `sourceCardResolved` output format.
+- The resolver has simulator and physical iPhone smoke coverage after a real Core Spotlight query.
 - User-facing controls are still required before Core Spotlight indexing is enabled outside internal builds.
 
 ## Next Recommended Spike
 
-Rerun the updated source-card resolver smoke on physical iPhone, then design the Foundation Models custom tool contract without wiring it into Chat.
+Design the Foundation Models custom tool contract without wiring it into Chat.
