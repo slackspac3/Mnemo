@@ -1,0 +1,25 @@
+# Local-only model spike artifacts.
+local_artifacts/
+
+# Python environments and caches.
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Downloaded or converted model artifacts.
+*.safetensors
+*.bin
+*.h5
+*.onnx
+*.xml
+*.npy
+*.npz
+*.gguf
+*.mlx
+*.mlmodel
+*.mlpackage
+
+# Generated manifests/logs.
+manifest*.json
+*.log
