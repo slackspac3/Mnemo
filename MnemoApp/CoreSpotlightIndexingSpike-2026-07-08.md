@@ -34,7 +34,7 @@ The first spike indexes the memory summary and metadata only. Source cards must 
 | Archived memory | Removes the memory UUID from Spotlight. | No-op. |
 | Permanently deleted memory | Removes the memory UUID from Spotlight. | No-op. |
 | Missing deleted memory ID | Removes the orphaned UUID from Spotlight if requested. | No-op. |
-| Delete All Data | Removes all items in `com.thinkact.mnemo.memories`. | No-op. |
+| Delete All Data | Always removes all items in `com.thinkact.mnemo.memories`, regardless of the indexing flag. | Always removes all items in `com.thinkact.mnemo.memories`. |
 | Unarchive | Not currently wired because V1 has no exposed unarchive flow. Future unarchive should re-index the active record. | No-op. |
 
 ## Source ID Strategy
@@ -48,6 +48,8 @@ Core Spotlight identifiers are the exact `MemoryRecord.id.uuidString`. A result 
 ## Privacy Notes
 
 Core Spotlight indexing is local to the device, but indexed text can be surfaced by system search. For this reason the feature is off by default and should remain internal until users have explicit, honest controls. This spike indexes only fields Mnemo already stores locally for recall, but product copy and settings controls are required before enabling this broadly.
+
+Delete All Data clears Mnemo's Spotlight domain even when indexing is disabled. This is intentional: reset/privacy deletion should clean up any previous internal indexing state even if the normal feature flag is currently off.
 
 ## Why Chat Recall Is Unchanged
 

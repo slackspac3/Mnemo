@@ -195,8 +195,7 @@ public struct MemoryCRUD {
     }
 
     /// Remove all Mnemo-owned items from the app search index.
-    /// This is disabled by default and exists so Delete All Data can clear
-    /// Core Spotlight when the internal indexing flag is enabled.
+    /// This follows the normal feature flag and is a no-op when indexing is off.
     @MainActor
     public static func removeAllSearchIndexItems(
         searchIndexingFlags: MemorySearchIndexingFlags = .disabled,
@@ -206,5 +205,17 @@ public struct MemoryCRUD {
             flags: searchIndexingFlags,
             indexer: searchIndexer
         ).removeAllIfNeeded()
+    }
+
+    /// Always clear Mnemo-owned app search items for reset/privacy deletion.
+    /// This is safe when nothing was indexed and keeps Delete All Data reliable
+    /// even if internal indexing was previously enabled.
+    @MainActor
+    public static func resetSearchIndexItems(
+        searchIndexer: (any MemorySearchIndexing)? = nil
+    ) async throws {
+        try await MemorySearchIndexingService(
+            indexer: searchIndexer
+        ).removeAllForReset()
     }
 }

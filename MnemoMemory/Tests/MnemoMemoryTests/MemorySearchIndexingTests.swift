@@ -133,8 +133,8 @@ struct MemorySearchIndexingTests {
         #expect(fake.removedMemoryIDs == [orphanID])
     }
 
-    @Test("Delete All Data search cleanup calls remove all when enabled")
-    func deleteAllDataSearchCleanupCallsRemoveAllWhenEnabled() async throws {
+    @Test("Delete All Data search cleanup clears all even when indexing flag is off")
+    func deleteAllDataSearchCleanupClearsAllEvenWhenIndexingFlagIsOff() async throws {
         let fake = FakeMemorySearchIndexer()
 
         try await MemoryCRUD.removeAllSearchIndexItems(
@@ -142,6 +142,14 @@ struct MemorySearchIndexingTests {
             searchIndexer: fake
         )
         #expect(fake.removeAllCount == 0)
+
+        try await MemoryCRUD.resetSearchIndexItems(searchIndexer: fake)
+        #expect(fake.removeAllCount == 1)
+    }
+
+    @Test("Flag-gated remove all still only runs when enabled")
+    func flagGatedRemoveAllStillOnlyRunsWhenEnabled() async throws {
+        let fake = FakeMemorySearchIndexer()
 
         try await MemoryCRUD.removeAllSearchIndexItems(
             searchIndexingFlags: .debugCoreSpotlight,
@@ -166,6 +174,53 @@ struct MemorySearchIndexingTests {
         #expect(try service.activeRecord(forSourceIdentifier: archived.id.uuidString, in: context) == nil)
         #expect(try service.activeRecord(forSourceIdentifier: UUID().uuidString, in: context) == nil)
         #expect(try service.activeRecord(forSourceIdentifier: "not-a-uuid", in: context) == nil)
+    }
+
+    @Test("Query source IDs validate only active records")
+    func querySourceIDsValidateOnlyActiveRecords() async throws {
+        let container = try MemoryStore.makeTestContainer()
+        let context = ModelContext(container)
+        let active = Self.makeRecord("Core Spotlight active memory")
+        let archived = Self.makeRecord("Core Spotlight archived memory")
+        archived.isArchived = true
+        let missingID = UUID()
+        try MemoryCRUD.insert(active, into: context)
+        try MemoryCRUD.insert(archived, into: context)
+
+        let fake = FakeMemorySearchIndexer()
+        fake.queryResultIDs = [
+            active.id.uuidString,
+            archived.id.uuidString,
+            missingID.uuidString,
+            "not-a-uuid",
+        ]
+        let service = MemorySearchIndexingService(
+            flags: .debugCoreSpotlight,
+            indexer: fake,
+            queryer: fake
+        )
+
+        let sourceIDs = try await service.sourceIdentifiersIfNeeded(matching: "Core Spotlight")
+        let activeRecords = try sourceIDs.compactMap {
+            try service.activeRecord(forSourceIdentifier: $0, in: context)
+        }
+
+        #expect(sourceIDs == fake.queryResultIDs)
+        #expect(activeRecords.map(\.id) == [active.id])
+    }
+
+    @Test("Query source IDs are hidden when feature flag is disabled")
+    func querySourceIDsAreHiddenWhenFeatureFlagIsDisabled() async throws {
+        let fake = FakeMemorySearchIndexer()
+        fake.queryResultIDs = [UUID().uuidString]
+
+        let sourceIDs = try await MemorySearchIndexingService(
+            flags: .disabled,
+            indexer: fake,
+            queryer: fake
+        ).sourceIdentifiersIfNeeded(matching: "anything")
+
+        #expect(sourceIDs.isEmpty)
     }
 
     @Test("Deterministic recall remains independent of search indexing")
@@ -203,10 +258,11 @@ struct MemorySearchIndexingTests {
 }
 
 @MainActor
-private final class FakeMemorySearchIndexer: MemorySearchIndexing {
+private final class FakeMemorySearchIndexer: MemorySearchIndexing, MemorySearchQuerying {
     private(set) var indexedPayloads: [MemorySearchIndexPayload] = []
     private(set) var removedMemoryIDs: [UUID] = []
     private(set) var removeAllCount = 0
+    var queryResultIDs: [String] = []
 
     func index(memory: MemoryRecord) async throws {
         if let payload = MemorySearchIndexPayload(memory: memory) {
@@ -220,5 +276,9 @@ private final class FakeMemorySearchIndexer: MemorySearchIndexing {
 
     func removeAll() async throws {
         removeAllCount += 1
+    }
+
+    func sourceIdentifiers(matching query: String, limit: Int) async throws -> [String] {
+        Array(queryResultIDs.prefix(limit))
     }
 }

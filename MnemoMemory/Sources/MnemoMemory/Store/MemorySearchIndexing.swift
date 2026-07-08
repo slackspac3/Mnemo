@@ -67,25 +67,35 @@ public protocol MemorySearchIndexing {
 }
 
 @MainActor
-public struct NoOpMemorySearchIndexer: MemorySearchIndexing {
+public protocol MemorySearchQuerying {
+    func sourceIdentifiers(matching query: String, limit: Int) async throws -> [String]
+}
+
+@MainActor
+public struct NoOpMemorySearchIndexer: MemorySearchIndexing, MemorySearchQuerying {
     public init() {}
 
     public func index(memory: MemoryRecord) async throws {}
     public func remove(memoryID: UUID) async throws {}
     public func removeAll() async throws {}
+    public func sourceIdentifiers(matching query: String, limit: Int) async throws -> [String] { [] }
 }
 
 @MainActor
 public struct MemorySearchIndexingService {
     public let flags: MemorySearchIndexingFlags
     private let indexer: any MemorySearchIndexing
+    private let queryer: any MemorySearchQuerying
 
     public init(
         flags: MemorySearchIndexingFlags = .disabled,
-        indexer: (any MemorySearchIndexing)? = nil
+        indexer: (any MemorySearchIndexing)? = nil,
+        queryer: (any MemorySearchQuerying)? = nil
     ) {
+        let coreSpotlightIndexer = CoreSpotlightMemoryIndexer()
         self.flags = flags
-        self.indexer = indexer ?? CoreSpotlightMemoryIndexer()
+        self.indexer = indexer ?? coreSpotlightIndexer
+        self.queryer = queryer ?? (indexer as? any MemorySearchQuerying) ?? coreSpotlightIndexer
     }
 
     public func indexIfNeeded(memory: MemoryRecord) async throws {
@@ -104,6 +114,18 @@ public struct MemorySearchIndexingService {
         try await indexer.removeAll()
     }
 
+    public func removeAllForReset() async throws {
+        try await indexer.removeAll()
+    }
+
+    public func sourceIdentifiersIfNeeded(
+        matching query: String,
+        limit: Int = 10
+    ) async throws -> [String] {
+        guard flags.coreSpotlightIndexingEnabled else { return [] }
+        return try await queryer.sourceIdentifiers(matching: query, limit: limit)
+    }
+
     public func activeRecord(
         forSourceIdentifier sourceIdentifier: String,
         in context: ModelContext
@@ -120,7 +142,7 @@ public struct MemorySearchIndexingService {
 
 #if canImport(CoreSpotlight)
 @MainActor
-public struct CoreSpotlightMemoryIndexer: MemorySearchIndexing {
+public struct CoreSpotlightMemoryIndexer: MemorySearchIndexing, MemorySearchQuerying {
     public init() {}
 
     public func index(memory: MemoryRecord) async throws {
@@ -175,14 +197,68 @@ public struct CoreSpotlightMemoryIndexer: MemorySearchIndexing {
             }
         }
     }
+
+    public func sourceIdentifiers(matching query: String, limit: Int) async throws -> [String] {
+        guard let queryString = Self.queryString(for: query) else { return [] }
+
+        let queryContext = CSSearchQueryContext()
+        queryContext.fetchAttributes = ["title", "contentDescription", "keywords"]
+        queryContext.filterQueries = [
+            "domainIdentifier == \"\(MemorySearchIndexPayload.domainIdentifier)\""
+        ]
+
+        let searchQuery = CSSearchQuery(
+            queryString: queryString,
+            queryContext: queryContext
+        )
+        let lock = NSLock()
+        var identifiers: [String] = []
+
+        searchQuery.foundItemsHandler = { items in
+            lock.lock()
+            identifiers.append(
+                contentsOf: items
+                    .filter { $0.domainIdentifier == MemorySearchIndexPayload.domainIdentifier }
+                    .map(\.uniqueIdentifier)
+            )
+            lock.unlock()
+        }
+
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[String], Error>) in
+            searchQuery.completionHandler = { error in
+                lock.lock()
+                let result = Array(identifiers.prefix(max(limit, 0)))
+                lock.unlock()
+
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: result)
+                }
+            }
+            searchQuery.start()
+        }
+    }
+
+    private static func queryString(for text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let escaped = trimmed
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+
+        return "(title == \"*\(escaped)*\"cd || contentDescription == \"*\(escaped)*\"cd || keywords == \"\(escaped)\"cd)"
+    }
 }
 #else
 @MainActor
-public struct CoreSpotlightMemoryIndexer: MemorySearchIndexing {
+public struct CoreSpotlightMemoryIndexer: MemorySearchIndexing, MemorySearchQuerying {
     public init() {}
 
     public func index(memory: MemoryRecord) async throws {}
     public func remove(memoryID: UUID) async throws {}
     public func removeAll() async throws {}
+    public func sourceIdentifiers(matching query: String, limit: Int) async throws -> [String] { [] }
 }
 #endif

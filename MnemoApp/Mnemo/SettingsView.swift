@@ -258,7 +258,7 @@ struct SettingsView: View {
             try modelContext.delete(model: PersonSubject.self)
             try modelContext.save()
             try await VectorBridge.shared.wipe()
-            try await MemoryCRUD.removeAllSearchIndexItems()
+            try await MemoryCRUD.resetSearchIndexItems()
             NavigationCoordinator.shared.dismiss()
             appState.resetAfterDeleteAllData()
             dismiss()

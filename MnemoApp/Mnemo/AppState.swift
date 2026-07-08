@@ -44,6 +44,22 @@ final class AppState {
                 "error=\"\(mlxSmokeResult.errorMessage ?? "none")\""
             )
         }
+
+        if CoreSpotlightQuerySmokeTest.shouldRunFromLaunchArguments {
+            let spotlightSmokeResult = await CoreSpotlightQuerySmokeTest.run()
+            print(
+                "Core Spotlight query smoke: " +
+                "indexed=\(spotlightSmokeResult.indexed) " +
+                "queried=\(spotlightSmokeResult.queried) " +
+                "found=\(spotlightSmokeResult.found) " +
+                "sourceValidated=\(spotlightSmokeResult.sourceValidated) " +
+                "archivedRejected=\(spotlightSmokeResult.archivedRejected) " +
+                "deletedRejected=\(spotlightSmokeResult.deletedRejected) " +
+                "cleared=\(spotlightSmokeResult.cleared) " +
+                "durationMs=\(String(format: "%.2f", spotlightSmokeResult.durationMs)) " +
+                "error=\"\(spotlightSmokeResult.errorMessage ?? "none")\""
+            )
+        }
         #endif
 
         await applyUITestingLaunchArgumentsIfNeeded()
