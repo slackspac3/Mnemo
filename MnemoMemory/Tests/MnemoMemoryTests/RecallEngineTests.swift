@@ -550,6 +550,90 @@ struct RecallEngineTests {
         #expect(!result.citedMemoryIds.contains(unrelatedCode.id))
     }
 
+    @Test("Temporary code query fails closed after matching memory is archived")
+    @MainActor
+    func temporaryCodeQueryFailsClosedAfterMatchingMemoryIsArchived() {
+        let archived = Self.makeMemory(
+            "Test archive memory. My temporary test code is purple banana 123.",
+            type: .credential,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(60)
+        )
+        archived.isArchived = true
+        let deleteCode = Self.makeMemory(
+            "Test delete memory. My delete test code is orange mango 456.",
+            type: .credential,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(120)
+        )
+        let labTest = Self.makeMemory(
+            "Lab where I have to go for test. MDC LAB",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(180)
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my temporary test code?",
+            memories: [archived, deleteCode, labTest]
+        )
+
+        #expect(result.text.localizedCaseInsensitiveContains("do not have your temporary test code saved"))
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
+        #expect(!result.text.localizedCaseInsensitiveContains("orange mango 456"))
+        #expect(!result.text.localizedCaseInsensitiveContains("MDC LAB"))
+        #expect(!result.text.localizedCaseInsensitiveContains("delete test code"))
+    }
+
+    @Test("Temporary phrase code answers directly")
+    @MainActor
+    func temporaryPhraseCodeAnswersDirectly() {
+        let memory = Self.makeMemory(
+            "Test archive memory. My temporary test code is purple banana 123.",
+            type: .credential,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my temporary test code?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("temporary test code is purple banana 123"))
+        #expect(!result.text.localizedCaseInsensitiveContains("I found a few possible matches"))
+    }
+
+    @Test("Delete phrase code answers directly and excludes lab test memory")
+    @MainActor
+    func deletePhraseCodeAnswersDirectlyAndExcludesLabTestMemory() {
+        let deleteCode = Self.makeMemory(
+            "Test delete memory. My delete test code is orange mango 456.",
+            type: .credential,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(120)
+        )
+        let labTest = Self.makeMemory(
+            "Lab where I have to go for test. MDC LAB",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(180)
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my delete test code?",
+            memories: [deleteCode, labTest]
+        )
+
+        #expect(result.citedMemoryIds == [deleteCode.id])
+        #expect(result.text.localizedCaseInsensitiveContains("delete test code is orange mango 456"))
+        #expect(!result.citedMemoryIds.contains(labTest.id))
+        #expect(!result.text.localizedCaseInsensitiveContains("MDC LAB"))
+        #expect(!result.text.localizedCaseInsensitiveContains("I found a few possible matches"))
+    }
+
     @Test("Branded conditional shoe size tolerates typo and cites only matching memory")
     @MainActor
     func brandedConditionalShoeSizeToleratesTypoAndFiltersSources() {

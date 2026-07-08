@@ -434,20 +434,45 @@ public struct RecallEngine {
         guard isCodeQuery(query) else { return nil }
 
         let anchors = codeAnchorTokens(in: query)
-        let requiredAnchors = anchors.subtracting(["code"])
-        guard anchors.contains("code"), !requiredAnchors.isEmpty else { return nil }
+        let requiredAnchors = anchors.subtracting(Self.codeIntentTerms)
+        let subject = codeSubject(for: query)
+        guard anchors.contains(where: { Self.codeIntentTerms.contains($0) }),
+              !requiredAnchors.isEmpty
+        else {
+            return RecallResult(
+                text: missingCodeSentence(subject: subject),
+                citedMemoryIds: [],
+                citations: []
+            )
+        }
 
         let candidates = memories.filter { memory in
             let memoryTokens = meaningfulTokens(in: searchableText(for: memory), expandingSynonyms: false)
-            return memoryTokens.contains("code") && requiredAnchors.isSubset(of: memoryTokens)
+            return !memoryTokens.intersection(Self.codeIntentTerms).isEmpty &&
+                requiredAnchors.isSubset(of: memoryTokens)
         }
-        guard let memory = candidates.sorted(by: { $0.createdAt > $1.createdAt }).first else {
-            return nil
+        let sortedCandidates = candidates.sorted { $0.createdAt > $1.createdAt }
+        guard let memory = sortedCandidates.first else {
+            return RecallResult(
+                text: missingCodeSentence(subject: subject),
+                citedMemoryIds: [],
+                citations: []
+            )
+        }
+
+        if sortedCandidates.count > 1 {
+            let lines = sortedCandidates.enumerated().map { index, candidate in
+                "\(index + 1). \"\(summaryLine(for: candidate))\""
+            }
+            return result(
+                text: "I found a few possible \(subject) matches:\n\n" + lines.joined(separator: "\n"),
+                memories: sortedCandidates
+            )
         }
 
         if let value = extractCodeValue(from: searchableText(for: memory)) {
             return result(
-                text: "Your \(codeSubject(for: query)) is \(value).",
+                text: "Your \(subject) is \(value).",
                 memories: [memory]
             )
         }
@@ -760,7 +785,9 @@ public struct RecallEngine {
     }
 
     private func isCodeQuery(_ query: String) -> Bool {
-        meaningfulTokens(in: query, expandingSynonyms: false).contains("code")
+        !meaningfulTokens(in: query, expandingSynonyms: false)
+            .intersection(Self.codeIntentTerms)
+            .isEmpty
     }
 
     private func isParkingQuery(_ query: String) -> Bool {
@@ -850,6 +877,15 @@ public struct RecallEngine {
         return (words + ["code"]).joined(separator: " ")
     }
 
+    private func missingCodeSentence(subject: String) -> String {
+        let trimmedSubject = subject.trimmingCharacters(in: .whitespacesAndNewlines)
+        let displaySubject = trimmedSubject.isEmpty ? "code" : trimmedSubject
+        if displaySubject.contains("'") {
+            return "I do not have \(displaySubject) saved."
+        }
+        return "I do not have your \(displaySubject) saved."
+    }
+
     private func orderedCodeSubjectWords(in query: String) -> [String] {
         var seen = Set<String>()
         return query.lowercased().split { character in
@@ -868,8 +904,7 @@ public struct RecallEngine {
 
     private func extractCodeValue(from text: String) -> String? {
         let patterns = [
-            #"\bcode\s+(?:is|=|:)\s*([A-Za-z0-9][A-Za-z0-9_-]{1,})\b"#,
-            #"\b(?:pin|reference)\s+(?:is|=|:)\s*([A-Za-z0-9][A-Za-z0-9_-]{1,})\b"#,
+            #"\b(?:reference\s+code|passcode|code|pin)\s+(?:is|=|:)\s*([^.;\n]+)"#,
         ]
 
         for pattern in patterns {
@@ -883,7 +918,7 @@ public struct RecallEngine {
                   let valueRange = Range(match.range(at: 1), in: text)
             else { continue }
 
-            let value = String(text[valueRange])
+            let value = cleanUserFacingText(String(text[valueRange]))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .trimmingCharacters(in: CharacterSet(charactersIn: "\"'.,;:!?"))
             if !value.isEmpty {
@@ -1554,6 +1589,13 @@ public struct RecallEngine {
         "my",
         "now",
         "your",
+    ]
+
+    private static let codeIntentTerms: Set<String> = [
+        "code",
+        "passcode",
+        "pin",
+        "reference",
     ]
 
     private static let synonyms: [String: Set<String>] = [
