@@ -4,6 +4,8 @@
 
 Mnemo now has a DEBUG-only Core Spotlight query smoke path. It proves the indexing layer can move from a local `MemoryRecord` to a Core Spotlight query result and then back to an active SwiftData source ID before anything is trusted.
 
+The smoke now also resolves that source identifier into a source-card-safe payload with `MemorySourceCardResolver`.
+
 This does not change Chat recall. Deterministic recall remains the default path.
 
 ## Launch Argument
@@ -22,28 +24,35 @@ The smoke runs only in DEBUG builds and only when the launch argument is present
 3. Queries Core Spotlight for the unique token.
 4. Treats the Spotlight result only as a source identifier.
 5. Validates that identifier against an active `MemoryRecord` in SwiftData.
-6. Archives the memory and confirms the result is removed or rejected by active-record validation.
-7. Permanently deletes the memory and confirms the result is removed or rejected.
-8. Calls `MemoryCRUD.resetSearchIndexItems` to clear the Mnemo Spotlight domain.
-9. Cleans up its own SwiftData/vector/search artefacts.
+6. Resolves the identifier into a `MemorySourceCardPayload` from SwiftData only.
+7. Confirms the payload ID, source identifier, and summary match the seeded `MemoryRecord`.
+8. Confirms untrusted Spotlight title/snippet fields are not used for the payload.
+9. Archives the memory and confirms the result is removed and rejected by active-record/source-card validation.
+10. Permanently deletes the memory and confirms the result is removed and rejected.
+11. Calls `MemoryCRUD.resetSearchIndexItems` to clear the Mnemo Spotlight domain.
+12. Cleans up its own SwiftData/vector/search artefacts.
 
 ## Console Output Format
 
 ```text
-Core Spotlight query smoke: indexed=<true|false> queried=<true|false> found=<true|false> sourceValidated=<true|false> archivedRejected=<true|false> deletedRejected=<true|false> cleared=<true|false> durationMs=<number> error="<none or message>"
+Core Spotlight query smoke: indexed=<true|false> queried=<true|false> found=<true|false> sourceValidated=<true|false> sourceCardResolved=<true|false> archivedRejected=<true|false> deletedRejected=<true|false> cleared=<true|false> durationMs=<number> error="<none or message>"
 ```
 
-Simulator smoke was run on an iPhone 17 Pro simulator through XcodeBuildMCP with the launch argument above.
+## Simulator Result
+
+Simulator smoke was run on an iPhone 17 Pro simulator, iOS 26.5, through XcodeBuildMCP with the launch argument above.
 
 Observed console output:
 
 ```text
-Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true archivedRejected=true deletedRejected=true cleared=true durationMs=6848.48 error="none"
+Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true sourceCardResolved=true archivedRejected=true deletedRejected=true cleared=true durationMs=4132.39 error="none"
 ```
+
+This supersedes the earlier simulator output format by adding `sourceCardResolved=true`. The previous simulator pass is not invalidated; it covered the same indexing/query lifecycle before the source-card resolver check existed.
 
 ## Physical iPhone Result
 
-Physical iPhone validation passed on:
+Physical iPhone validation passed for the earlier smoke format on:
 
 - Device: `Mr B`
 - OS: iOS 26.6
@@ -62,7 +71,7 @@ Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated
 Type: stdio
 ```
 
-All smoke checks passed on device:
+All earlier smoke checks passed on device:
 
 - `indexed=true`
 - `queried=true`
@@ -72,6 +81,8 @@ All smoke checks passed on device:
 - `deletedRejected=true`
 - `cleared=true`
 - `error="none"`
+
+Physical iPhone validation for the new `sourceCardResolved` smoke format has not been rerun yet.
 
 The smoke harness archives, permanently deletes, and clears its own test artefact. No seeded memory or Spotlight item was intentionally left behind.
 
@@ -83,11 +94,11 @@ This cleanup is safe if no items were indexed.
 
 ## Archive/Delete Rejection
 
-Spotlight query results are never trusted directly. Result identifiers must map back to an active `MemoryRecord`. Archived and missing records are rejected by `MemorySearchIndexingService.activeRecord(forSourceIdentifier:in:)`.
+Spotlight query results are never trusted directly. Result identifiers must map back to an active `MemoryRecord`. Archived and missing records are rejected by `MemorySearchIndexingService.activeRecord(forSourceIdentifier:in:)` and by `MemorySourceCardResolver`.
 
 ## Why Chat Recall Is Unchanged
 
-Core Spotlight query results are not wired into Chat, Browse, source cards, VectorBridge, or RecallEngine. The smoke exists to validate indexing/query lifecycle behaviour only.
+Core Spotlight query results are not wired into Chat, Browse, source cards, VectorBridge, or RecallEngine. The smoke exists to validate indexing/query lifecycle behaviour and source-card-safe payload resolution only.
 
 ## Why Foundation Models Is Not Wired
 
@@ -95,11 +106,12 @@ Foundation Models and `SpotlightSearchTool` need source-card validation, archive
 
 ## Remaining Risks
 
-- Real Core Spotlight query latency and consistency have one simulator pass and one physical iPhone pass.
+- Real Core Spotlight query latency and consistency have simulator validation for the new source-card format and one physical iPhone pass for the previous format.
+- Physical iPhone validation is pending for the `sourceCardResolved` output format.
 - User-facing settings and copy are required before enabling indexing outside internal builds.
 - The query syntax may need refinement after real-world search smoke data.
 - The system search privacy posture must be reviewed before release exposure.
 
 ## Next Recommended Spike
 
-Design the next Apple-native spike around source-card validation for Spotlight-returned IDs before any Foundation Models or `SpotlightSearchTool` work.
+Rerun the updated `sourceCardResolved` smoke on a physical iPhone, then design the Foundation Models custom tool contract without wiring it into Chat.

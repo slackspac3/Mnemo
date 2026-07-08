@@ -62,13 +62,29 @@ This is enough for the existing source-card/detail flow to open the canonical `M
 
 ## DEBUG Smoke Output
 
-The existing Core Spotlight query smoke output was not changed in this pass. Source-card validation is covered by unit tests rather than expanding the launch smoke.
+The Core Spotlight query smoke now includes `sourceCardResolved`.
 
 Current smoke launch argument remains:
 
 ```text
 --run-core-spotlight-query-smoke
 ```
+
+Updated output format:
+
+```text
+Core Spotlight query smoke: indexed=<true|false> queried=<true|false> found=<true|false> sourceValidated=<true|false> sourceCardResolved=<true|false> archivedRejected=<true|false> deletedRejected=<true|false> cleared=<true|false> durationMs=<number> error="<none or message>"
+```
+
+`sourceCardResolved=true` proves that a real Core Spotlight query result identifier was converted into a `MemorySourceCardPayload` by rehydrating the active `MemoryRecord` from SwiftData. The smoke also passes untrusted Spotlight title/snippet values and verifies the payload summary still comes from SwiftData.
+
+Simulator result, iPhone 17 Pro simulator on iOS 26.5:
+
+```text
+Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true sourceCardResolved=true archivedRejected=true deletedRejected=true cleared=true durationMs=4132.39 error="none"
+```
+
+The earlier simulator and physical iPhone smoke results remain valid for the old format. Physical iPhone validation is still pending for the new `sourceCardResolved` format.
 
 ## Why Chat Recall Is Unchanged
 
@@ -89,9 +105,10 @@ This pass addresses only source ID validation and payload safety.
 ## Remaining Risks
 
 - The resolver is package-tested but not wired into a user flow.
-- A future Spotlight query-to-source-card smoke should validate the resolver after a real Core Spotlight query.
+- The resolver has simulator smoke coverage after a real Core Spotlight query.
+- A physical iPhone smoke pass is still needed for the new `sourceCardResolved` output format.
 - User-facing controls are still required before Core Spotlight indexing is enabled outside internal builds.
 
 ## Next Recommended Spike
 
-Add a DEBUG-only source-card resolver smoke that runs after the existing Core Spotlight query smoke and records `sourceCardResolved=true` once a real Spotlight result is converted into a `MemorySourceCardPayload`.
+Rerun the updated source-card resolver smoke on physical iPhone, then design the Foundation Models custom tool contract without wiring it into Chat.

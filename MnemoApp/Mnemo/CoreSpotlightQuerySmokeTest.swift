@@ -9,6 +9,7 @@ struct CoreSpotlightQuerySmokeTestResult: Equatable, Sendable {
     let queried: Bool
     let found: Bool
     let sourceValidated: Bool
+    let sourceCardResolved: Bool
     let archivedRejected: Bool
     let deletedRejected: Bool
     let cleared: Bool
@@ -50,6 +51,7 @@ enum CoreSpotlightQuerySmokeTest {
         var queried = false
         var found = false
         var sourceValidated = false
+        var sourceCardResolved = false
         var archivedRejected = false
         var deletedRejected = false
         var cleared = false
@@ -63,17 +65,32 @@ enum CoreSpotlightQuerySmokeTest {
             )
             indexed = true
 
-            found = try await waitForSourceID(
+            let foundSourceIdentifier = try await waitForSourceIdentifier(
                 record.id,
                 matching: token,
                 service: service
             )
             queried = true
+            found = foundSourceIdentifier == record.id.uuidString
             let activeRecord = try service.activeRecord(
-                forSourceIdentifier: record.id.uuidString,
+                forSourceIdentifier: foundSourceIdentifier ?? record.id.uuidString,
                 in: context
             )
             sourceValidated = found && activeRecord?.id == record.id
+            let sourceCandidate = MemorySearchSourceCandidate(
+                sourceIdentifier: foundSourceIdentifier ?? record.id.uuidString,
+                title: "Untrusted Spotlight smoke title",
+                snippet: "Untrusted Spotlight smoke snippet"
+            )
+            let sourceCardPayload = try MemorySourceCardResolver(
+                indexingService: service
+            ).resolve(candidate: sourceCandidate, in: context)
+            sourceCardResolved = sourceValidated &&
+                sourceCardPayload?.id == record.id &&
+                sourceCardPayload?.sourceIdentifier == record.id.uuidString &&
+                sourceCardPayload?.summary == record.summary &&
+                sourceCardPayload?.summary != sourceCandidate.title &&
+                sourceCardPayload?.summary != sourceCandidate.snippet
 
             try await MemoryCRUD.archiveAndUnindex(
                 id: record.id,
@@ -85,13 +102,16 @@ enum CoreSpotlightQuerySmokeTest {
                 forSourceIdentifier: record.id.uuidString,
                 in: context
             )
-            let archivedRecordRejected = archivedRecord == nil
+            let archivedSourceCardPayload = try MemorySourceCardResolver(
+                indexingService: service
+            ).resolve(sourceIdentifier: record.id.uuidString, in: context)
+            let archivedRecordRejected = archivedRecord == nil && archivedSourceCardPayload == nil
             let archivedQueryAbsent = try await waitForSourceIDToDisappear(
                 record.id,
                 matching: token,
                 service: service
             )
-            archivedRejected = archivedRecordRejected || archivedQueryAbsent
+            archivedRejected = archivedRecordRejected && archivedQueryAbsent
 
             try await MemoryCRUD.deletePermanently(
                 id: record.id,
@@ -103,13 +123,16 @@ enum CoreSpotlightQuerySmokeTest {
                 forSourceIdentifier: record.id.uuidString,
                 in: context
             )
-            let deletedRecordRejected = deletedRecord == nil
+            let deletedSourceCardPayload = try MemorySourceCardResolver(
+                indexingService: service
+            ).resolve(sourceIdentifier: record.id.uuidString, in: context)
+            let deletedRecordRejected = deletedRecord == nil && deletedSourceCardPayload == nil
             let deletedQueryAbsent = try await waitForSourceIDToDisappear(
                 record.id,
                 matching: token,
                 service: service
             )
-            deletedRejected = deletedRecordRejected || deletedQueryAbsent
+            deletedRejected = deletedRecordRejected && deletedQueryAbsent
 
             try await MemoryCRUD.resetSearchIndexItems(searchIndexer: indexer)
             cleared = try await waitForSourceIDToDisappear(
@@ -118,13 +141,14 @@ enum CoreSpotlightQuerySmokeTest {
                 service: service
             )
 
-            let passed = indexed && queried && found && sourceValidated &&
+            let passed = indexed && queried && found && sourceValidated && sourceCardResolved &&
                 archivedRejected && deletedRejected && cleared
             return CoreSpotlightQuerySmokeTestResult(
                 indexed: indexed,
                 queried: queried,
                 found: found,
                 sourceValidated: sourceValidated,
+                sourceCardResolved: sourceCardResolved,
                 archivedRejected: archivedRejected,
                 deletedRejected: deletedRejected,
                 cleared: cleared,
@@ -145,6 +169,7 @@ enum CoreSpotlightQuerySmokeTest {
                 queried: queried,
                 found: found,
                 sourceValidated: sourceValidated,
+                sourceCardResolved: sourceCardResolved,
                 archivedRejected: archivedRejected,
                 deletedRejected: deletedRejected,
                 cleared: cleared,
@@ -155,19 +180,19 @@ enum CoreSpotlightQuerySmokeTest {
     }
 
     @MainActor
-    private static func waitForSourceID(
+    private static func waitForSourceIdentifier(
         _ id: UUID,
         matching query: String,
         service: MemorySearchIndexingService
-    ) async throws -> Bool {
+    ) async throws -> String? {
         for _ in 0..<12 {
             let ids = try await service.sourceIdentifiersIfNeeded(matching: query, limit: 10)
             if ids.contains(id.uuidString) {
-                return true
+                return id.uuidString
             }
             try await Task.sleep(nanoseconds: 250_000_000)
         }
-        return false
+        return nil
     }
 
     @MainActor

@@ -53,6 +53,7 @@ final class AppState {
                 "queried=\(spotlightSmokeResult.queried) " +
                 "found=\(spotlightSmokeResult.found) " +
                 "sourceValidated=\(spotlightSmokeResult.sourceValidated) " +
+                "sourceCardResolved=\(spotlightSmokeResult.sourceCardResolved) " +
                 "archivedRejected=\(spotlightSmokeResult.archivedRejected) " +
                 "deletedRejected=\(spotlightSmokeResult.deletedRejected) " +
                 "cleared=\(spotlightSmokeResult.cleared) " +
