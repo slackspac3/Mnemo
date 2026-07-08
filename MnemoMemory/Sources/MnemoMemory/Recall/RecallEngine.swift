@@ -337,21 +337,27 @@ public struct RecallEngine {
     }
 
     private func summaryLine(for memory: MemoryRecord) -> String {
-        let summary = memory.summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        let summary = cleanUserFacingText(memory.summary)
         if !summary.isEmpty { return summary }
 
-        let rawInput = memory.rawInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawInput = cleanUserFacingText(memory.rawInput)
         if !rawInput.isEmpty { return rawInput }
 
         return "Untitled memory"
     }
 
     private func searchableText(for memory: MemoryRecord) -> String {
-        ([memory.summary, memory.rawInput] + memory.tags).joined(separator: " ")
+        ([memory.summary, memory.rawInput] + memory.tags)
+            .map(cleanUserFacingText)
+            .joined(separator: " ")
     }
 
     private func guardedPrecisionResult(for query: String, memories: [MemoryRecord]) -> RecallResult? {
         if let result = passportNumberGuard(for: query, memories: memories) {
+            return result
+        }
+
+        if let result = exactCodeResult(for: query, memories: memories) {
             return result
         }
 
@@ -421,6 +427,34 @@ public struct RecallEngine {
             text: "I do not have \(subject.capitalized)'s birthday saved.",
             citedMemoryIds: [],
             citations: []
+        )
+    }
+
+    private func exactCodeResult(for query: String, memories: [MemoryRecord]) -> RecallResult? {
+        guard isCodeQuery(query) else { return nil }
+
+        let anchors = codeAnchorTokens(in: query)
+        let requiredAnchors = anchors.subtracting(["code"])
+        guard anchors.contains("code"), !requiredAnchors.isEmpty else { return nil }
+
+        let candidates = memories.filter { memory in
+            let memoryTokens = meaningfulTokens(in: searchableText(for: memory), expandingSynonyms: false)
+            return memoryTokens.contains("code") && requiredAnchors.isSubset(of: memoryTokens)
+        }
+        guard let memory = candidates.sorted(by: { $0.createdAt > $1.createdAt }).first else {
+            return nil
+        }
+
+        if let value = extractCodeValue(from: searchableText(for: memory)) {
+            return result(
+                text: "Your \(codeSubject(for: query)) is \(value).",
+                memories: [memory]
+            )
+        }
+
+        return result(
+            text: summaryLine(for: memory),
+            memories: [memory]
         )
     }
 
@@ -577,6 +611,7 @@ public struct RecallEngine {
     }
 
     private func extractLocation(from text: String) -> String? {
+        let text = cleanUserFacingText(text)
         let patterns = [
             #"\b(?:in|at|near)\s+([^.,;\n]+)"#,
             #"\bthe\s+([A-Za-z][A-Za-z\s'-]{1,40})\s+waterfall\b"#,
@@ -639,7 +674,19 @@ public struct RecallEngine {
     }
 
     private func cleanLocationPhrase(_ phrase: String) -> String {
-        let stopMarkers = [" is ", " was ", " were ", " for ", " because ", " when ", " that "]
+        let stopMarkers = [
+            " is ",
+            " was ",
+            " were ",
+            " for ",
+            " because ",
+            " when ",
+            " that ",
+            " i ",
+            " needs review",
+            " needs-review",
+            " review suggested",
+        ]
         let lowercased = phrase.lowercased()
 
         var endIndex = phrase.endIndex
@@ -656,9 +703,19 @@ public struct RecallEngine {
     }
 
     private func cleanSizeCondition(_ phrase: String) -> String {
-        var cleaned = phrase
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        var cleaned = cleanUserFacingText(phrase)
             .trimmingCharacters(in: CharacterSet(charactersIn: "\"'?.!"))
+
+        cleaned = cleaned.replacingOccurrences(
+            of: #"\benough\s+guy\s+padding\b"#,
+            with: "enough padding",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        cleaned = cleaned.replacingOccurrences(
+            of: #"\bguy\s+padding\b"#,
+            with: "padding",
+            options: [.regularExpression, .caseInsensitive]
+        )
 
         if cleaned.lowercased().hasPrefix("lining ") {
             cleaned = "the \(cleaned)"
@@ -700,6 +757,10 @@ public struct RecallEngine {
             lowercased.contains("clothes") ||
             lowercased.contains("clothing") ||
             lowercased.contains("wear")
+    }
+
+    private func isCodeQuery(_ query: String) -> Bool {
+        meaningfulTokens(in: query, expandingSynonyms: false).contains("code")
     }
 
     private func isParkingQuery(_ query: String) -> Bool {
@@ -769,6 +830,64 @@ public struct RecallEngine {
             let subject = String(query[subjectRange]).lowercased()
             if !isGenericSizeSubject(subject) {
                 return subject
+            }
+        }
+
+        return nil
+    }
+
+    private func codeAnchorTokens(in query: String) -> Set<String> {
+        meaningfulTokens(in: query, expandingSynonyms: false)
+            .filter { !Self.codeAnchorIgnoredTerms.contains($0) }
+    }
+
+    private func codeSubject(for query: String) -> String {
+        let words = orderedCodeSubjectWords(in: query)
+        guard !words.isEmpty else { return "code" }
+        if words.last == "code" {
+            return words.joined(separator: " ")
+        }
+        return (words + ["code"]).joined(separator: " ")
+    }
+
+    private func orderedCodeSubjectWords(in query: String) -> [String] {
+        var seen = Set<String>()
+        return query.lowercased().split { character in
+            !character.isLetter && !character.isNumber
+        }
+        .compactMap { word -> String? in
+            let token = String(word)
+            guard token.count > 2 else { return nil }
+            guard !Self.stopWords.contains(token), !Self.codeSubjectIgnoredTerms.contains(token) else {
+                return nil
+            }
+            guard seen.insert(token).inserted else { return nil }
+            return token
+        }
+    }
+
+    private func extractCodeValue(from text: String) -> String? {
+        let patterns = [
+            #"\bcode\s+(?:is|=|:)\s*([A-Za-z0-9][A-Za-z0-9_-]{1,})\b"#,
+            #"\b(?:pin|reference)\s+(?:is|=|:)\s*([A-Za-z0-9][A-Za-z0-9_-]{1,})\b"#,
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+                continue
+            }
+
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            guard let match = regex.firstMatch(in: text, range: range),
+                  match.numberOfRanges > 1,
+                  let valueRange = Range(match.range(at: 1), in: text)
+            else { continue }
+
+            let value = String(text[valueRange])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\"'.,;:!?"))
+            if !value.isEmpty {
+                return value
             }
         }
 
@@ -1258,7 +1377,7 @@ public struct RecallEngine {
 
     private func result(text: String, memories: [MemoryRecord]) -> RecallResult {
         RecallResult(
-            text: text,
+            text: cleanUserFacingText(text),
             citedMemoryIds: memories.map(\.id),
             citations: memories.map { memory in
                 RecallCitation(
@@ -1268,6 +1387,33 @@ public struct RecallEngine {
                 )
             }
         )
+    }
+
+    private func cleanUserFacingText(_ text: String) -> String {
+        var cleaned = text
+            .replacingOccurrences(
+                of: #"\bneeds[-\s]?review\b"#,
+                with: "",
+                options: [.regularExpression, .caseInsensitive]
+            )
+            .replacingOccurrences(
+                of: #"\breview[-\s]?suggested\b"#,
+                with: "",
+                options: [.regularExpression, .caseInsensitive]
+            )
+            .replacingOccurrences(
+                of: #"\blow[-\s]?confidence\b"#,
+                with: "",
+                options: [.regularExpression, .caseInsensitive]
+            )
+
+        cleaned = cleaned.replacingOccurrences(
+            of: #"\s{2,}"#,
+            with: " ",
+            options: [.regularExpression]
+        )
+
+        return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func displayName(for subject: String) -> String {
@@ -1390,6 +1536,20 @@ public struct RecallEngine {
     private static let sizeAnchorIgnoredTerms: Set<String> = [
         "meant",
         "mean",
+        "mine",
+        "my",
+        "now",
+        "your",
+    ]
+
+    private static let codeAnchorIgnoredTerms: Set<String> = [
+        "mine",
+        "my",
+        "now",
+        "your",
+    ]
+
+    private static let codeSubjectIgnoredTerms: Set<String> = [
         "mine",
         "my",
         "now",

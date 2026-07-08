@@ -495,6 +495,61 @@ struct RecallEngineTests {
         #expect(!result.text.localizedCaseInsensitiveContains("It was in Dubai Mall"))
     }
 
+    @Test("Waterfall location answer hides internal review markers")
+    @MainActor
+    func waterfallLocationAnswerHidesInternalReviewMarkers() {
+        let memory = Self.makeMemory(
+            "It was in Guam I loved the waterfall in Guam Needs-Review",
+            type: .preference,
+            source: .image,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "Where was the waterfall?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text == "It was in Guam.")
+        #expect(!result.text.localizedCaseInsensitiveContains("needs-review"))
+        #expect(!result.text.localizedCaseInsensitiveContains("needs review"))
+        #expect(!result.citations.first!.summary.localizedCaseInsensitiveContains("needs-review"))
+    }
+
+    @Test("Exact code recall cites only the matching code memory")
+    @MainActor
+    func exactCodeRecallCitesOnlyMatchingCodeMemory() {
+        let target = Self.makeMemory(
+            "My temporary test code is ZX-91.",
+            type: .credential,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(120)
+        )
+        let unrelatedTest = Self.makeMemory(
+            "The test reminder is to buy printer paper.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(240)
+        )
+        let unrelatedCode = Self.makeMemory(
+            "My gym locker code is 2806.",
+            type: .credential,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(60)
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my temporary test code?",
+            memories: [target, unrelatedTest, unrelatedCode]
+        )
+
+        #expect(result.citedMemoryIds == [target.id])
+        #expect(result.text.localizedCaseInsensitiveContains("temporary test code is ZX-91"))
+        #expect(!result.citedMemoryIds.contains(unrelatedTest.id))
+        #expect(!result.citedMemoryIds.contains(unrelatedCode.id))
+    }
+
     @Test("Branded conditional shoe size tolerates typo and cites only matching memory")
     @MainActor
     func brandedConditionalShoeSizeToleratesTypoAndFiltersSources() {
@@ -530,6 +585,27 @@ struct RecallEngineTests {
         #expect(result.text.localizedCaseInsensitiveContains("the lining is thin"))
         #expect(!result.citedMemoryIds.contains(otherShoe.id))
         #expect(!result.citedMemoryIds.contains(otherClothing.id))
+    }
+
+    @Test("Conditional size answer cleans speech artifacts")
+    @MainActor
+    func conditionalSizeAnswerCleansSpeechArtifacts() {
+        let memory = Self.makeMemory(
+            "New Balance shoe size is 42 if there is enough guy padding, 41 if lining is thin.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my New Balance shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.citedMemoryIds == [memory.id])
+        #expect(result.text.localizedCaseInsensitiveContains("42 if there is enough padding"))
+        #expect(result.text.localizedCaseInsensitiveContains("41 if the lining is thin"))
+        #expect(!result.text.localizedCaseInsensitiveContains("guy padding"))
     }
 
     @Test("Non-matching brand does not cite unrelated conditional shoe memory")
