@@ -1,0 +1,57 @@
+{
+  "text": "The waterfall I loved was in Guam.",
+  "model": "sentence-transformers/paraphrase-MiniLM-L3-v2",
+  "input_ids": [
+    101,
+    1996,
+    14297,
+    1045,
+    3866,
+    2001,
+    1999,
+    16162,
+    1012,
+    102
+  ],
+  "token_type_ids": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "attention_mask": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "tokens": [
+    "[CLS]",
+    "the",
+    "waterfall",
+    "i",
+    "loved",
+    "was",
+    "in",
+    "guam",
+    ".",
+    "[SEP]"
+  ],
+  "model_max_length": 512,
+  "tokenizer_class": "BertTokenizerFast",
+  "reference_source": "Hugging Face AutoTokenizer.from_pretrained",
+  "generated_at": "2026-07-08T09:05:11.764029+00:00",
+  "note": "Tokenizer metadata only. No model weights or embeddings."
+}

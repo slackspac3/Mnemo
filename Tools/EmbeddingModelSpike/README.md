@@ -37,6 +37,28 @@ This prints:
 
 It does not download model weights.
 
+## Reference Tokenizer Output
+
+Run:
+
+```text
+Tools/EmbeddingModelSpike/scripts/reference_minilm_tokens.py
+```
+
+This uses `transformers.AutoTokenizer` for:
+
+```text
+The waterfall I loved was in Guam.
+```
+
+If dependencies are missing, install them outside the repo:
+
+```text
+python3 -m pip install transformers tokenizers
+```
+
+Do not commit Hugging Face caches or generated logs. A tiny hand-verified tokenizer metadata fixture may be committed under package tests.
+
 ## Prepare Local Files
 
 Run:
