@@ -85,7 +85,7 @@ struct BackupRestoreView: View {
                                         Text(manifest.createdAt.formatted(.dateTime.day().month().year().hour().minute()))
                                             .font(DS.Typography.subheadline)
                                             .foregroundStyle(DS.Colours.textPrimary)
-                                        Text("\(manifest.recordCount) memories - v\(manifest.appVersion)")
+                                        Text("\(manifest.recordCount) memories")
                                             .font(DS.Typography.caption1)
                                             .foregroundStyle(DS.Colours.textSecondary)
                                     }
@@ -109,7 +109,7 @@ struct BackupRestoreView: View {
                             Image(systemName: "lock.shield")
                                 .font(DS.Typography.subheadline)
                                 .foregroundStyle(DS.Colours.success)
-                            Text("Backups are encrypted before being stored in your private iCloud account. Mnemo does not operate a backup server. Restore currently requires this iPhone's local Keychain backup key, so this build is not validated for lost-device or new-device recovery.")
+                            Text("Backups are encrypted before being stored in your private iCloud account. Mnemo does not operate a backup server. Restore currently requires this iPhone's local Keychain backup key. Restore on a new or replacement iPhone is coming soon.")
                                 .font(DS.Typography.footnote)
                                 .foregroundStyle(DS.Colours.textSecondary)
                         }
@@ -179,7 +179,7 @@ struct BackupRestoreView: View {
                 let manifest = try await backupManager.backup(context: modelContext)
                 await MainActor.run {
                     lastBackupManifest = manifest
-                    successMessage = "Backup complete - \(manifest.recordCount) memories saved."
+                    successMessage = "Backup complete: \(manifest.recordCount) memories saved."
                     isBackingUp = false
                 }
                 await loadBackups()

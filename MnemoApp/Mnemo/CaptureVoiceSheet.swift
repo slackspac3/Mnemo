@@ -50,6 +50,7 @@ struct CaptureVoiceSheet: View {
                             isRecording: voiceHandler.isRecording,
                             isReceivingAudio: voiceHandler.isReceivingAudio,
                             isTranscribing: isTranscribing,
+                            audioLevel: voiceHandler.audioLevel,
                             transcript: voiceHandler.transcript,
                             onToggle: { toggleRecording() },
                             onDone: {
@@ -157,7 +158,7 @@ struct CaptureVoiceSheet: View {
 
     private func noSpeechMessage(receivedAudio: Bool) -> String {
         if receivedAudio {
-            return "Audio was received, but no words were recognised. Try again and speak clearly until you tap stop."
+            return "Audio was received, but no words were recognized. Try again and speak clearly until you tap stop."
         }
 
         #if targetEnvironment(simulator)
@@ -170,13 +171,13 @@ struct CaptureVoiceSheet: View {
     private func recognitionFailureMessage(_ message: String) -> String {
         if message.localizedCaseInsensitiveContains("initialize recognizer") {
             #if targetEnvironment(simulator)
-            return "The simulator is receiving microphone input, but Apple speech recognition failed to initialize. Type what you said below, or retry on a physical iPhone."
+            return "The simulator is receiving microphone input, but Apple speech recognition could not start. Type what you said below, or retry on a physical iPhone."
             #else
-            return "Apple speech recognition failed to initialize. Type what you said below, or restart the app and try again."
+            return "Apple speech recognition could not start. Type what you said below, or restart the app and try again."
             #endif
         }
 
-        return "Speech recognition failed: \(message)"
+        return "Speech recognition could not finish: \(message)"
     }
 
     private func showManualTranscriptFallback(message: String) {
@@ -234,15 +235,17 @@ struct VoiceRecordingView: View {
     let isRecording: Bool
     let isReceivingAudio: Bool
     let isTranscribing: Bool
+    let audioLevel: Double
     let transcript: String
     let onToggle: () -> Void
     let onDone: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pulse = false
+    @State private var displayedLevel = 0.0
 
     var body: some View {
-        VStack(spacing: DS.Spacing.xl) {
+        VStack(spacing: DS.Spacing.lg) {
             Spacer()
 
             ZStack {
@@ -274,30 +277,43 @@ struct VoiceRecordingView: View {
                         )
                 }
 
-                Button(action: onToggle) {
+                Button {
+                    guard !isTranscribing else { return }
+                    onToggle()
+                } label: {
                     Image(systemName: isRecording ? "stop.fill" : "mic.fill")
                         .font(DS.Typography.largeTitle)
                         .foregroundStyle(isRecording ? DS.Colours.destructive : DS.Colours.accent)
                         .frame(width: 80.0, height: 80.0)
+                        .scaleEffect(isRecording && !reduceMotion ? 1.0 + CGFloat(displayedLevel * 0.10) : 1.0)
+                        .animation(reduceMotion ? nil : DS.Animation.quick, value: displayedLevel)
                 }
+                .disabled(isTranscribing)
                 .accessibilityLabel(isRecording ? "Stop recording" : "Record voice memory")
                 .accessibilityValue(statusText)
                 .accessibilityHint(isRecording ? "Stop recording and finish the transcript" : "Start voice capture")
             }
             .onAppear {
                 pulse = isRecording
+                displayedLevel = audioLevel
             }
             .onChange(of: isRecording) { _, newValue in
                 pulse = newValue
             }
+            .onChange(of: audioLevel) { _, newValue in
+                withAnimation(reduceMotion ? nil : DS.Animation.quick) {
+                    displayedLevel = newValue
+                }
+            }
 
             if isRecording {
-                RecordingWaveform(isAnimating: pulse)
+                RecordingWaveform(level: displayedLevel)
             }
 
             Text(statusText)
                 .font(DS.Typography.subheadline)
                 .foregroundStyle(DS.Colours.textSecondary)
+                .multilineTextAlignment(.center)
 
             if isTranscribing {
                 ProgressView()
@@ -331,17 +347,17 @@ struct VoiceRecordingView: View {
 
     private var statusText: String {
         if isRecording {
-            return isReceivingAudio ? "Listening... audio detected" : "Listening... waiting for microphone input"
+            return isReceivingAudio ? "Recording... tap the stop button when finished" : "Recording... speak now"
         }
         if isTranscribing {
             return "Finishing transcript..."
         }
-        return "Tap to record"
+        return "Tap the microphone to start"
     }
 }
 
 struct RecordingWaveform: View {
-    let isAnimating: Bool
+    let level: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -351,32 +367,21 @@ struct RecordingWaveform: View {
                     .fill(DS.Colours.destructive)
                     .frame(
                         width: DS.Spacing.xs,
-                        height: height(for: index, isRaised: reduceMotion ? false : isAnimating)
+                        height: height(for: index)
                     )
-                    .animation(reduceMotion ? nil : waveformAnimation(for: index), value: isAnimating)
+                    .animation(reduceMotion ? nil : DS.Animation.quick, value: level)
             }
         }
         .frame(height: DS.Spacing.lg)
         .accessibilityHidden(true)
     }
 
-    private func waveformAnimation(for index: Int) -> Animation {
-        Animation.easeInOut(duration: 0.50)
-            .repeatForever(autoreverses: true)
-            .delay(Double(index) * 0.10)
-    }
-
-    private func height(for index: Int, isRaised: Bool) -> CGFloat {
+    private func height(for index: Int) -> CGFloat {
         let low = DS.Spacing.sm
         let high = DS.Spacing.lg
-        switch index {
-        case 0, 4:
-            return isRaised ? DS.Spacing.md : low
-        case 1, 3:
-            return isRaised ? high : DS.Spacing.md
-        default:
-            return isRaised ? DS.Spacing.sm : high
-        }
+        let multipliers = [0.50, 0.78, 1.0, 0.72, 0.46]
+        let shapedLevel = max(0.06, min(1.0, level))
+        return low + ((high - low) * CGFloat(shapedLevel * multipliers[index]))
     }
 }
 

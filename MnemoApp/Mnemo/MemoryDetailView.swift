@@ -170,7 +170,7 @@ struct MemoryDetailView: View {
 
                         if snapshot.corroboratingEvidenceCount > 0 {
                             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                                Text("Confirmed by \(snapshot.corroboratingEvidenceCount) other source(s)")
+                                Text(corroborationText(for: snapshot.corroboratingEvidenceCount))
                                     .font(DS.Typography.subheadline)
                                     .foregroundStyle(DS.Colours.success)
                             }
@@ -399,6 +399,10 @@ private func typeAccentColour(for type: MemoryType) -> Color {
     case .fact, .instruction:
         return DS.Colours.brandSage.opacity(0.6)
     }
+}
+
+private func corroborationText(for count: Int) -> String {
+    count == 1 ? "Confirmed by 1 other source" : "Confirmed by \(count) other sources"
 }
 
 struct MetadataRow: View {

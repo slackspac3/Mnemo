@@ -61,7 +61,7 @@ struct SettingsView: View {
                                     Text("On-Device Only")
                                         .font(DS.Typography.body)
                                         .foregroundStyle(DS.Colours.textPrimary)
-                                    Text("Capture and recall stay local in this build. Cloud Assist is unavailable.")
+                                    Text("Capture and recall stay local on this iPhone. Cloud Assist is coming soon.")
                                         .font(DS.Typography.footnote)
                                         .foregroundStyle(DS.Colours.textSecondary)
                                 }
@@ -73,7 +73,7 @@ struct SettingsView: View {
                                     .font(DS.Typography.subheadline)
                                     .foregroundStyle(DS.Colours.accent)
                                     .accessibilityHidden(true)
-                                Text("Mnemo works without a Mnemo account, email, or backend sign-in.")
+                                Text("Mnemo works without an account, email, or sign-in.")
                                     .font(DS.Typography.footnote)
                                     .foregroundStyle(DS.Colours.textSecondary)
                             }
@@ -139,18 +139,18 @@ struct SettingsView: View {
                     .accessibilityIdentifier(AccessibilityID.Settings.securitySection)
 
                     Section {
-                        if let model = userModel {
+                        if userModel != nil {
                             SenseComingSoonRow(
                                 title: "Memory Moments",
-                                detail: model.memoryMomentsEnabled ? "Off in this build" : "Coming later"
+                                detail: "Coming soon"
                             )
                             SenseComingSoonRow(
                                 title: "Pattern Insights",
-                                detail: "Coming later"
+                                detail: "Coming soon"
                             )
                             SenseComingSoonRow(
                                 title: "Thread Suggestions",
-                                detail: "Coming later"
+                                detail: "Coming soon"
                             )
                         } else {
                             Text("Mnemo Sense settings will appear after onboarding.")
@@ -450,7 +450,7 @@ struct DeviceTierRow: View {
                 Text(tierLabel)
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.textPrimary)
-                Text("This build stores memories on device and uses local deterministic recall.")
+                Text("Mnemo stores memories on this iPhone and uses local recall.")
                     .font(DS.Typography.caption1)
                     .foregroundStyle(DS.Colours.textSecondary)
             }

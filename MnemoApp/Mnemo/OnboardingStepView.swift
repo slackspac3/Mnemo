@@ -10,40 +10,8 @@ struct OnboardingStepView: View {
     @State private var contentAppeared = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: DS.Spacing.xl) {
-                Spacer(minLength: DS.Spacing.xl)
-
-                ZStack {
-                    MnemoThreadMotif(style: .hero, lineWidth: 2.0)
-                        .frame(width: 144.0, height: 112.0)
-                    stepMark
-                }
-                .onboardingStaggered(appeared: contentAppeared, delay: 0.0, reduceMotion: reduceMotion)
-
-                VStack(spacing: DS.Spacing.sm) {
-                    Text(step.title)
-                        .font(DS.Typography.title1)
-                        .foregroundStyle(DS.Colours.textPrimary)
-                        .multilineTextAlignment(.center)
-                        .onboardingStaggered(appeared: contentAppeared, delay: 0.08, reduceMotion: reduceMotion)
-
-                    Text(step.subtitle)
-                        .font(DS.Typography.body)
-                        .foregroundStyle(DS.Colours.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, DS.Spacing.md)
-                        .onboardingStaggered(appeared: contentAppeared, delay: 0.14, reduceMotion: reduceMotion)
-                }
-
-                stepContent
-                    .onboardingStaggered(appeared: contentAppeared, delay: 0.22, reduceMotion: reduceMotion)
-
-                Spacer(minLength: DS.Spacing.xxxl)
-            }
-            .padding(.horizontal, DS.Spacing.xl)
-        }
-        .scrollBounceBehavior(.basedOnSize)
+        onboardingContent
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear {
             revealContent()
         }
@@ -54,6 +22,42 @@ struct OnboardingStepView: View {
         .onDisappear {
             contentAppeared = false
         }
+    }
+
+    private var onboardingContent: some View {
+        VStack(spacing: DS.Spacing.lg) {
+            Spacer(minLength: DS.Spacing.sm)
+
+            ZStack {
+                MnemoThreadMotif(style: .hero, lineWidth: 2.0)
+                    .frame(width: 128.0, height: 96.0)
+                stepMark
+            }
+            .onboardingStaggered(appeared: contentAppeared, delay: 0.0, reduceMotion: reduceMotion)
+
+            VStack(spacing: DS.Spacing.xs) {
+                Text(step.title)
+                    .font(DS.Typography.title1)
+                    .foregroundStyle(DS.Colours.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .onboardingStaggered(appeared: contentAppeared, delay: 0.08, reduceMotion: reduceMotion)
+
+                Text(step.subtitle)
+                    .font(DS.Typography.body)
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, DS.Spacing.md)
+                    .onboardingStaggered(appeared: contentAppeared, delay: 0.14, reduceMotion: reduceMotion)
+            }
+
+            stepContent
+                .onboardingStaggered(appeared: contentAppeared, delay: 0.22, reduceMotion: reduceMotion)
+
+            Spacer(minLength: DS.Spacing.sm)
+        }
+        .padding(.horizontal, DS.Spacing.xl)
+        .padding(.top, DS.Spacing.md)
+        .padding(.bottom, DS.Spacing.md)
     }
 
     @ViewBuilder
@@ -87,15 +91,15 @@ struct OnboardingStepView: View {
     private var stepMark: some View {
         switch step {
         case .welcome:
-            MnemoLogoMark(size: 88.0, style: .filled)
+            MnemoLogoMark(size: 80.0, style: .filled)
         case .done:
-            MnemoLogoMark(size: 76.0, style: .subtle)
+            MnemoLogoMark(size: 72.0, style: .subtle)
         default:
             Image(systemName: step.icon)
-                .font(DS.Typography.largeTitle)
+                .font(DS.Typography.title1)
                 .foregroundStyle(iconColor)
                 .symbolRenderingMode(.hierarchical)
-                .frame(width: 88.0, height: 88.0)
+                .frame(width: 76.0, height: 76.0)
                 .background(DS.Colours.privateBadgeSurface)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge, style: .continuous))
                 .accessibilityHidden(true)
@@ -180,38 +184,33 @@ struct FeatureRow: View {
             Image(systemName: icon)
                 .font(DS.Typography.title2)
                 .foregroundStyle(color)
-                .frame(width: 40.0, height: 40.0)
+                .frame(width: 44.0, height: 44.0)
                 .background(color.opacity(0.14))
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.small))
+                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 .accessibilityHidden(true)
             Text(text)
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textPrimary)
             Spacer()
         }
+        .padding(.vertical, DS.Spacing.xs)
     }
 }
 
 struct RecallStepContent: View {
     var body: some View {
-        VStack(spacing: DS.Spacing.md) {
+        VStack(spacing: DS.Spacing.sm) {
             OnboardingInfoCard(
                 icon: "text.magnifyingglass",
                 title: "Local recall",
-                description: "Mnemo searches the memories you have saved and answers from that local store.",
+                description: "Mnemo answers from memories saved on this iPhone.",
                 color: DS.Colours.accent
             )
             OnboardingInfoCard(
                 icon: "bookmark.fill",
                 title: "Sources stay visible",
-                description: "When Mnemo recalls something, source cards show the memory behind the answer.",
+                description: "Source cards show the memory behind an answer.",
                 color: DS.Colours.success
-            )
-            OnboardingInfoCard(
-                icon: "icloud.slash",
-                title: "No cloud AI in this build",
-                description: "Capture and recall stay local in this version. Future cloud processing would require a separate consent step.",
-                color: DS.Colours.textSecondary
             )
         }
     }
@@ -219,24 +218,18 @@ struct RecallStepContent: View {
 
 struct ProtectionStepContent: View {
     var body: some View {
-        VStack(spacing: DS.Spacing.md) {
+        VStack(spacing: DS.Spacing.sm) {
             OnboardingInfoCard(
                 icon: "lock.open.fill",
                 title: "Optional App Lock",
-                description: "Ask Mnemo to unlock with Face ID, Touch ID or your device passcode when you reopen the app.",
+                description: "Unlock with Face ID, Touch ID or your passcode.",
                 color: DS.Colours.accent
             )
             OnboardingInfoCard(
                 icon: "person.crop.circle.badge.xmark",
-                title: "No account recovery step",
-                description: "Mnemo does not create an account, password, or remote identity for V1.",
+                title: "No Mnemo account",
+                description: "No email, password, or remote account is required.",
                 color: DS.Colours.sense
-            )
-            OnboardingInfoCard(
-                icon: "checkmark.shield.fill",
-                title: "You stay in control",
-                description: "Archive or permanently delete saved memories from the memory detail screen.",
-                color: DS.Colours.success
             )
         }
     }
@@ -264,6 +257,7 @@ struct OnboardingInfoCard: View {
                     .font(DS.Typography.footnote)
                     .foregroundStyle(DS.Colours.textSecondary)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(2)
             }
 
             Spacer()

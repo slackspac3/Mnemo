@@ -18,6 +18,7 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
     @Published public var transcript: String = ""
     @Published public var isRecording: Bool = false
     @Published public var isReceivingAudio: Bool = false
+    @Published public var audioLevel: Double = 0.0
     @Published public var permissionGranted: Bool = false
     @Published public var recognitionErrorMessage: String?
 
@@ -73,11 +74,12 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         recognitionTask = nil
         transcript = ""
         isReceivingAudio = false
+        audioLevel = 0.0
         recognitionErrorMessage = nil
         cleanupRecordingFile()
 
         guard let recognizer = availableSpeechRecognizer() else {
-            throw CaptureError.transcriptionFailed("Speech recogniser unavailable")
+            throw CaptureError.transcriptionFailed("Speech recognition is not available right now")
         }
 
         let audioEngine = AVAudioEngine()
@@ -92,9 +94,14 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         #endif
 
         let inputNode = audioEngine.inputNode
-        guard let tapFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else {
-            throw CaptureError.transcriptionFailed("Could not create audio format")
+        inputNode.removeTap(onBus: 0)
+
+        let tapFormat = inputNode.outputFormat(forBus: 0)
+        guard tapFormat.sampleRate > 0, tapFormat.channelCount > 0 else {
+            deactivateAudioSession()
+            throw CaptureError.transcriptionFailed("Microphone input is not available")
         }
+
         let recordingURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("mnemo-voice-\(UUID().uuidString).caf")
         let audioFile = try AVAudioFile(
@@ -106,10 +113,23 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         self.recordingURL = recordingURL
         self.recognitionRequest = request
 
+        var hasReportedAudio = false
+        var lastLevelUpdate = Date.distantPast.timeIntervalSinceReferenceDate
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: tapFormat) { [weak self] buffer, _ in
-            self?.recognitionRequest?.append(buffer)
-            try? self?.audioFile?.write(from: buffer)
-            guard Self.bufferContainsAudio(buffer) else { return }
+            request.append(buffer)
+            try? audioFile.write(from: buffer)
+
+            let level = Self.normalizedAudioLevel(for: buffer)
+            let now = Date.timeIntervalSinceReferenceDate
+            if now - lastLevelUpdate >= 0.05 {
+                lastLevelUpdate = now
+                Task { @MainActor in
+                    self?.audioLevel = level
+                }
+            }
+
+            guard !hasReportedAudio, level > 0.04 else { return }
+            hasReportedAudio = true
             Task { @MainActor in
                 self?.isReceivingAudio = true
             }
@@ -129,11 +149,21 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
             }
         }
 
-        audioEngine.prepare()
-        try audioEngine.start()
+        do {
+            audioEngine.prepare()
+            try audioEngine.start()
 
-        self.audioEngine = audioEngine
-        self.isRecording = true
+            self.audioEngine = audioEngine
+            self.isRecording = true
+        } catch {
+            inputNode.removeTap(onBus: 0)
+            recognitionTask?.cancel()
+            recognitionTask = nil
+            recognitionRequest = nil
+            cleanupRecordingFile()
+            deactivateAudioSession()
+            throw error
+        }
     }
 
     public func stopRecording() -> RawCapture? {
@@ -145,6 +175,8 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         audioEngine = nil
         recognitionRequest = nil
         isRecording = false
+        audioLevel = 0.0
+        deactivateAudioSession()
 
         let capturedTranscript = transcript
         guard !capturedTranscript.isEmpty else { return nil }
@@ -256,7 +288,7 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
 
     private func transcribeRecordingFile(at url: URL) async throws -> String {
         guard let recognizer = availableSpeechRecognizer() else {
-            throw CaptureError.transcriptionFailed("Speech recogniser unavailable")
+            throw CaptureError.transcriptionFailed("Speech recognition is not available right now")
         }
 
         return try await withCheckedThrowingContinuation { continuation in
@@ -314,19 +346,30 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         recordingURL = nil
     }
 
-    private nonisolated static func bufferContainsAudio(_ buffer: AVAudioPCMBuffer) -> Bool {
-        guard let channels = buffer.floatChannelData else { return false }
-        let frameLength = Int(buffer.frameLength)
-        guard frameLength > 0 else { return false }
+    private func deactivateAudioSession() {
+        #if os(iOS)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        #endif
+    }
 
+    private nonisolated static func normalizedAudioLevel(for buffer: AVAudioPCMBuffer) -> Double {
+        guard let channels = buffer.floatChannelData else { return 0.0 }
+        let frameLength = Int(buffer.frameLength)
+        guard frameLength > 0 else { return 0.0 }
+
+        var sum: Float = 0.0
+        var sampleCount = 0
         for channelIndex in 0..<Int(buffer.format.channelCount) {
             let channel = channels[channelIndex]
             for frameIndex in 0..<frameLength {
-                if abs(channel[frameIndex]) > 0.01 {
-                    return true
-                }
+                let sample = channel[frameIndex]
+                sum += sample * sample
+                sampleCount += 1
             }
         }
-        return false
+
+        guard sampleCount > 0 else { return 0.0 }
+        let rms = sqrt(sum / Float(sampleCount))
+        return min(1.0, max(0.0, Double(rms) * 12.0))
     }
 }

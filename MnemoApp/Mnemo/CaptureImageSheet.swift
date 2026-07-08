@@ -228,7 +228,7 @@ struct ImageSelectionView: View {
             .fixedSize(horizontal: false, vertical: true)
 
             if source == .camera, !UIImagePickerController.isSourceTypeAvailable(.camera) {
-                Label("Camera is unavailable here", systemImage: "camera.fill")
+                Label("Camera is not available here", systemImage: "camera.fill")
                     .font(DS.Typography.footnote)
                     .foregroundStyle(DS.Colours.warning)
             }

@@ -609,7 +609,7 @@ struct EmptyMemoryRecoveryPanel: View {
                     .font(DS.Typography.headline)
                     .foregroundStyle(DS.Colours.textPrimary)
 
-                Text("Once Mnemo has something saved, this chat becomes your recall screen.")
+                Text("Once Mnemo has something saved, ask for it here.")
                     .font(DS.Typography.footnote)
                     .foregroundStyle(DS.Colours.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

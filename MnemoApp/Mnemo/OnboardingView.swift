@@ -3,7 +3,7 @@ import SwiftData
 import MnemoUI
 import MnemoCore
 
-/// Root onboarding container. Forward-only, V1 setup steps.
+/// Root onboarding container. Forward-only setup steps.
 /// Gated: main app is inaccessible until complete.
 struct OnboardingView: View {
 
