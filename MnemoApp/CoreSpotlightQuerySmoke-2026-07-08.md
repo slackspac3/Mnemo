@@ -41,7 +41,31 @@ Observed console output:
 Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true archivedRejected=true deletedRejected=true cleared=true durationMs=6848.48 error="none"
 ```
 
-No physical-device smoke run has been recorded in this commit.
+## Physical iPhone Attempt
+
+Physical iPhone validation was attempted on:
+
+- Device: `Mr B`
+- OS: iOS 26.6
+- UDID: `FFE5C4A6-31E5-580B-83D3-CD05172A8F2D`
+
+The app built, installed and launched on the device through XcodeBuildMCP with:
+
+```text
+--run-core-spotlight-query-smoke
+```
+
+The user manually deleted the app during validation; XcodeBuildMCP then reinstalled and relaunched it successfully with the same launch argument.
+
+No exact `Core Spotlight query smoke:` console line was captured from the physical device in this pass. XcodeBuildMCP's device build-and-run output did not provide a runtime log path, `devicectl --console` timed out waiting for CoreDeviceService, and `idevicesyslog` did not attach to the device.
+
+Observed CoreDevice console-capture error:
+
+```text
+ERROR: Timed out waiting for CoreDeviceService to fully initialize. This is likely a bug in CoreDevice. Please file a bug report against CoreDevice | X. (com.apple.coredevice.devicectl error 1 (0x01))
+```
+
+Physical iPhone smoke status: pending console capture. The app install/launch path succeeded, but the Core Spotlight smoke result itself is not claimed as passed on device.
 
 ## Delete All Data Semantics
 
@@ -63,11 +87,11 @@ Foundation Models and `SpotlightSearchTool` need source-card validation, archive
 
 ## Remaining Risks
 
-- Real Core Spotlight query latency and consistency still need simulator or device smoke output.
+- Real Core Spotlight query latency and consistency are validated in simulator only; physical iPhone console capture remains pending.
 - User-facing settings and copy are required before enabling indexing outside internal builds.
 - The query syntax may need refinement after real-world search smoke data.
 - The system search privacy posture must be reviewed before release exposure.
 
 ## Next Recommended Spike
 
-Run the DEBUG Core Spotlight query smoke on simulator and physical iPhone, capture exact console output, and verify no seeded memory or Spotlight item is left behind.
+Run the DEBUG Core Spotlight query smoke on physical iPhone from Xcode's console, or fix CoreDevice console capture, then record the exact `Core Spotlight query smoke:` output and verify no seeded memory or Spotlight item is left behind.
