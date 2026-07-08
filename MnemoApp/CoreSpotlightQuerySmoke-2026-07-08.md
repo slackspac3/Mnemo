@@ -41,31 +41,39 @@ Observed console output:
 Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true archivedRejected=true deletedRejected=true cleared=true durationMs=6848.48 error="none"
 ```
 
-## Physical iPhone Attempt
+## Physical iPhone Result
 
-Physical iPhone validation was attempted on:
+Physical iPhone validation passed on:
 
 - Device: `Mr B`
 - OS: iOS 26.6
 - UDID: `FFE5C4A6-31E5-580B-83D3-CD05172A8F2D`
 
-The app built, installed and launched on the device through XcodeBuildMCP with:
+The smoke was run from Xcode with:
 
 ```text
 --run-core-spotlight-query-smoke
 ```
 
-The user manually deleted the app during validation; XcodeBuildMCP then reinstalled and relaunched it successfully with the same launch argument.
-
-No exact `Core Spotlight query smoke:` console line was captured from the physical device in this pass. XcodeBuildMCP's device build-and-run output did not provide a runtime log path, `devicectl --console` timed out waiting for CoreDeviceService, and `idevicesyslog` did not attach to the device.
-
-Observed CoreDevice console-capture error:
+Captured Xcode console output:
 
 ```text
-ERROR: Timed out waiting for CoreDeviceService to fully initialize. This is likely a bug in CoreDevice. Please file a bug report against CoreDevice | X. (com.apple.coredevice.devicectl error 1 (0x01))
+Core Spotlight query smoke: indexed=true queried=true found=true sourceValidated=true archivedRejected=true deletedRejected=true cleared=true durationMs=324.23 error="none"
+Type: stdio
 ```
 
-Physical iPhone smoke status: pending console capture. The app install/launch path succeeded, but the Core Spotlight smoke result itself is not claimed as passed on device.
+All smoke checks passed on device:
+
+- `indexed=true`
+- `queried=true`
+- `found=true`
+- `sourceValidated=true`
+- `archivedRejected=true`
+- `deletedRejected=true`
+- `cleared=true`
+- `error="none"`
+
+The smoke harness archives, permanently deletes, and clears its own test artefact. No seeded memory or Spotlight item was intentionally left behind.
 
 ## Delete All Data Semantics
 
@@ -87,11 +95,11 @@ Foundation Models and `SpotlightSearchTool` need source-card validation, archive
 
 ## Remaining Risks
 
-- Real Core Spotlight query latency and consistency are validated in simulator only; physical iPhone console capture remains pending.
+- Real Core Spotlight query latency and consistency have one simulator pass and one physical iPhone pass.
 - User-facing settings and copy are required before enabling indexing outside internal builds.
 - The query syntax may need refinement after real-world search smoke data.
 - The system search privacy posture must be reviewed before release exposure.
 
 ## Next Recommended Spike
 
-Run the DEBUG Core Spotlight query smoke on physical iPhone from Xcode's console, or fix CoreDevice console capture, then record the exact `Core Spotlight query smoke:` output and verify no seeded memory or Spotlight item is left behind.
+Design the next Apple-native spike around source-card validation for Spotlight-returned IDs before any Foundation Models or `SpotlightSearchTool` work.
