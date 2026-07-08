@@ -20,14 +20,10 @@ public actor FoundationModelLoader {
     public init() {}
 
     public func load() async {
-        // Foundation Models availability is checked at runtime.
-        // On devices without Apple Intelligence the state becomes unavailable
-        // and ModelRouter routes to MLX or cloud instead.
-        if #available(iOS 26.0, *) {
-            state = .available
-        } else {
-            state = .unavailable("Foundation Models requires iOS 26.0 or later")
-        }
+        // The prototype branch does not link a real Foundation Models session.
+        // Keep this unavailable until the framework import, availability checks,
+        // execution scope, and App Review copy are implemented together.
+        state = .unavailable("Foundation Models are not wired in this build")
     }
 
     public var isAvailable: Bool {

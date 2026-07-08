@@ -23,8 +23,12 @@ final class AppState {
     private var backgroundedAt: Date?
 
     func initialise() async {
-        // Load Foundation Models availability
-        await FoundationModelLoader.shared.load()
+        // AI Core prototype flags default off for TestFlight. Do not start
+        // Foundation Models sessions unless a future internal build explicitly
+        // enables them.
+        if AICoreFlags.testFlightDefault.foundationModelsEnabled {
+            await FoundationModelLoader.shared.load()
+        }
 
         // Open the vector store early so semantic search is ready for capture/recall.
         try? await VectorBridge.shared.open()

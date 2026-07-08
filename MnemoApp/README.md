@@ -18,6 +18,12 @@ Mnemo currently supports:
 
 Mnemo does not yet ship a production Foundation Models or MLX embedding model. The current vector embedding is deterministic placeholder logic intended to keep the app functional until the model assets are bundled.
 
+## AI Core Prototype Branch
+
+The `ai-core-mlx-prototype` branch defines the next architecture for local AI-led memory intelligence while keeping TestFlight V1 behavior stable. AI Core feature flags default off, MLX and Foundation Models loaders fail closed until real model assets/framework sessions are wired, and `AIRecallPipeline` falls back to deterministic `RecallEngine`.
+
+The intended AI Core path is local extraction, real local embeddings, semantic retrieval, local answer composition from retrieved memories only, citation validation, then source cards. This branch does not add MLX Swift as a dependency, bundle model assets, download models, enable Foundation Models inference, or add cloud LLM processing.
+
 ## Repository Layout
 
 ```
@@ -80,6 +86,7 @@ This builds and launches the app on Simulator, resets local test data for that D
 - Use `ManualRecallValidation.md` before tuning recall so changes are driven by observed failures.
 - Use `AutomatedTestingPlan-2026-07-07.md` and `EfficiencyBaseline-2026-07-07.md` before changing recall, indexing, archive/delete, or source citation behavior.
 - Keep privacy and App Review notes factual. Do not claim bundled Foundation Models, MLX embeddings, or cloud LLM processing until those code paths are active and tested.
+- Keep AI Core prototype claims separate from TestFlight V1. If AI Core flags remain off, TestFlight notes should continue to describe deterministic local recall and placeholder model hooks only.
 
 ## Known Gaps
 

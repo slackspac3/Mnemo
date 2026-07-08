@@ -18,6 +18,7 @@ public final class ExtractionEngine: Sendable {
     private let jsonParser: ExtractionJSONParser
     private let anonymisation: AnonymisationLayer
     private let vectorBridge: VectorBridge
+    private let aiCoreFlags: AICoreFlags
 
     public init(
         foundationLoader: FoundationModelLoader = .shared,
@@ -25,7 +26,8 @@ public final class ExtractionEngine: Sendable {
         promptBuilder: ExtractionPromptBuilder = ExtractionPromptBuilder(),
         jsonParser: ExtractionJSONParser = ExtractionJSONParser(),
         anonymisation: AnonymisationLayer = AnonymisationLayer(),
-        vectorBridge: VectorBridge = .shared
+        vectorBridge: VectorBridge = .shared,
+        aiCoreFlags: AICoreFlags = .testFlightDefault
     ) {
         self.foundationLoader = foundationLoader
         self.mlxLoader = mlxLoader
@@ -33,6 +35,7 @@ public final class ExtractionEngine: Sendable {
         self.jsonParser = jsonParser
         self.anonymisation = anonymisation
         self.vectorBridge = vectorBridge
+        self.aiCoreFlags = aiCoreFlags
     }
 
     /// Extract structured memory from raw text input.
@@ -56,8 +59,10 @@ public final class ExtractionEngine: Sendable {
             userContext: userContext
         )
 
-        // Attempt Foundation Models hook first. It returns nil until production inference is wired.
-        if let response = try await foundationLoader.generate(prompt: prompt) {
+        // Attempt Foundation Models only when the AI Core prototype is explicitly enabled.
+        if aiCoreFlags.aiCoreEnabled,
+           aiCoreFlags.foundationModelsEnabled,
+           let response = try await foundationLoader.generate(prompt: prompt) {
             let result = jsonParser.parse(
                 json: response,
                 source: source,
@@ -69,8 +74,10 @@ public final class ExtractionEngine: Sendable {
             }
         }
 
-        // Attempt MLX fallback hook. It returns nil until production inference is wired.
-        if let response = try await mlxLoader.generate(prompt: prompt) {
+        // Attempt MLX only when the AI Core prototype is explicitly enabled.
+        if aiCoreFlags.aiCoreEnabled,
+           aiCoreFlags.mlxAnswerComposerEnabled,
+           let response = try await mlxLoader.generate(prompt: prompt) {
             let result = jsonParser.parse(
                 json: response,
                 source: source,

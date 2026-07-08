@@ -22,13 +22,13 @@ public actor MLXModelLoader {
     public init() {}
 
     /// Load the future MLX model from the app bundle.
-    /// In this build this is a stub that marks the loader as ready for tests.
+    /// In this build no MLX model assets are bundled, so the loader remains unavailable.
     public func load() async throws {
         guard case .notLoaded = state else { return }
         state = .loading
-        // Phase 4 stub: mark ready immediately.
-        // Phase 12: replace with actual MLX model loading via MLXSwift.
-        state = .ready
+        // Replace with actual MLXSwift model loading only after the dependency,
+        // model assets, memory budget, and app build path are validated.
+        state = .failed("MLX model assets are not bundled in this build")
     }
 
     public func unload() {

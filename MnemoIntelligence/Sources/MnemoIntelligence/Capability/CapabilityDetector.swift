@@ -62,7 +62,9 @@ public final class CapabilityDetector: Sendable {
     }
 
     private func checkMnemoMLX() -> Bool {
-        // Placeholder: real MLX availability must check bundled assets and runtime support.
-        return true
+        // Real MLX availability must check linked runtime support and bundled or
+        // user-approved model assets. The prototype branch keeps this false so
+        // Settings and routing never imply MLX inference is active.
+        return false
     }
 }
