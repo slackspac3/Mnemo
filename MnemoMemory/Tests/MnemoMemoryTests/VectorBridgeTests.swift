@@ -59,6 +59,43 @@ struct VectorBridgeTests {
         #expect(abs(magnitude - 1.0) < 0.001 || magnitude == 0.0)
     }
 
+    @Test("EmbeddingHelper exposes deterministic provider metadata")
+    func embeddingHelperExposesDeterministicProviderMetadata() {
+        let helper = EmbeddingHelper()
+
+        #expect(helper.providerDescriptor.id == "mnemo.character-frequency")
+        #expect(helper.providerDescriptor.version == "1")
+        #expect(helper.providerDescriptor.dimensions == EmbeddingHelper.dimensions)
+        #expect(helper.providerDescriptor.executionScope == .deterministicLocal)
+    }
+
+    @Test("MLX embedding provider fails closed without model assets")
+    func mlxEmbeddingProviderFailsClosedWithoutModelAssets() {
+        let helper = EmbeddingHelper(provider: MLXEmbeddingProvider())
+
+        #expect(throws: EmbeddingProviderError.unavailable("MLX embedding model assets are not configured")) {
+            _ = try helper.embedStrict("Mum wears size 38 shoes")
+        }
+        #expect(helper.embed("Mum wears size 38 shoes").isEmpty)
+    }
+
+    @Test("VectorBridge search ignores mismatched embedding dimensions")
+    func vectorBridgeSearchIgnoresMismatchedEmbeddingDimensions() async throws {
+        let bridge = VectorBridge()
+        try await bridge.open()
+
+        let id = UUID()
+        try await bridge.upsert(id: id, embedding: [1, 0, 0], summary: "dimension mismatch")
+
+        let results = try await bridge.search(
+            queryEmbedding: [1, 0, 0, 0],
+            limit: 5
+        )
+
+        #expect(!results.contains(id))
+        try await bridge.delete(id: id)
+    }
+
     @Test("EmbeddingHelper similar texts have higher similarity than dissimilar")
     func embeddingSemanticOrdering() {
         let helper = EmbeddingHelper()

@@ -202,6 +202,7 @@ public actor VectorBridge {
         let allEmbeddings = try fetchAllEmbeddings()
         let ranked = allEmbeddings
             .map { (id: $0.id, score: cosineSimilarity(queryEmbedding, $0.embedding)) }
+            .filter { $0.score > 0 }
             .sorted { $0.score > $1.score }
             .prefix(limit)
             .compactMap { UUID(uuidString: $0.id) }
@@ -336,14 +337,13 @@ public actor VectorBridge {
     // MARK: - Cosine similarity
 
     private func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
-        let count = min(a.count, b.count)
-        guard count > 0 else { return 0 }
+        guard a.count == b.count, !a.isEmpty else { return 0 }
 
         var dot: Float = 0
         var magA: Float = 0
         var magB: Float = 0
 
-        for i in 0..<count {
+        for i in 0..<a.count {
             dot += a[i] * b[i]
             magA += a[i] * a[i]
             magB += b[i] * b[i]

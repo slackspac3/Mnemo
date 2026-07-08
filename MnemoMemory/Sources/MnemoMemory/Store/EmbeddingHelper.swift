@@ -15,19 +15,37 @@ import MnemoCore
 public struct EmbeddingHelper: Sendable {
 
     public static let shared = EmbeddingHelper()
-    public static let dimensions = 26
+    public static let dimensions = CharacterFrequencyEmbeddingProvider.dimensions
 
-    public init() {}
+    public let providerDescriptor: EmbeddingProviderDescriptor
+    private let provider: any EmbeddingProvider
+
+    public init(provider: any EmbeddingProvider = CharacterFrequencyEmbeddingProvider()) {
+        self.provider = provider
+        self.providerDescriptor = provider.descriptor
+    }
 
     /// Generate an embedding for a text string.
     /// Returns a normalised 26-dimensional character frequency vector.
     public func embed(_ text: String) -> [Float] {
-        characterFrequencyEmbedding(from: text)
+        (try? embedStrict(text)) ?? []
+    }
+
+    /// Generate an embedding and surface provider failures.
+    public func embedStrict(_ text: String) throws -> [Float] {
+        let embedding = try provider.embed(text)
+        guard embedding.count == providerDescriptor.dimensions else {
+            throw EmbeddingProviderError.dimensionMismatch(
+                expected: providerDescriptor.dimensions,
+                actual: embedding.count
+            )
+        }
+        return embedding
     }
 
     /// Upsert a memory's embedding into the VectorBridge.
     public func index(id: UUID, summary: String) async throws {
-        let embedding = embed(summary)
+        let embedding = try embedStrict(summary)
         try await VectorBridge.shared.upsert(
             id: id,
             embedding: embedding,
@@ -39,34 +57,12 @@ public struct EmbeddingHelper: Sendable {
     /// Called after restore to rebuild the vector index from SwiftData records.
     public func reindex(snapshots: [MemorySnapshot]) async throws {
         for snapshot in snapshots {
-            let embedding = embed(snapshot.summary)
+            let embedding = try embedStrict(snapshot.summary)
             try await VectorBridge.shared.upsert(
                 id: snapshot.id,
                 embedding: embedding,
                 summary: snapshot.summary
             )
         }
-    }
-
-    // MARK: - Embedding implementations
-
-    /// Character frequency vector normalised to unit length.
-    /// Maps each lowercase letter a-z to a dimension.
-    private func characterFrequencyEmbedding(from text: String) -> [Float] {
-        var freq = [Float](repeating: 0, count: Self.dimensions)
-        let lower = text.lowercased()
-
-        for char in lower {
-            if let ascii = char.asciiValue {
-                let idx = Int(ascii) - Int(Character("a").asciiValue!)
-                if idx >= 0, idx < Self.dimensions {
-                    freq[idx] += 1
-                }
-            }
-        }
-
-        let magnitude = sqrt(freq.map { $0 * $0 }.reduce(0, +))
-        guard magnitude > 0 else { return freq }
-        return freq.map { $0 / magnitude }
     }
 }
