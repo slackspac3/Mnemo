@@ -61,6 +61,22 @@ final class AppState {
                 "error=\"\(spotlightSmokeResult.errorMessage ?? "none")\""
             )
         }
+
+        if FoundationModelsMemorySmokeTest.shouldRunFromLaunchArguments {
+            let foundationModelsSmokeResult = await FoundationModelsMemorySmokeTest.run()
+            print(
+                "Foundation Models memory smoke: " +
+                "available=\(foundationModelsSmokeResult.available) " +
+                "indexed=\(foundationModelsSmokeResult.indexed) " +
+                "queried=\(foundationModelsSmokeResult.queried) " +
+                "sourceCardResolved=\(foundationModelsSmokeResult.sourceCardResolved) " +
+                "modelAnswered=\(foundationModelsSmokeResult.modelAnswered) " +
+                "citationsValid=\(foundationModelsSmokeResult.citationsValid) " +
+                "answer=\"\(foundationModelsSmokeResult.answer)\" " +
+                "durationMs=\(String(format: "%.2f", foundationModelsSmokeResult.durationMs)) " +
+                "error=\"\(foundationModelsSmokeResult.errorMessage ?? "none")\""
+            )
+        }
         #endif
 
         await applyUITestingLaunchArgumentsIfNeeded()

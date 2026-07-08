@@ -201,6 +201,117 @@ struct AICoreTests {
         #expect(result.reason?.localizedCaseInsensitiveContains("unsupported claims") == true)
     }
 
+    @Test("Source-grounded answer parser accepts JSON inside text")
+    func sourceGroundedAnswerParserAcceptsJSONInsideText() throws {
+        let id = UUID()
+        let text = """
+        Result:
+        ```json
+        {
+          "answer": "The waterfall you loved was in Guam.",
+          "sourceIdentifiers": ["\(id.uuidString)"],
+          "insufficientEvidence": false
+        }
+        ```
+        """
+
+        let output = try SourceGroundedAnswerParser().parse(text)
+
+        #expect(output.answer == "The waterfall you loved was in Guam.")
+        #expect(output.sourceIdentifiers == [id.uuidString])
+        #expect(output.insufficientEvidence == false)
+    }
+
+    @Test("Source-grounded validator accepts matching source ID")
+    func sourceGroundedValidatorAcceptsMatchingSourceID() {
+        let id = UUID().uuidString
+        let output = SourceGroundedAnswerOutput(
+            answer: "The waterfall you loved was in Guam.",
+            sourceIdentifiers: [id],
+            insufficientEvidence: false
+        )
+
+        let result = SourceGroundedAnswerValidator().validate(
+            output,
+            candidateSourceIdentifiers: [id]
+        )
+
+        #expect(result.isValid == true)
+        #expect(result.shouldShowAnswer == true)
+    }
+
+    @Test("Source-grounded validator rejects missing citation")
+    func sourceGroundedValidatorRejectsMissingCitation() {
+        let output = SourceGroundedAnswerOutput(
+            answer: "The waterfall you loved was in Guam.",
+            sourceIdentifiers: [],
+            insufficientEvidence: false
+        )
+
+        let result = SourceGroundedAnswerValidator().validate(
+            output,
+            candidateSourceIdentifiers: []
+        )
+
+        #expect(result.isValid == false)
+        #expect(result.reason?.localizedCaseInsensitiveContains("no source") == true)
+    }
+
+    @Test("Source-grounded validator rejects malformed citation")
+    func sourceGroundedValidatorRejectsMalformedCitation() {
+        let output = SourceGroundedAnswerOutput(
+            answer: "The waterfall you loved was in Guam.",
+            sourceIdentifiers: ["not-a-uuid"],
+            insufficientEvidence: false
+        )
+
+        let result = SourceGroundedAnswerValidator().validate(
+            output,
+            candidateSourceIdentifiers: ["not-a-uuid"]
+        )
+
+        #expect(result.isValid == false)
+        #expect(result.reason?.localizedCaseInsensitiveContains("malformed") == true)
+    }
+
+    @Test("Source-grounded validator rejects citation outside returned sources")
+    func sourceGroundedValidatorRejectsCitationOutsideReturnedSources() {
+        let cited = UUID().uuidString
+        let candidate = UUID().uuidString
+        let output = SourceGroundedAnswerOutput(
+            answer: "The waterfall you loved was in Guam.",
+            sourceIdentifiers: [cited],
+            insufficientEvidence: false
+        )
+
+        let result = SourceGroundedAnswerValidator().validate(
+            output,
+            candidateSourceIdentifiers: [candidate]
+        )
+
+        #expect(result.isValid == false)
+        #expect(result.reason?.localizedCaseInsensitiveContains("outside the retrieval set") == true)
+    }
+
+    @Test("Source-grounded validator fails closed for insufficient evidence")
+    func sourceGroundedValidatorFailsClosedForInsufficientEvidence() {
+        let id = UUID().uuidString
+        let output = SourceGroundedAnswerOutput(
+            answer: "The waterfall might have been in Guam.",
+            sourceIdentifiers: [id],
+            insufficientEvidence: true
+        )
+
+        let result = SourceGroundedAnswerValidator().validate(
+            output,
+            candidateSourceIdentifiers: [id]
+        )
+
+        #expect(result.isValid == false)
+        #expect(result.shouldShowAnswer == false)
+        #expect(result.reason?.localizedCaseInsensitiveContains("insufficient evidence") == true)
+    }
+
     @MainActor
     private static func makeMemory(_ text: String) -> MemoryRecord {
         MemoryRecord(
