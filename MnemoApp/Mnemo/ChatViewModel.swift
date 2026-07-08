@@ -241,6 +241,25 @@ final class ChatViewModel {
 
     @MainActor
     private func recall(query: String, context: ModelContext) async throws -> RecallResponse {
+        #if DEBUG
+        if let aiResponse = await ChatAIRecallPipeline.attemptAnswer(
+            query: query,
+            context: context
+        ) {
+            return RecallResponse(
+                text: aiResponse.text,
+                citedMemoryIds: aiResponse.citedMemoryIds,
+                citations: aiResponse.citations.map { citation in
+                    Message.Citation(
+                        id: citation.id,
+                        summary: citation.summary,
+                        source: citation.source
+                    )
+                }
+            )
+        }
+        #endif
+
         let memories = try MemoryCRUD.fetchAll(in: context)
         let result = RecallEngine().recall(query: query, memories: memories)
         return RecallResponse(

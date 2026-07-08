@@ -40,6 +40,15 @@ public struct MemoryCRUD {
             flags: searchIndexingFlags,
             indexer: searchIndexer
         ).indexIfNeeded(memory: record)
+
+        #if DEBUG
+        if !searchIndexingFlags.coreSpotlightIndexingEnabled {
+            try await debugIndexForLocalAIChatIfNeeded(
+                record,
+                searchIndexer: searchIndexer
+            )
+        }
+        #endif
     }
 
     /// Rebuild the VectorBridge index from the current non-archived SwiftData store.
@@ -50,6 +59,41 @@ public struct MemoryCRUD {
         let snapshots = try fetchSnapshots(in: context)
         try await EmbeddingHelper().reindex(snapshots: snapshots)
     }
+
+    #if DEBUG
+    /// Backfill the internal DEBUG Local AI Chat Core Spotlight index.
+    ///
+    /// This deliberately bypasses the normal disabled default because it is
+    /// only called from DEBUG-only app controls. Release builds do not compile
+    /// this path and must not silently index private memories into Spotlight.
+    @MainActor
+    public static func backfillSearchIndex(
+        in context: ModelContext,
+        searchIndexer: (any MemorySearchIndexing)? = nil
+    ) async throws {
+        let searchIndexingService = MemorySearchIndexingService(
+            flags: .debugCoreSpotlight,
+            indexer: searchIndexer
+        )
+        let records = try fetchAll(in: context)
+        for record in records where !record.isArchived {
+            try await searchIndexingService.indexIfNeeded(memory: record)
+        }
+    }
+
+    @MainActor
+    static func debugIndexForLocalAIChatIfNeeded(
+        _ record: MemoryRecord,
+        searchIndexer: (any MemorySearchIndexing)? = nil,
+        isEnabled: Bool = MemoryDebugLocalAIChatIndexing.isEnabled
+    ) async throws {
+        guard isEnabled, !record.isArchived else { return }
+        try await MemorySearchIndexingService(
+            flags: .debugCoreSpotlight,
+            indexer: searchIndexer
+        ).indexIfNeeded(memory: record)
+    }
+    #endif
 
     // MARK: - Read
 

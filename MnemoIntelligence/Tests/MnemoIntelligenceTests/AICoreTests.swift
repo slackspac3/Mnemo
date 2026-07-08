@@ -293,6 +293,25 @@ struct AICoreTests {
         #expect(result.reason?.localizedCaseInsensitiveContains("outside the retrieval set") == true)
     }
 
+    @Test("Source-grounded validator rejects empty answer")
+    func sourceGroundedValidatorRejectsEmptyAnswer() {
+        let id = UUID().uuidString
+        let output = SourceGroundedAnswerOutput(
+            answer: "  ",
+            sourceIdentifiers: [id],
+            insufficientEvidence: false
+        )
+
+        let result = SourceGroundedAnswerValidator().validate(
+            output,
+            candidateSourceIdentifiers: [id]
+        )
+
+        #expect(result.isValid == false)
+        #expect(result.shouldShowAnswer == false)
+        #expect(result.reason?.localizedCaseInsensitiveContains("empty answer") == true)
+    }
+
     @Test("Source-grounded validator fails closed for insufficient evidence")
     func sourceGroundedValidatorFailsClosedForInsufficientEvidence() {
         let id = UUID().uuidString

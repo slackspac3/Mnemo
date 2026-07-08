@@ -147,6 +147,71 @@ struct MemorySearchIndexingTests {
         #expect(fake.removeAllCount == 1)
     }
 
+    #if DEBUG
+    @Test("DEBUG Local AI indexing flag defaults off")
+    func debugLocalAIIndexingFlagDefaultsOff() {
+        UserDefaults.standard.removeObject(
+            forKey: MemoryDebugLocalAIChatIndexing.userDefaultsKey
+        )
+
+        #expect(MemoryDebugLocalAIChatIndexing.isEnabled == false)
+    }
+
+    @Test("Backfill indexes active records and skips archived records")
+    func backfillIndexesActiveRecordsAndSkipsArchivedRecords() async throws {
+        let container = try MemoryStore.makeTestContainer()
+        let context = ModelContext(container)
+        let active = Self.makeRecord("Active waterfall memory")
+        let archived = Self.makeRecord("Archived waterfall memory")
+        archived.isArchived = true
+        try MemoryCRUD.insert(active, into: context)
+        try MemoryCRUD.insert(archived, into: context)
+        let fake = FakeMemorySearchIndexer()
+
+        try await MemoryCRUD.backfillSearchIndex(in: context, searchIndexer: fake)
+
+        #expect(fake.indexedPayloads.map(\.memoryID) == [active.id])
+    }
+
+    @Test("Backfill can run repeatedly without indexing archived records")
+    func backfillCanRunRepeatedlyWithoutIndexingArchivedRecords() async throws {
+        let container = try MemoryStore.makeTestContainer()
+        let context = ModelContext(container)
+        let active = Self.makeRecord("Repeatable active memory")
+        let archived = Self.makeRecord("Repeatable archived memory")
+        archived.isArchived = true
+        try MemoryCRUD.insert(active, into: context)
+        try MemoryCRUD.insert(archived, into: context)
+        let fake = FakeMemorySearchIndexer()
+
+        try await MemoryCRUD.backfillSearchIndex(in: context, searchIndexer: fake)
+        try await MemoryCRUD.backfillSearchIndex(in: context, searchIndexer: fake)
+
+        #expect(Set(fake.indexedPayloads.map(\.memoryID)) == [active.id])
+        #expect(fake.indexedPayloads.allSatisfy { $0.memoryID != archived.id })
+    }
+
+    @Test("Capture-time DEBUG indexing only runs when enabled")
+    func captureTimeDebugIndexingOnlyRunsWhenEnabled() async throws {
+        let record = Self.makeRecord("Capture-time debug memory")
+        let fake = FakeMemorySearchIndexer()
+
+        try await MemoryCRUD.debugIndexForLocalAIChatIfNeeded(
+            record,
+            searchIndexer: fake,
+            isEnabled: false
+        )
+        #expect(fake.indexedPayloads.isEmpty)
+
+        try await MemoryCRUD.debugIndexForLocalAIChatIfNeeded(
+            record,
+            searchIndexer: fake,
+            isEnabled: true
+        )
+        #expect(fake.indexedPayloads.map(\.memoryID) == [record.id])
+    }
+    #endif
+
     @Test("Flag-gated remove all still only runs when enabled")
     func flagGatedRemoveAllStillOnlyRunsWhenEnabled() async throws {
         let fake = FakeMemorySearchIndexer()

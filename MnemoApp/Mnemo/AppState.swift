@@ -81,6 +81,10 @@ final class AppState {
 
         await applyUITestingLaunchArgumentsIfNeeded()
 
+        #if DEBUG
+        await backfillLocalAIChatIndexIfNeeded()
+        #endif
+
         let settings = await MainActor.run {
             let context = MemoryStore.shared.container.mainContext
             let descriptor = FetchDescriptor<UserModel>()
@@ -229,6 +233,15 @@ final class AppState {
         }
         #endif
     }
+
+    #if DEBUG
+    @MainActor
+    private func backfillLocalAIChatIndexIfNeeded() async {
+        guard DebugAIChatSetting.isEnabled else { return }
+        let context = MemoryStore.shared.container.mainContext
+        try? await MemoryCRUD.backfillSearchIndex(in: context)
+    }
+    #endif
 }
 
 #if DEBUG

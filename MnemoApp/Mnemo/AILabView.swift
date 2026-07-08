@@ -1,11 +1,21 @@
 #if DEBUG
+import SwiftData
 import SwiftUI
+import MnemoMemory
 import MnemoUI
 
 struct AILabView: View {
+    @Environment(\.modelContext) private var modelContext
+
     @State private var coreSpotlightResult: AILabSmokeResult?
     @State private var foundationModelsResult: AILabSmokeResult?
     @State private var runningSmoke: AILabSmoke?
+    @State private var localAIChatEnabled = DebugAIChatSetting.isEnabled
+    @State private var isUpdatingLocalAIChat = false
+    @State private var localAIChatErrorMessage: String?
+    @State private var localAIQuestion = ""
+    @State private var localAIManualResult: ChatAIRecallDiagnosticResult?
+    @State private var isAskingLocalAI = false
 
     var body: some View {
         ZStack {
@@ -23,6 +33,82 @@ struct AILabView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(.vertical, DS.Spacing.xs)
+                }
+                .listRowBackground(DS.Colours.surfaceElevated)
+
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { localAIChatEnabled },
+                        set: { enabled in
+                            Task {
+                                await setLocalAIChatEnabled(enabled)
+                            }
+                        }
+                    )) {
+                        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                            Text("Local AI answers in Chat (DEBUG)")
+                                .font(DS.Typography.body)
+                                .foregroundStyle(DS.Colours.textPrimary)
+                            Text("When on, Chat tries an on-device Foundation Models answer grounded in your saved memories, with deterministic recall as fallback. When off, Chat always uses deterministic recall.")
+                                .font(DS.Typography.caption1)
+                                .foregroundStyle(DS.Colours.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .tint(DS.Colours.accent)
+                    .disabled(isUpdatingLocalAIChat)
+
+                    if isUpdatingLocalAIChat {
+                        HStack(spacing: DS.Spacing.sm) {
+                            ProgressView()
+                                .tint(DS.Colours.accent)
+                            Text("Updating Local AI Chat index...")
+                                .font(DS.Typography.caption1)
+                                .foregroundStyle(DS.Colours.textSecondary)
+                        }
+                    }
+
+                    if let localAIChatErrorMessage {
+                        Text(localAIChatErrorMessage)
+                            .font(DS.Typography.caption1)
+                            .foregroundStyle(DS.Colours.destructive)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } header: {
+                    SettingsSectionHeader("Local AI Chat")
+                }
+                .listRowBackground(DS.Colours.surfaceElevated)
+
+                Section {
+                    TextField(
+                        "Ask about a saved memory",
+                        text: $localAIQuestion,
+                        axis: .vertical
+                    )
+                    .font(DS.Typography.body)
+                    .foregroundStyle(DS.Colours.textPrimary)
+                    .lineLimit(2...4)
+
+                    AILabRunButton(
+                        title: "Ask Local AI",
+                        systemImage: "message.badge.waveform.fill",
+                        isRunning: isAskingLocalAI
+                    ) {
+                        askLocalAI()
+                    }
+                    .disabled(
+                        isAskingLocalAI ||
+                        runningSmoke != nil ||
+                        localAIQuestion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    )
+
+                    if let localAIManualResult {
+                        AILabManualLocalAIResultView(result: localAIManualResult)
+                    } else {
+                        AILabEmptyResultView(message: "No Local AI Chat result yet.")
+                    }
+                } header: {
+                    SettingsSectionHeader("Manual Local AI Chat Test")
                 }
                 .listRowBackground(DS.Colours.surfaceElevated)
 
@@ -71,6 +157,52 @@ struct AILabView: View {
         }
         .navigationTitle("AI Lab")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            localAIChatEnabled = DebugAIChatSetting.isEnabled
+        }
+    }
+
+    @MainActor
+    private func setLocalAIChatEnabled(_ enabled: Bool) async {
+        guard !isUpdatingLocalAIChat else { return }
+
+        isUpdatingLocalAIChat = true
+        localAIChatErrorMessage = nil
+
+        do {
+            if enabled {
+                DebugAIChatSetting.isEnabled = true
+                try await MemoryCRUD.backfillSearchIndex(in: modelContext)
+                localAIChatEnabled = true
+            } else {
+                DebugAIChatSetting.isEnabled = false
+                try await MemoryCRUD.resetSearchIndexItems()
+                localAIChatEnabled = false
+                localAIManualResult = nil
+            }
+        } catch {
+            DebugAIChatSetting.isEnabled = !enabled
+            localAIChatEnabled = !enabled
+            localAIChatErrorMessage = error.localizedDescription
+        }
+
+        isUpdatingLocalAIChat = false
+    }
+
+    @MainActor
+    private func askLocalAI() {
+        guard !isAskingLocalAI else { return }
+        isAskingLocalAI = true
+        localAIManualResult = nil
+
+        let question = localAIQuestion
+        Task {
+            localAIManualResult = await ChatAIRecallPipeline.runManualTest(
+                query: question,
+                context: modelContext
+            )
+            isAskingLocalAI = false
+        }
     }
 
     @MainActor
@@ -223,6 +355,36 @@ private struct AILabSmokeResultView: View {
             ForEach(result.extraRows, id: \.0) { row in
                 AILabResultRow(label: row.0, value: row.1)
             }
+        }
+        .padding(.vertical, DS.Spacing.xs)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct AILabManualLocalAIResultView: View {
+    let result: ChatAIRecallDiagnosticResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+            AILabResultRow(label: "answered", value: result.answered ? "true" : "false")
+            AILabResultRow(
+                label: "answer",
+                value: result.answer.isEmpty ? "none" : result.answer
+            )
+            AILabResultRow(
+                label: "sourceCount",
+                value: "\(result.citedSourceIdentifiers.count)"
+            )
+            AILabResultRow(
+                label: "sourceIDs",
+                value: result.citedSourceIdentifiers.isEmpty
+                    ? "none"
+                    : result.citedSourceIdentifiers.joined(separator: ", ")
+            )
+            AILabResultRow(
+                label: "error",
+                value: result.errorMessage ?? "none"
+            )
         }
         .padding(.vertical, DS.Spacing.xs)
         .accessibilityElement(children: .combine)
