@@ -15,6 +15,7 @@ public struct RecallEngine {
 
     @MainActor
     public func recall(query: String, memories: [MemoryRecord]) -> RecallResult {
+        let recallQuery = normalisedQuery(query)
         let activeMemories = memories.filter { !$0.isArchived }
         guard !activeMemories.isEmpty else {
             return RecallResult(
@@ -24,7 +25,7 @@ public struct RecallEngine {
             )
         }
 
-        if isRecentMemoryQuery(query),
+        if isRecentMemoryQuery(recallQuery),
            let latest = activeMemories.sorted(by: { $0.createdAt > $1.createdAt }).first {
             return result(
                 text: """
@@ -35,7 +36,7 @@ public struct RecallEngine {
             )
         }
 
-        if let guardedResult = guardedPrecisionResult(for: query, memories: activeMemories) {
+        if let guardedResult = guardedPrecisionResult(for: recallQuery, memories: activeMemories) {
             return guardedResult
         }
 
@@ -43,7 +44,7 @@ public struct RecallEngine {
             .map { memory in
                 RankedMemory(
                     memory: memory,
-                    score: score(memory: memory, query: query)
+                    score: score(memory: memory, query: recallQuery)
                 )
             }
             .filter { $0.score >= 0.12 }
@@ -63,7 +64,7 @@ public struct RecallEngine {
             )
         }
 
-        let draft = responseDraft(for: topMatches, query: query)
+        let draft = responseDraft(for: topMatches, query: recallQuery)
         return result(text: draft.text, memories: draft.citedMemories)
     }
 
@@ -222,8 +223,17 @@ public struct RecallEngine {
     }
 
     private func sizeAnswer(for query: String, using matches: [RankedMemory]) -> ResponseDraft? {
-        let facts = matches.compactMap { match in
-            extractSizeFact(from: searchableText(for: match.memory), memory: match.memory)
+        let allFacts = matches.flatMap { match in
+            extractSizeFacts(from: searchableText(for: match.memory), memory: match.memory)
+        }
+        let facts = focusedSizeFacts(allFacts, query: query)
+        if facts.isEmpty, !sizeAnchorTokens(in: query).isEmpty {
+            let item = itemLabel(for: query)
+            let subject = sizeSubject(item: item, location: nil, query: query, memoryText: query)
+            return ResponseDraft(
+                text: "I do not have your \(subject) saved.",
+                citedMemories: []
+            )
         }
         guard let first = facts.first else { return nil }
 
@@ -240,6 +250,15 @@ public struct RecallEngine {
             query: query,
             memoryText: searchableText(for: chosen.memory)
         )
+
+        let conditionalFacts = facts.filter { $0.condition != nil }
+        if conditionalFacts.count > 1,
+           uniqueMemories(conditionalFacts.map(\.memory)).count == 1 {
+            return ResponseDraft(
+                text: conditionalSizeSentence(subject: subject, facts: conditionalFacts),
+                citedMemories: [chosen.memory]
+            )
+        }
 
         if uniqueSizes.count > 1 {
             return ResponseDraft(
@@ -258,6 +277,44 @@ public struct RecallEngine {
     }
 
     // MARK: - Text extraction
+
+    private func extractSizeFacts(from text: String, memory: MemoryRecord) -> [SizeFact] {
+        let conditionalFacts = extractConditionalSizeFacts(from: text, memory: memory)
+        if !conditionalFacts.isEmpty {
+            return conditionalFacts
+        }
+
+        if let fact = extractSizeFact(from: text, memory: memory) {
+            return [fact]
+        }
+
+        return []
+    }
+
+    private func extractConditionalSizeFacts(from text: String, memory: MemoryRecord) -> [SizeFact] {
+        let pattern = #"\b(?:size\s+)?(?:is\s+)?(xxs|xs|s|m|l|xl|xxl|small|medium|large|\d{1,3})\s+if\s+([^,.;\n]+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return []
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.matches(in: text, range: range).compactMap { match in
+            guard match.numberOfRanges > 2,
+                  let sizeRange = Range(match.range(at: 1), in: text),
+                  let conditionRange = Range(match.range(at: 2), in: text)
+            else { return nil }
+
+            let rawSize = String(text[sizeRange])
+            let normalisedSize = normaliseSize(rawSize)
+            return SizeFact(
+                displaySize: displaySize(for: normalisedSize),
+                normalisedSize: normalisedSize,
+                location: extractLocation(from: text),
+                condition: cleanSizeCondition(String(text[conditionRange])),
+                memory: memory
+            )
+        }
+    }
 
     private func summaryLine(for memory: MemoryRecord) -> String {
         let summary = memory.summary.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -466,6 +523,7 @@ public struct RecallEngine {
                 displaySize: displaySize,
                 normalisedSize: normalisedSize,
                 location: location,
+                condition: nil,
                 memory: memory
             )
         }
@@ -550,6 +608,18 @@ public struct RecallEngine {
         return String(phrase[..<endIndex])
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "\"'?.!"))
+    }
+
+    private func cleanSizeCondition(_ phrase: String) -> String {
+        var cleaned = phrase
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"'?.!"))
+
+        if cleaned.lowercased().hasPrefix("lining ") {
+            cleaned = "the \(cleaned)"
+        }
+
+        return cleaned
     }
 
     // MARK: - Query intent
@@ -639,7 +709,7 @@ public struct RecallEngine {
 
         let patterns = [
             #"\bwhat\s+size\s+does\s+([A-Za-z][A-Za-z-]+)\s+wear\b"#,
-            #"\b([A-Za-z][A-Za-z-]+)(?:'s)?\s+(?:shoe\s+|shirt\s+|t-shirt\s+|t\s+shirt\s+)?size\b"#,
+            #"\b([A-Za-z][A-Za-z-]+)'s\s+(?:shoe\s+|shirt\s+|t-shirt\s+|t\s+shirt\s+)?size\b"#,
         ]
 
         for pattern in patterns {
@@ -652,7 +722,7 @@ public struct RecallEngine {
             else { continue }
 
             let subject = String(query[subjectRange]).lowercased()
-            if !Self.genericSizeSubjects.contains(subject) {
+            if !isGenericSizeSubject(subject) {
                 return subject
             }
         }
@@ -840,6 +910,85 @@ public struct RecallEngine {
         return variants
     }
 
+    private func fuzzyCanonicalSizeTerm(for token: String) -> String? {
+        guard token.count >= 4 else { return nil }
+        if Self.genericSizeSubjects.contains(token) {
+            return token
+        }
+
+        return Self.fuzzySizeTerms.first { candidate in
+            levenshteinDistance(token, candidate) <= 1
+        }
+    }
+
+    private func isGenericSizeSubject(_ subject: String) -> Bool {
+        Self.genericSizeSubjects.contains(subject) || fuzzyCanonicalSizeTerm(for: subject) != nil
+    }
+
+    private func normalisedQuery(_ query: String) -> String {
+        let words = query.split { character in
+            !character.isLetter && !character.isNumber
+        }
+        var replacements: [String: String] = [:]
+
+        for word in words {
+            let token = String(word).lowercased()
+            if let canonical = fuzzyCanonicalSizeTerm(for: token),
+               canonical != token,
+               Self.sizeItemTerms.contains(canonical) {
+                replacements[token] = canonical
+            }
+        }
+
+        guard !replacements.isEmpty else { return query }
+
+        return query.split(separator: " ", omittingEmptySubsequences: false)
+            .map { rawPart in
+                let token = rawPart.trimmingCharacters(in: .punctuationCharacters).lowercased()
+                guard let replacement = replacements[token] else {
+                    return String(rawPart)
+                }
+                return String(rawPart).replacingOccurrences(
+                    of: token,
+                    with: replacement,
+                    options: [.caseInsensitive]
+                )
+            }
+            .joined(separator: " ")
+    }
+
+    private func levenshteinDistance(_ lhs: String, _ rhs: String) -> Int {
+        let lhsCharacters = Array(lhs)
+        let rhsCharacters = Array(rhs)
+        var distances = Array(
+            repeating: Array(repeating: 0, count: rhsCharacters.count + 1),
+            count: lhsCharacters.count + 1
+        )
+
+        for index in 0...lhsCharacters.count {
+            distances[index][0] = index
+        }
+        for index in 0...rhsCharacters.count {
+            distances[0][index] = index
+        }
+
+        for lhsIndex in 1...lhsCharacters.count {
+            for rhsIndex in 1...rhsCharacters.count {
+                if lhsCharacters[lhsIndex - 1] == rhsCharacters[rhsIndex - 1] {
+                    distances[lhsIndex][rhsIndex] = distances[lhsIndex - 1][rhsIndex - 1]
+                } else {
+                    distances[lhsIndex][rhsIndex] = 1 + min(
+                        distances[lhsIndex - 1][rhsIndex],
+                        distances[lhsIndex][rhsIndex - 1],
+                        distances[lhsIndex - 1][rhsIndex - 1]
+                    )
+                }
+            }
+        }
+
+        return distances[lhsCharacters.count][rhsCharacters.count]
+    }
+
     private func meaningfulTokens(in text: String, expandingSynonyms: Bool) -> Set<String> {
         tokens(in: text, expandingSynonyms: expandingSynonyms).subtracting(Self.stopWords)
     }
@@ -859,15 +1008,59 @@ public struct RecallEngine {
 
     private func itemLabel(for query: String) -> String {
         let lowercased = query.lowercased()
+        let queryTokens = meaningfulTokens(in: query, expandingSynonyms: true)
         if lowercased.contains("t-shirt") ||
             lowercased.contains("t shirt") ||
             lowercased.contains("shirt") {
             return "T-shirt"
         }
-        if lowercased.contains("shoe") {
+        if queryTokens.contains("shoe") || queryTokens.contains("shoes") {
             return "shoe"
         }
+        if queryTokens.contains("suit") {
+            return "suit"
+        }
         return "size"
+    }
+
+    private func focusedSizeFacts(_ facts: [SizeFact], query: String) -> [SizeFact] {
+        let anchors = sizeAnchorTokens(in: query)
+        guard !anchors.isEmpty else { return facts }
+
+        let focused = facts.filter { fact in
+            let memoryTokens = meaningfulTokens(
+                in: searchableText(for: fact.memory),
+                expandingSynonyms: false
+            )
+            return anchors.isSubset(of: memoryTokens)
+        }
+
+        return focused.isEmpty ? [] : focused
+    }
+
+    private func sizeAnchorTokens(in query: String) -> Set<String> {
+        Set(orderedSizeAnchorWords(in: query))
+    }
+
+    private func orderedSizeAnchorWords(in text: String) -> [String] {
+        let words = text.lowercased().split { character in
+            !character.isLetter && !character.isNumber
+        }
+        var seen = Set<String>()
+
+        return words.compactMap { word -> String? in
+            let token = String(word)
+            guard token.count > 2 else { return nil }
+            guard !isIgnoredSizeAnchor(token) else { return nil }
+            guard seen.insert(token).inserted else { return nil }
+            return token
+        }
+    }
+
+    private func isIgnoredSizeAnchor(_ token: String) -> Bool {
+        Self.stopWords.contains(token) ||
+            Self.sizeAnchorIgnoredTerms.contains(token) ||
+            isGenericSizeSubject(token)
     }
 
     private func sizeSubject(
@@ -876,14 +1069,16 @@ public struct RecallEngine {
         query: String,
         memoryText: String
     ) -> String {
-        let combinedText = "\(query) \(memoryText)".lowercased()
-        if combinedText.contains("mum") ||
-            combinedText.contains("mom") ||
-            combinedText.contains("mother") {
-            if combinedText.contains("shoe") {
-                return "Mum's shoe size"
+        if let personSubject = sizePersonSubject(in: query) {
+            let displayName = displayName(for: personSubject)
+            if item == "size" {
+                return "\(displayName)'s size"
             }
-            return "Mum's size"
+            return "\(displayName)'s \(item) size"
+        }
+
+        if let anchoredSubject = anchoredSizeSubject(query: query, item: item) {
+            return anchoredSubject
         }
 
         if let location, item == "size" {
@@ -897,9 +1092,40 @@ public struct RecallEngine {
         }
     }
 
+    private func anchoredSizeSubject(query: String, item: String) -> String? {
+        let anchors = orderedSizeAnchorWords(in: query)
+        guard !anchors.isEmpty else { return nil }
+
+        let anchorPhrase = anchors
+            .map { $0.capitalized }
+            .joined(separator: " ")
+
+        if item == "size" {
+            return "\(anchorPhrase) size"
+        }
+
+        return "\(anchorPhrase) \(item) size"
+    }
+
     private func sizeSentence(subject: String, displaySize: String) -> String {
         let prefix = subject.contains("'") ? "" : "your "
         return "\(prefix)\(subject) is \(displaySize)"
+    }
+
+    private func conditionalSizeSentence(subject: String, facts: [SizeFact]) -> String {
+        let clauses = facts.compactMap { fact -> String? in
+            guard let condition = fact.condition else { return nil }
+            return "\(fact.displaySize) if \(condition)"
+        }
+
+        let joined: String
+        if clauses.count == 2 {
+            joined = "\(clauses[0]), or \(clauses[1])"
+        } else {
+            joined = clauses.dropLast().joined(separator: ", ") + ", or \(clauses.last ?? "")"
+        }
+
+        return "\(capitalizedSentence(sizeSentence(subject: subject, displaySize: joined)))."
     }
 
     private func capitalizedSentence(_ sentence: String) -> String {
@@ -994,6 +1220,7 @@ public struct RecallEngine {
         let displaySize: String
         let normalisedSize: String
         let location: String?
+        let condition: String?
         let memory: MemoryRecord
     }
 
@@ -1017,10 +1244,35 @@ public struct RecallEngine {
         "shoe",
         "shoes",
         "size",
+        "suit",
         "tshirt",
         "wear",
-        "what",
-        "zara"
+        "what"
+    ]
+
+    private static let sizeItemTerms: Set<String> = [
+        "shoe",
+        "shoes",
+        "shirt",
+        "suit",
+        "tshirt",
+    ]
+
+    private static let fuzzySizeTerms: [String] = [
+        "shoe",
+        "shoes",
+        "shirt",
+        "suit",
+        "size",
+    ]
+
+    private static let sizeAnchorIgnoredTerms: Set<String> = [
+        "meant",
+        "mean",
+        "mine",
+        "my",
+        "now",
+        "your",
     ]
 
     private static let synonyms: [String: Set<String>] = [

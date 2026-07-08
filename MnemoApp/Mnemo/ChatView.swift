@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+#if os(iOS)
+import UIKit
+#endif
 import MnemoUI
 import MnemoCore
 import MnemoMemory
@@ -93,6 +96,12 @@ struct ChatView: View {
                             .padding(.bottom, DS.Spacing.xl)
                         }
                         .scrollDismissesKeyboard(.interactively)
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 12.0)
+                                .onChanged { _ in
+                                    dismissKeyboard()
+                                }
+                        )
                         .onChange(of: viewModel.messages.count) {
                             if viewModel.messages.last?.role == .assistant {
                                 HapticManager.impact(.soft)
@@ -203,6 +212,17 @@ struct ChatView: View {
     @MainActor
     private func deleteSourceMemoryPermanently(id: UUID) async throws {
         try await MemoryCRUD.deletePermanently(id: id, in: modelContext)
+    }
+
+    private func dismissKeyboard() {
+        #if os(iOS)
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+        #endif
     }
 }
 

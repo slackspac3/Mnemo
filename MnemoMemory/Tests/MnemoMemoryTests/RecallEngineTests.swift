@@ -352,6 +352,43 @@ struct RecallEngineTests {
         #expect(!result.text.localizedCaseInsensitiveContains("It was in Dubai Mall"))
     }
 
+    @Test("Branded conditional shoe size tolerates typo and cites only matching memory")
+    @MainActor
+    func brandedConditionalShoeSizeToleratesTypoAndFiltersSources() {
+        let target = Self.makeMemory(
+            "New Balance shoe size is 42 if lining is thick, 41 if lining is thin.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(180)
+        )
+        let otherShoe = Self.makeMemory(
+            "Cole Haan shoe size is 7.5.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(240)
+        )
+        let otherClothing = Self.makeMemory(
+            "My Zara T-shirt size is M.",
+            type: .fact,
+            source: .text,
+            createdAt: referenceDate.addingTimeInterval(300)
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is my new balance show size?",
+            memories: [target, otherShoe, otherClothing]
+        )
+
+        #expect(result.citedMemoryIds == [target.id])
+        #expect(result.text.localizedCaseInsensitiveContains("New Balance shoe size"))
+        #expect(result.text.localizedCaseInsensitiveContains("42"))
+        #expect(result.text.localizedCaseInsensitiveContains("the lining is thick"))
+        #expect(result.text.localizedCaseInsensitiveContains("41"))
+        #expect(result.text.localizedCaseInsensitiveContains("the lining is thin"))
+        #expect(!result.citedMemoryIds.contains(otherShoe.id))
+        #expect(!result.citedMemoryIds.contains(otherClothing.id))
+    }
+
     private func assert(
         result: RecallResult,
         satisfies testCase: ManualRecallFixture.ValidationCase,
