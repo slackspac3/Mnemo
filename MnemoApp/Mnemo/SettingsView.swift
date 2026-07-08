@@ -189,6 +189,33 @@ struct SettingsView: View {
                     }
                     .listRowBackground(DS.Colours.surfaceElevated)
 
+                    #if DEBUG
+                    Section {
+                        NavigationLink {
+                            AILabView()
+                        } label: {
+                            HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                                Image(systemName: "apple.intelligence")
+                                    .font(DS.Typography.subheadline)
+                                    .foregroundStyle(DS.Colours.sense)
+                                    .accessibilityHidden(true)
+
+                                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                                    Text("AI Lab")
+                                        .font(DS.Typography.body)
+                                        .foregroundStyle(DS.Colours.textPrimary)
+                                    Text("Internal DEBUG smoke tests. Chat recall stays deterministic.")
+                                        .font(DS.Typography.caption1)
+                                        .foregroundStyle(DS.Colours.textSecondary)
+                                }
+                            }
+                        }
+                    } header: {
+                        SettingsSectionHeader("Internal")
+                    }
+                    .listRowBackground(DS.Colours.surfaceElevated)
+                    #endif
+
                     Section {
                         if let destructiveErrorMessage {
                             Text(destructiveErrorMessage)
