@@ -33,6 +33,19 @@ final class AppState {
         // Open the vector store early so semantic search is ready for capture/recall.
         try? await VectorBridge.shared.open()
 
+        #if DEBUG
+        if MLXRuntimeSmokeTest.shouldRunFromLaunchArguments {
+            let mlxSmokeResult = MLXRuntimeSmokeTest.run()
+            print(
+                "MLX runtime smoke: linked=\(mlxSmokeResult.isLinked) " +
+                "passed=\(mlxSmokeResult.operationSucceeded) " +
+                "durationMs=\(String(format: "%.2f", mlxSmokeResult.durationMs)) " +
+                "preview=\"\(mlxSmokeResult.resultPreview)\" " +
+                "error=\"\(mlxSmokeResult.errorMessage ?? "none")\""
+            )
+        }
+        #endif
+
         await applyUITestingLaunchArgumentsIfNeeded()
 
         let settings = await MainActor.run {
