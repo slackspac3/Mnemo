@@ -17,7 +17,9 @@ public struct MemoryCRUD {
     @MainActor
     public static func insertAndIndex(
         _ record: MemoryRecord,
-        into context: ModelContext
+        into context: ModelContext,
+        searchIndexingFlags: MemorySearchIndexingFlags = .disabled,
+        searchIndexer: (any MemorySearchIndexing)? = nil
     ) async throws {
         context.insert(record)
         try context.save()
@@ -33,6 +35,11 @@ public struct MemoryCRUD {
                 throw error
             }
         }
+
+        try await MemorySearchIndexingService(
+            flags: searchIndexingFlags,
+            indexer: searchIndexer
+        ).indexIfNeeded(memory: record)
     }
 
     /// Rebuild the VectorBridge index from the current non-archived SwiftData store.
@@ -80,21 +87,35 @@ public struct MemoryCRUD {
     /// Archive a memory and remove its vector index row so hidden memories do
     /// not participate in vector-backed recall, corroboration, or threads.
     @MainActor
-    public static func archiveAndUnindex(id: UUID, in context: ModelContext) async throws {
+    public static func archiveAndUnindex(
+        id: UUID,
+        in context: ModelContext,
+        searchIndexingFlags: MemorySearchIndexingFlags = .disabled,
+        searchIndexer: (any MemorySearchIndexing)? = nil
+    ) async throws {
+        let searchIndexingService = MemorySearchIndexingService(
+            flags: searchIndexingFlags,
+            indexer: searchIndexer
+        )
+
         guard let record = try fetch(id: id, in: context) else {
             try await VectorBridge.shared.delete(id: id)
+            try await searchIndexingService.removeIfNeeded(memoryID: id)
             return
         }
         let summary = record.summary
 
         try await VectorBridge.shared.delete(id: id)
+        try await searchIndexingService.removeIfNeeded(memoryID: id)
 
         do {
             record.isArchived = true
             record.updatedAt = Date()
             try context.save()
         } catch {
+            record.isArchived = false
             try? await EmbeddingHelper().index(id: id, summary: summary)
+            try? await searchIndexingService.indexIfNeeded(memory: record)
             throw error
         }
     }
@@ -142,21 +163,48 @@ public struct MemoryCRUD {
     /// Permanently delete one memory and remove its vector index row.
     /// This is the individual-memory privacy delete path.
     @MainActor
-    public static func deletePermanently(id: UUID, in context: ModelContext) async throws {
+    public static func deletePermanently(
+        id: UUID,
+        in context: ModelContext,
+        searchIndexingFlags: MemorySearchIndexingFlags = .disabled,
+        searchIndexer: (any MemorySearchIndexing)? = nil
+    ) async throws {
+        let searchIndexingService = MemorySearchIndexingService(
+            flags: searchIndexingFlags,
+            indexer: searchIndexer
+        )
+
         guard let record = try fetch(id: id, in: context) else {
             try await VectorBridge.shared.delete(id: id)
+            try await searchIndexingService.removeIfNeeded(memoryID: id)
             return
         }
         let summary = record.summary
 
         try await VectorBridge.shared.delete(id: id)
+        try await searchIndexingService.removeIfNeeded(memoryID: id)
 
         do {
             context.delete(record)
             try context.save()
         } catch {
             try? await EmbeddingHelper().index(id: id, summary: summary)
+            try? await searchIndexingService.indexIfNeeded(memory: record)
             throw error
         }
+    }
+
+    /// Remove all Mnemo-owned items from the app search index.
+    /// This is disabled by default and exists so Delete All Data can clear
+    /// Core Spotlight when the internal indexing flag is enabled.
+    @MainActor
+    public static func removeAllSearchIndexItems(
+        searchIndexingFlags: MemorySearchIndexingFlags = .disabled,
+        searchIndexer: (any MemorySearchIndexing)? = nil
+    ) async throws {
+        try await MemorySearchIndexingService(
+            flags: searchIndexingFlags,
+            indexer: searchIndexer
+        ).removeAllIfNeeded()
     }
 }
