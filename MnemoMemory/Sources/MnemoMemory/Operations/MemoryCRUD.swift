@@ -1,15 +1,27 @@
 import Foundation
+#if DEBUG && canImport(OSLog)
+import OSLog
+#endif
 import SwiftData
 import MnemoCore
 
 /// CRUD operations for MemoryRecord and PersonSubject.
 public struct MemoryCRUD {
+    #if DEBUG && canImport(OSLog)
+    private static let debugLogger = Logger(
+        subsystem: "com.thinkact.mnemo",
+        category: "DebugDiagnostics"
+    )
+    #endif
 
     // MARK: - Create
 
     public static func insert(_ record: MemoryRecord, into context: ModelContext) throws {
         context.insert(record)
         try context.save()
+        #if DEBUG
+        debugLog("MemoryInsert saved source=\(record.inputSource) summaryLength=\(record.summary.count) tags=\(record.tags.count) indexed=false")
+        #endif
     }
 
     /// Insert a MemoryRecord and index it in the VectorBridge for semantic search.
@@ -23,6 +35,9 @@ public struct MemoryCRUD {
     ) async throws {
         context.insert(record)
         try context.save()
+        #if DEBUG
+        debugLog("MemoryInsert saved source=\(record.inputSource) summaryLength=\(record.summary.count) tags=\(record.tags.count) indexed=pending")
+        #endif
 
         let helper = EmbeddingHelper()
         do {
@@ -35,6 +50,9 @@ public struct MemoryCRUD {
                 throw error
             }
         }
+        #if DEBUG
+        debugLog("MemoryInsert vectorIndexed=true source=\(record.inputSource)")
+        #endif
 
         try await MemorySearchIndexingService(
             flags: searchIndexingFlags,
@@ -87,11 +105,24 @@ public struct MemoryCRUD {
         searchIndexer: (any MemorySearchIndexing)? = nil,
         isEnabled: Bool = MemoryDebugLocalAIChatIndexing.isEnabled
     ) async throws {
-        guard isEnabled, !record.isArchived else { return }
+        guard isEnabled, !record.isArchived else {
+            debugLog("LocalAIChat memoryIndex skipped enabled=\(isEnabled) archived=\(record.isArchived)")
+            return
+        }
         try await MemorySearchIndexingService(
             flags: .debugCoreSpotlight,
             indexer: searchIndexer
         ).indexIfNeeded(memory: record)
+        debugLog("LocalAIChat memoryIndex indexed=true source=\(record.inputSource)")
+    }
+    #endif
+
+    #if DEBUG
+    private static func debugLog(_ message: String) {
+        print("[MnemoDebug] \(message)")
+        #if canImport(OSLog)
+        debugLogger.debug("[MnemoDebug] \(message, privacy: .public)")
+        #endif
     }
     #endif
 

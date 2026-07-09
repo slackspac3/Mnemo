@@ -19,6 +19,18 @@ struct AICoreTests {
         #expect(flags.hasModelBackedPathEnabled == false)
     }
 
+    @Test("DEBUG Foundation Models extraction flag keeps deterministic fallback")
+    func debugFoundationModelsExtractionFlagKeepsFallback() {
+        let flags = AICoreFlags.debugLocalFoundationModelsExtraction
+
+        #expect(flags.aiCoreEnabled == true)
+        #expect(flags.foundationModelsEnabled == true)
+        #expect(flags.mlxEmbeddingsEnabled == false)
+        #expect(flags.mlxAnswerComposerEnabled == false)
+        #expect(flags.deterministicRecallFallbackEnabled == true)
+        #expect(flags.hasModelBackedPathEnabled == true)
+    }
+
     @Test("Capability detector does not report MLX without assets")
     func capabilityDetectorDoesNotReportMLXWithoutAssets() {
         let capability = CapabilityDetector().detect()
@@ -40,17 +52,20 @@ struct AICoreTests {
         }
     }
 
-    @Test("Foundation Models loader stays unavailable until wired")
-    func foundationModelsLoaderStaysUnavailableUntilWired() async {
+    @Test("Foundation Models loader reports real availability or fails closed")
+    func foundationModelsLoaderReportsAvailabilityOrFailsClosed() async {
         let loader = FoundationModelLoader()
 
         await loader.load()
 
-        #expect(await loader.isAvailable == false)
-        if case let .unavailable(reason) = await loader.state {
-            #expect(reason.localizedCaseInsensitiveContains("not wired"))
-        } else {
-            Issue.record("Expected Foundation Models loader to remain unavailable.")
+        switch await loader.state {
+        case .available:
+            #expect(await loader.isAvailable == true)
+        case .unavailable(let reason):
+            #expect(!reason.isEmpty)
+            #expect(await loader.isAvailable == false)
+        case .notLoaded:
+            Issue.record("Expected loader to resolve availability.")
         }
     }
 

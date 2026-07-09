@@ -1,5 +1,8 @@
 import Foundation
 import MnemoCore
+#if DEBUG && canImport(OSLog)
+import OSLog
+#endif
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -18,6 +21,12 @@ import Vision
 /// Raw image data never leaves the device and is never included in
 /// cloud escalation payloads.
 public struct ImageCaptureHandler: Sendable {
+    #if DEBUG && canImport(OSLog)
+    private static let debugLogger = Logger(
+        subsystem: "com.thinkact.mnemo",
+        category: "DebugDiagnostics"
+    )
+    #endif
 
     public init() {}
 
@@ -31,6 +40,7 @@ public struct ImageCaptureHandler: Sendable {
 
         let extractedText = try await recogniseText(in: cgImage)
         let imageData = image.jpegData(compressionQuality: 0.7) ?? Data()
+        Self.debugLog("ImageCapture ocr extractedTextLength=\(extractedText.count) imageBytes=\(imageData.count)")
 
         return ClarifyingQuestionPayload(
             extractedText: extractedText,
@@ -48,6 +58,7 @@ public struct ImageCaptureHandler: Sendable {
         let combinedText = userContext.isEmpty
             ? payload.extractedText
             : "\(userContext). \(payload.extractedText)"
+        Self.debugLog("ImageCapture finalised userContextLength=\(userContext.count) combinedTextLength=\(combinedText.count)")
 
         return RawCapture(
             text: combinedText,
@@ -85,4 +96,13 @@ public struct ImageCaptureHandler: Sendable {
         }
     }
     #endif
+
+    private static func debugLog(_ message: String) {
+        #if DEBUG
+        print("[MnemoDebug] \(message)")
+        #if canImport(OSLog)
+        debugLogger.debug("[MnemoDebug] \(message, privacy: .public)")
+        #endif
+        #endif
+    }
 }

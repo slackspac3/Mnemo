@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SwiftUI
 import SwiftData
 import MnemoCore
@@ -9,6 +10,12 @@ import MnemoSecurity
 /// Top-level application state observable by all views.
 @Observable
 final class AppState {
+    #if DEBUG
+    private static let debugLogger = Logger(
+        subsystem: "com.thinkact.mnemo",
+        category: "DebugDiagnostics"
+    )
+    #endif
 
     var isInitialised: Bool = false
     var deviceCapability: DeviceCapability = CapabilityDetector().detect()
@@ -23,6 +30,10 @@ final class AppState {
     private var backgroundedAt: Date?
 
     func initialise() async {
+        #if DEBUG
+        debugLog("App initialise debugDiagnostics=true localAIChatFirst=\(DebugAIChatSetting.usesLocalAIFirst)")
+        #endif
+
         // AI Core prototype flags default off for TestFlight. Do not start
         // Foundation Models sessions unless a future internal build explicitly
         // enables them.
@@ -105,6 +116,13 @@ final class AppState {
             isInitialised = true
         }
     }
+
+    #if DEBUG
+    private func debugLog(_ message: String) {
+        print("[MnemoDebug] \(message)")
+        Self.debugLogger.debug("[MnemoDebug] \(message, privacy: .public)")
+    }
+    #endif
 
     @MainActor
     func handleScenePhase(_ scenePhase: ScenePhase) {

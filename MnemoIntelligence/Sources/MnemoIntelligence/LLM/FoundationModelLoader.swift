@@ -1,6 +1,10 @@
 import Foundation
 import MnemoCore
 
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
+
 /// Wraps Apple's Foundation Models framework for on-device LLM inference.
 /// Uses availability checks so the app degrades gracefully on unsupported devices.
 /// The actual FoundationModels import is gated — if the framework is unavailable
@@ -20,10 +24,24 @@ public actor FoundationModelLoader {
     public init() {}
 
     public func load() async {
-        // The prototype branch does not link a real Foundation Models session.
-        // Keep this unavailable until the framework import, availability checks,
-        // execution scope, and App Review copy are implemented together.
-        state = .unavailable("Foundation Models are not wired in this build")
+        #if canImport(FoundationModels)
+        guard #available(iOS 26.0, macOS 26.0, visionOS 26.0, *) else {
+            state = .unavailable("Foundation Models require iOS 26.0, macOS 26.0, or visionOS 26.0.")
+            return
+        }
+
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            state = .unavailable(
+                "Foundation Models unavailable: \(Self.availabilityDescription(model.availability))."
+            )
+            return
+        }
+
+        state = .available
+        #else
+        state = .unavailable("FoundationModels framework is unavailable in this build.")
+        #endif
     }
 
     public var isAvailable: Bool {
@@ -34,10 +52,54 @@ public actor FoundationModelLoader {
     /// Generate a completion using Foundation Models.
     /// Returns nil if unavailable — caller falls through to MLX or cloud.
     public func generate(prompt: String, maxTokens: Int = 512) async throws -> String? {
-        guard isAvailable else { return nil }
-        // Foundation Models session created per call for stateless extraction.
-        // When the real FoundationModels framework is linked, replace this
-        // stub with: let session = LanguageModelSession(); return try await session.respond(to: prompt)
+        #if canImport(FoundationModels)
+        guard #available(iOS 26.0, macOS 26.0, visionOS 26.0, *) else {
+            state = .unavailable("Foundation Models require iOS 26.0, macOS 26.0, or visionOS 26.0.")
+            return nil
+        }
+
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            state = .unavailable(
+                "Foundation Models unavailable: \(Self.availabilityDescription(model.availability))."
+            )
+            return nil
+        }
+
+        state = .available
+        let session = LanguageModelSession(model: model)
+        let response = try await session.respond(
+            to: prompt,
+            options: GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.0,
+                maximumResponseTokens: maxTokens
+            )
+        )
+        return response.content
+        #else
+        state = .unavailable("FoundationModels framework is unavailable in this build.")
         return nil
+        #endif
     }
+
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
+    private static func availabilityDescription(
+        _ availability: SystemLanguageModel.Availability
+    ) -> String {
+        switch availability {
+        case .available:
+            return "available"
+        case .unavailable(.deviceNotEligible):
+            return "deviceNotEligible"
+        case .unavailable(.appleIntelligenceNotEnabled):
+            return "appleIntelligenceNotEnabled"
+        case .unavailable(.modelNotReady):
+            return "modelNotReady"
+        @unknown default:
+            return "unknown"
+        }
+    }
+    #endif
 }

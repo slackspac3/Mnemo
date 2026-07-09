@@ -36,6 +36,14 @@ public struct AICoreFlags: Equatable, Sendable {
         deterministicRecallFallbackEnabled: true
     )
 
+    public static let debugLocalFoundationModelsExtraction = AICoreFlags(
+        aiCoreEnabled: true,
+        mlxEmbeddingsEnabled: false,
+        mlxAnswerComposerEnabled: false,
+        foundationModelsEnabled: true,
+        deterministicRecallFallbackEnabled: true
+    )
+
     public var hasModelBackedPathEnabled: Bool {
         aiCoreEnabled &&
             (mlxEmbeddingsEnabled || mlxAnswerComposerEnabled || foundationModelsEnabled)

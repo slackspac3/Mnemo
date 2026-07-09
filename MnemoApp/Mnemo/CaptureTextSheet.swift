@@ -20,7 +20,11 @@ struct CaptureTextSheet: View {
     @State private var savedSummary: String?
 
     private let handler = TextCaptureHandler()
+    #if DEBUG
+    private let engine = ExtractionEngine(aiCoreFlags: .debugLocalFoundationModelsExtraction)
+    #else
     private let engine = ExtractionEngine()
+    #endif
 
     var body: some View {
         NavigationStack {

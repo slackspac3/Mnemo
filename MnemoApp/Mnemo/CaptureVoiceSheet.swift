@@ -22,7 +22,11 @@ struct CaptureVoiceSheet: View {
     @State private var errorMessage: String?
     @State private var savedSummary: String?
 
+    #if DEBUG
+    private let engine = ExtractionEngine(aiCoreFlags: .debugLocalFoundationModelsExtraction)
+    #else
     private let engine = ExtractionEngine()
+    #endif
 
     var body: some View {
         NavigationStack {

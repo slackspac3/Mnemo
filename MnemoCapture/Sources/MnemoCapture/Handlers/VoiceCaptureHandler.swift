@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import Combine
 import MnemoCore
+import OSLog
 import Speech
 
 /// Handles voice capture using iOS 18 native speech recognition.
@@ -14,6 +15,12 @@ import Speech
 /// without a persistent audio use case causes App Store rejection.
 @MainActor
 public final class VoiceCaptureHandler: NSObject, ObservableObject {
+    #if DEBUG
+    private static let debugLogger = Logger(
+        subsystem: "com.thinkact.mnemo",
+        category: "DebugDiagnostics"
+    )
+    #endif
 
     @Published public var transcript: String = ""
     @Published public var isRecording: Bool = false
@@ -70,6 +77,9 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
     // MARK: - Recording
 
     public func startRecording() throws {
+        #if DEBUG
+        debugLog("VoiceCapture start requested")
+        #endif
         recognitionTask?.cancel()
         recognitionTask = nil
         transcript = ""
@@ -79,8 +89,14 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         cleanupRecordingFile()
 
         guard let recognizer = availableSpeechRecognizer() else {
+            #if DEBUG
+            debugLog("VoiceCapture speechRecognizerAvailable=false")
+            #endif
             throw CaptureError.transcriptionFailed("Speech recognition is not available right now")
         }
+        #if DEBUG
+        debugLog("VoiceCapture speechRecognizerAvailable=true locale=\(recognizer.locale.identifier)")
+        #endif
 
         let audioEngine = AVAudioEngine()
         let request = SFSpeechAudioBufferRecognitionRequest()
@@ -132,6 +148,9 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
             hasReportedAudio = true
             Task { @MainActor in
                 self?.isReceivingAudio = true
+                #if DEBUG
+                self?.debugLog("VoiceCapture receivingAudio=true")
+                #endif
             }
         }
 
@@ -155,6 +174,9 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
 
             self.audioEngine = audioEngine
             self.isRecording = true
+            #if DEBUG
+            debugLog("VoiceCapture recordingStarted=true")
+            #endif
         } catch {
             inputNode.removeTap(onBus: 0)
             recognitionTask?.cancel()
@@ -162,11 +184,17 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
             recognitionRequest = nil
             cleanupRecordingFile()
             deactivateAudioSession()
+            #if DEBUG
+            debugLog("VoiceCapture recordingStarted=false error=\(error.localizedDescription)")
+            #endif
             throw error
         }
     }
 
     public func stopRecording() -> RawCapture? {
+        #if DEBUG
+        debugLog("VoiceCapture stop requested hadTranscript=\(!transcript.isEmpty) receivingAudio=\(isReceivingAudio)")
+        #endif
         audioEngine?.stop()
         audioEngine?.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()
@@ -179,8 +207,16 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         deactivateAudioSession()
 
         let capturedTranscript = transcript
-        guard !capturedTranscript.isEmpty else { return nil }
+        guard !capturedTranscript.isEmpty else {
+            #if DEBUG
+            debugLog("VoiceCapture captureCreated=false reason=emptyTranscript")
+            #endif
+            return nil
+        }
 
+        #if DEBUG
+        debugLog("VoiceCapture captureCreated=true transcriptLength=\(capturedTranscript.count)")
+        #endif
         return RawCapture(
             text: capturedTranscript,
             source: .voice,
@@ -191,6 +227,9 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
     public func stopRecordingAndTranscribe() async -> RawCapture? {
         if let capture = stopRecording() {
             cleanupRecordingFile()
+            #if DEBUG
+            debugLog("VoiceCapture finalCaptureSource=live")
+            #endif
             return capture
         }
 
@@ -199,12 +238,18 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
             try? await Task.sleep(nanoseconds: 200_000_000)
             if let capture = currentCapture() {
                 cleanupRecordingFile()
+                #if DEBUG
+                debugLog("VoiceCapture finalCaptureSource=delayedLive transcriptLength=\(capture.text.count)")
+                #endif
                 return capture
             }
         }
 
         guard isReceivingAudio, let recordingURL else {
             cleanupRecordingFile()
+            #if DEBUG
+            debugLog("VoiceCapture finalCaptureSource=none receivingAudio=\(isReceivingAudio)")
+            #endif
             return nil
         }
 
@@ -218,6 +263,9 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
 
             transcript = trimmed
             cleanupRecordingFile()
+            #if DEBUG
+            debugLog("VoiceCapture finalCaptureSource=file transcriptLength=\(trimmed.count)")
+            #endif
             return RawCapture(
                 text: trimmed,
                 source: .voice,
@@ -226,6 +274,9 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         } catch {
             recognitionErrorMessage = error.localizedDescription
             cleanupRecordingFile()
+            #if DEBUG
+            debugLog("VoiceCapture finalCaptureSource=error error=\(error.localizedDescription)")
+            #endif
             return nil
         }
     }
@@ -351,6 +402,13 @@ public final class VoiceCaptureHandler: NSObject, ObservableObject {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         #endif
     }
+
+    #if DEBUG
+    private func debugLog(_ message: String) {
+        print("[MnemoDebug] \(message)")
+        Self.debugLogger.debug("[MnemoDebug] \(message, privacy: .public)")
+    }
+    #endif
 
     private nonisolated static func normalizedAudioLevel(for buffer: AVAudioPCMBuffer) -> Double {
         guard let channels = buffer.floatChannelData else { return 0.0 }

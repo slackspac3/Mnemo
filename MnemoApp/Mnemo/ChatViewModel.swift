@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SwiftData
 import SwiftUI
 import MnemoCore
@@ -8,6 +9,12 @@ import MnemoMemory
 /// Manages the conversation history, memory recall, and pattern insights.
 @Observable
 final class ChatViewModel {
+    #if DEBUG
+    private static let debugLogger = Logger(
+        subsystem: "com.thinkact.mnemo",
+        category: "DebugDiagnostics"
+    )
+    #endif
 
     struct Message: Identifiable {
         let id: UUID
@@ -261,7 +268,13 @@ final class ChatViewModel {
         #endif
 
         let memories = try MemoryCRUD.fetchAll(in: context)
+        #if DEBUG
+        debugLog("DeterministicRecall start memories=\(memories.count) queryLength=\(query.count)")
+        #endif
         let result = RecallEngine().recall(query: query, memories: memories)
+        #if DEBUG
+        debugLog("DeterministicRecall answered citations=\(result.citations.count)")
+        #endif
         return RecallResponse(
             text: result.text,
             citedMemoryIds: result.citedMemoryIds,
@@ -284,6 +297,13 @@ final class ChatViewModel {
 
         return "Untitled memory"
     }
+
+    #if DEBUG
+    private func debugLog(_ message: String) {
+        print("[MnemoDebug] \(message)")
+        Self.debugLogger.debug("[MnemoDebug] \(message, privacy: .public)")
+    }
+    #endif
 
     private func searchableText(for memory: MemoryRecord) -> String {
         ([memory.summary, memory.rawInput] + memory.tags).joined(separator: " ")

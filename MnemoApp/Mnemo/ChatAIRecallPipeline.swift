@@ -1,5 +1,6 @@
 #if DEBUG
 import Foundation
+import OSLog
 import SwiftData
 import MnemoIntelligence
 import MnemoMemory
@@ -40,11 +41,25 @@ enum ChatAIRecallPipeline {
         query: String,
         context: ModelContext
     ) async -> ChatAIRecallResult? {
-        guard DebugAIChatSetting.usesLocalAIFirst else { return nil }
+        guard DebugAIChatSetting.usesLocalAIFirst else {
+            debugLog("LocalAIChat disabled fallback=true queryLength=\(query.count)")
+            return nil
+        }
+
+        debugLog("LocalAIChat attempt queryLength=\(query.count)")
 
         do {
-            return try await answer(query: query, context: context)
+            let result = try await answer(query: query, context: context)
+            debugLog("LocalAIChat answered=true citations=\(result.citations.count)")
+            return result
+        } catch let error as LocalAIChatFailure {
+            let diagnostic = error.diagnostic
+            debugLog(
+                "LocalAIChat answered=false fallback=true retrieved=\(diagnostic?.retrievedSourceCount ?? 0) resolved=\(diagnostic?.resolvedSourceCount ?? 0) validation=\(diagnostic?.validationError ?? "none") fidelity=\(diagnostic?.fidelityValidationError ?? "none") error=\(error.localizedDescription)"
+            )
+            return nil
         } catch {
+            debugLog("LocalAIChat answered=false fallback=true error=\(error.localizedDescription)")
             return nil
         }
     }
@@ -118,12 +133,15 @@ enum ChatAIRecallPipeline {
     ) async throws -> ChatAIRecallAnswerDetails {
         let model = SystemLanguageModel.default
         guard case .available = model.availability else {
+            debugLog("LocalAIChat foundationModelsAvailable=false availability=\(availabilityDescription(model.availability))")
             throw LocalAIChatError.foundationModelsUnavailable(
                 "Foundation Models unavailable: \(availabilityDescription(model.availability))."
             )
         }
+        debugLog("LocalAIChat foundationModelsAvailable=true")
 
         try await MemoryCRUD.backfillSearchIndex(in: context)
+        debugLog("LocalAIChat indexBackfill complete")
 
         let indexer = CoreSpotlightMemoryIndexer()
         let service = MemorySearchIndexingService(
@@ -136,6 +154,7 @@ enum ChatAIRecallPipeline {
             service: service,
             limit: 5
         )
+        debugLog("LocalAIChat spotlightRetrieved=\(sourceIdentifiers.count)")
         guard !sourceIdentifiers.isEmpty else {
             throw LocalAIChatError.noCandidateSources
         }
@@ -152,6 +171,7 @@ enum ChatAIRecallPipeline {
             }
             if payloads.count == 5 { break }
         }
+        debugLog("LocalAIChat sourcesResolved=\(payloads.count)")
         guard !payloads.isEmpty else {
             throw LocalAIChatError.noResolvedSources
         }
@@ -199,6 +219,7 @@ enum ChatAIRecallPipeline {
             mappedOutput,
             candidateSourceIdentifiers: candidateSourceIdentifiers
         )
+        debugLog("LocalAIChat validation isValid=\(validation.isValid) shouldShowAnswer=\(validation.shouldShowAnswer) reason=\(validation.reason ?? "none")")
         guard validation.isValid, validation.shouldShowAnswer else {
             let reason = validation.reason ?? "Invalid model output."
             diagnostics.validationError = reason
@@ -230,6 +251,7 @@ enum ChatAIRecallPipeline {
             question: query,
             sourceSummaries: citedPayloads.map(\.summary)
         )
+        debugLog("LocalAIChat fidelity isValid=\(fidelity.isValid) reason=\(fidelity.reason ?? "none")")
         guard fidelity.isValid else {
             let reason = fidelity.reason ?? "Answer fidelity validation failed."
             diagnostics.fidelityValidationError = reason
@@ -288,6 +310,7 @@ enum ChatAIRecallPipeline {
                 maximumResponseTokens: 220
             )
         )
+        debugLog("LocalAIChat modelResponse received")
         return try SourceGroundedAnswerParser().parse(response.content)
     }
 
@@ -453,6 +476,16 @@ enum ChatAIRecallPipeline {
         var errorDescription: String? {
             message
         }
+    }
+
+    private static let debugLogger = Logger(
+        subsystem: "com.thinkact.mnemo",
+        category: "DebugDiagnostics"
+    )
+
+    private static func debugLog(_ message: String) {
+        print("[MnemoDebug] \(message)")
+        debugLogger.debug("[MnemoDebug] \(message, privacy: .public)")
     }
 }
 #endif
