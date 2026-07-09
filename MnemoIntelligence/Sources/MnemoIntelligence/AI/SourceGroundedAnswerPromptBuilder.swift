@@ -36,8 +36,13 @@ public struct SourceGroundedAnswerPromptBuilder: Sendable {
         Extract the relevant fact from the memory instead of dumping the full memory text.
         Do not simply copy the full memory unless the full memory is the answer.
         Preserve important product names, people, places, numbers, dates, and qualifiers.
+        For names, brands, product names, model numbers, codes, locations, dates, sizes, and passwords, copy the exact wording from the memory.
         If text looks OCR-noisy, answer with the clearest supported phrase from the memory.
         Do not invent corrections for OCR errors.
+        Do not translate, normalize, autocorrect, or improve OCR text.
+        If the memory says "GOURMET", do not answer "Gourmand".
+        If a phrase looks awkward or OCR-like but is the only saved evidence, preserve it exactly or quote the relevant phrase.
+        Natural phrasing is good, but exact factual tokens are more important.
         Do not use outside knowledge.
         Do not guess.
         Cite only the source aliases exactly as written, such as S1 or S2.
@@ -68,6 +73,7 @@ public struct SourceGroundedAnswerPromptBuilder: Sendable {
         \(aliases)
 
         Source cards show the original capture. The answer should be concise and should not repeat OCR noise unless it is part of the supported answer.
+        The answer must not introduce unsupported wording.
 
         If the memories do not support an answer, return:
         {

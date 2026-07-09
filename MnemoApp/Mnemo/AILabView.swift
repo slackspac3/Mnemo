@@ -400,6 +400,10 @@ private struct AILabManualLocalAIResultView: View {
                 value: result.validationError ?? "none"
             )
             AILabResultRow(
+                label: "fidelity",
+                value: result.fidelityValidationError ?? "none"
+            )
+            AILabResultRow(
                 label: "rawAnswer",
                 value: result.rawModelAnswer.isEmpty ? "none" : result.rawModelAnswer
             )

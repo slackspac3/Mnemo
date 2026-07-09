@@ -471,6 +471,10 @@ struct AICoreTests {
         #expect(combined.localizedCaseInsensitiveContains("extract the relevant fact"))
         #expect(combined.localizedCaseInsensitiveContains("do not simply copy the full memory"))
         #expect(combined.localizedCaseInsensitiveContains("preserve important product names"))
+        #expect(combined.localizedCaseInsensitiveContains("copy the exact wording from the memory"))
+        #expect(combined.localizedCaseInsensitiveContains("do not translate, normalize, autocorrect, or improve OCR text"))
+        #expect(combined.contains("If the memory says \"GOURMET\", do not answer \"Gourmand\"."))
+        #expect(combined.localizedCaseInsensitiveContains("exact factual tokens are more important"))
         #expect(combined.localizedCaseInsensitiveContains("do not invent corrections for OCR errors"))
         #expect(combined.localizedCaseInsensitiveContains("do not use outside knowledge"))
         #expect(combined.contains("Source S1:"))
@@ -478,6 +482,106 @@ struct AICoreTests {
         #expect(combined.contains("\"sourceIdentifiers\": [\"S1\"]"))
         #expect(combined.localizedCaseInsensitiveContains("source aliases"))
         #expect(!combined.contains(hiddenID))
+    }
+
+    @Test("Answer fidelity rejects translated product token")
+    func answerFidelityRejectsTranslatedProductToken() {
+        let result = SourceGroundedAnswerFidelityValidator().validate(
+            answer: "Your favourite butter is Gourmand Butter.",
+            question: "What's my favourite butter?",
+            sourceSummaries: ["GOURMET BUTTER"]
+        )
+
+        #expect(result.isValid == false)
+        #expect(result.reason == "Unsupported answer token: gourmand")
+    }
+
+    @Test("Answer fidelity accepts exact product wording")
+    func answerFidelityAcceptsExactProductWording() {
+        let result = SourceGroundedAnswerFidelityValidator().validate(
+            answer: "Your butter is GOURMET BUTTER.",
+            question: "What's my favourite butter?",
+            sourceSummaries: ["GOURMET BUTTER"]
+        )
+
+        #expect(result.isValid == true)
+    }
+
+    @Test("Answer fidelity accepts waterfall location")
+    func answerFidelityAcceptsWaterfallLocation() {
+        let result = SourceGroundedAnswerFidelityValidator().validate(
+            answer: "The waterfall was in Guam.",
+            question: "Where was the waterfall?",
+            sourceSummaries: ["I loved the waterfall in Guam"]
+        )
+
+        #expect(result.isValid == true)
+    }
+
+    @Test("Answer fidelity accepts parking spot")
+    func answerFidelityAcceptsParkingSpot() {
+        let result = SourceGroundedAnswerFidelityValidator().validate(
+            answer: "P3, row C18.",
+            question: "Where did I park?",
+            sourceSummaries: ["At Dubai Mall, I parked in P3, row C18"]
+        )
+
+        #expect(result.isValid == true)
+    }
+
+    @Test("Answer fidelity accepts exact Wi-Fi password")
+    func answerFidelityAcceptsExactWiFiPassword() {
+        let result = SourceGroundedAnswerFidelityValidator().validate(
+            answer: "coconut-sand-77",
+            question: "What is the Wi-Fi password?",
+            sourceSummaries: ["The beach house Wi-Fi password is coconut-sand-77"]
+        )
+
+        #expect(result.isValid == true)
+    }
+
+    @Test("Answer fidelity accepts printer ink code")
+    func answerFidelityAcceptsPrinterInkCode() {
+        let result = SourceGroundedAnswerFidelityValidator().validate(
+            answer: "HP 305 black.",
+            question: "What ink do I need?",
+            sourceSummaries: ["HP 305 black"]
+        )
+
+        #expect(result.isValid == true)
+    }
+
+    @Test("Answer fidelity ignores helper words")
+    func answerFidelityIgnoresHelperWords() {
+        let result = SourceGroundedAnswerFidelityValidator().validate(
+            answer: "It was in Guam because that is what you saved.",
+            question: "Where was it?",
+            sourceSummaries: ["Guam"]
+        )
+
+        #expect(result.isValid == true)
+    }
+
+    @Test("Answer fidelity guard does not weaken UUID validator")
+    func answerFidelityGuardDoesNotWeakenUUIDValidator() {
+        let output = SourceGroundedAnswerOutput(
+            answer: "GOURMET BUTTER.",
+            sourceIdentifiers: ["S1"],
+            insufficientEvidence: false
+        )
+        let citationResult = SourceGroundedAnswerValidator().validate(
+            output,
+            candidateSourceIdentifiers: ["S1"]
+        )
+        let fidelityResult = SourceGroundedAnswerFidelityValidator().validate(
+            answer: output.answer,
+            question: "What's my favourite butter?",
+            sourceSummaries: ["GOURMET BUTTER"]
+        )
+
+        #expect(citationResult.isValid == false)
+        #expect(citationResult.reason?.localizedCaseInsensitiveContains("malformed") == true)
+        #expect(fidelityResult.isValid == true)
     }
 
     @MainActor

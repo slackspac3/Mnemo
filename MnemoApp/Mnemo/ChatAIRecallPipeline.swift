@@ -29,6 +29,7 @@ struct ChatAIRecallDiagnosticResult: Equatable, Sendable {
     let rawModelSourceIdentifiers: [String]
     let mappedSourceIdentifiers: [String]
     let validationError: String?
+    let fidelityValidationError: String?
     let rawModelAnswer: String
     let errorMessage: String?
 }
@@ -106,6 +107,7 @@ enum ChatAIRecallPipeline {
             rawModelSourceIdentifiers: [],
             mappedSourceIdentifiers: [],
             validationError: nil,
+            fidelityValidationError: nil,
             rawModelAnswer: "",
             errorMessage: message
         )
@@ -227,6 +229,23 @@ enum ChatAIRecallPipeline {
             throw LocalAIChatError.invalidModelOutput("No cited sources resolved.")
         }
 
+        let fidelity = SourceGroundedAnswerFidelityValidator().validate(
+            answer: mappedOutput.answer,
+            question: query,
+            sourceSummaries: citedPayloads.map(\.summary)
+        )
+        guard fidelity.isValid else {
+            let reason = fidelity.reason ?? "Answer fidelity validation failed."
+            diagnostics.fidelityValidationError = reason
+            throw LocalAIChatFailure(
+                message: reason,
+                diagnostic: diagnostics.result(
+                    answered: false,
+                    errorMessage: reason
+                )
+            )
+        }
+
         let result = ChatAIRecallResult(
             text: mappedOutput.answer.trimmingCharacters(in: .whitespacesAndNewlines),
             citedMemoryIds: citedPayloads.map(\.id),
@@ -323,6 +342,7 @@ enum ChatAIRecallPipeline {
         var rawModelSourceIdentifiers: [String] = []
         var mappedSourceIdentifiers: [String] = []
         var validationError: String?
+        var fidelityValidationError: String?
         var rawModelAnswer: String = ""
 
         func result(
@@ -340,6 +360,7 @@ enum ChatAIRecallPipeline {
                 rawModelSourceIdentifiers: rawModelSourceIdentifiers,
                 mappedSourceIdentifiers: mappedSourceIdentifiers,
                 validationError: validationError,
+                fidelityValidationError: fidelityValidationError,
                 rawModelAnswer: rawModelAnswer,
                 errorMessage: errorMessage
             )

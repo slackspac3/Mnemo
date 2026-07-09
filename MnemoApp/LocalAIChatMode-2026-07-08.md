@@ -117,6 +117,29 @@ Grounding and citation validation are unchanged: aliases are mapped back to UUID
 source identifiers, `SourceGroundedAnswerValidator` still runs on UUIDs, and the
 source-card payload is still rehydrated from SwiftData.
 
+## Answer Fidelity Guard
+
+The butter device test exposed a second Local AI trust issue: the saved memory
+said `GOURMET BUTTER`, but the model answered with `Gourmand Unsalted Butter`.
+That kind of translation, normalisation, or embellishment is not acceptable for
+memory recall.
+
+The prompt now tells Foundation Models to copy exact wording for names, brands,
+product names, model numbers, codes, locations, dates, sizes, and passwords. If
+the memory says `GOURMET`, the model must not answer `Gourmand`. Natural phrasing
+is allowed, but exact factual tokens are more important.
+
+After UUID citation validation and source-card re-resolution, Local AI Chat runs
+`SourceGroundedAnswerFidelityValidator` against the cited SwiftData summaries.
+The validator ignores common helper words, but rejects significant answer tokens
+that are absent from both the user question and cited summaries. If fidelity
+validation fails, `ChatAIRecallPipeline` returns `nil` and Chat falls back to
+deterministic recall. AI Lab shows the fidelity failure reason, for example
+`Unsupported answer token: gourmand`.
+
+Source cards remain the raw source of truth for inspecting OCR text and original
+captures.
+
 ## Foundation Models Unavailable
 
 If Apple Foundation Models are unavailable because of OS, device eligibility,
