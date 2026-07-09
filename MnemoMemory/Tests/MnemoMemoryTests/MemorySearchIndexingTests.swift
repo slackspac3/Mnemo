@@ -202,6 +202,26 @@ struct MemorySearchIndexingTests {
         #expect(fake.indexedPayloads.allSatisfy { $0.memoryID != archived.id })
     }
 
+    @Test("Backfill propagates index failure")
+    func backfillPropagatesIndexFailure() async throws {
+        let container = try MemoryStore.makeTestContainer()
+        let context = ModelContext(container)
+        let active = Self.makeRecord("Failing active memory")
+        try MemoryCRUD.insert(active, into: context)
+        let failing = FailingMemorySearchIndexer()
+
+        do {
+            try await MemoryCRUD.backfillSearchIndex(in: context, searchIndexer: failing)
+            Issue.record("Expected backfill to propagate the indexer failure.")
+        } catch let error as FakeMemorySearchIndexError {
+            #expect(error == .indexFailed)
+        } catch {
+            Issue.record("Expected FakeMemorySearchIndexError, got \(error).")
+        }
+
+        #expect(failing.indexAttempts == 1)
+    }
+
     @Test("Capture-time DEBUG indexing only runs when enabled")
     func captureTimeDebugIndexingOnlyRunsWhenEnabled() async throws {
         let record = Self.makeRecord("Capture-time debug memory")
@@ -333,6 +353,10 @@ struct MemorySearchIndexingTests {
     }
 }
 
+private enum FakeMemorySearchIndexError: Error, Equatable {
+    case indexFailed
+}
+
 @MainActor
 private final class FakeMemorySearchIndexer: MemorySearchIndexing, MemorySearchQuerying {
     private(set) var indexedPayloads: [MemorySearchIndexPayload] = []
@@ -357,4 +381,17 @@ private final class FakeMemorySearchIndexer: MemorySearchIndexing, MemorySearchQ
     func sourceIdentifiers(matching query: String, limit: Int) async throws -> [String] {
         Array(queryResultIDs.prefix(limit))
     }
+}
+
+@MainActor
+private final class FailingMemorySearchIndexer: MemorySearchIndexing {
+    private(set) var indexAttempts = 0
+
+    func index(memory: MemoryRecord) async throws {
+        indexAttempts += 1
+        throw FakeMemorySearchIndexError.indexFailed
+    }
+
+    func remove(memoryID: UUID) async throws {}
+    func removeAll() async throws {}
 }

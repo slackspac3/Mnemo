@@ -34,7 +34,8 @@ The Local AI path:
 
 1. Checks the DEBUG fallback-only override.
 2. Checks Apple Foundation Models availability.
-3. Backfills the DEBUG Core Spotlight index with active, non-archived memories.
+3. Backfills the DEBUG Core Spotlight index with active, non-archived memories
+   only when the DEBUG backfill completion state is false.
 4. Queries Core Spotlight for source identifiers.
 5. Resolves every returned identifier through `MemorySourceCardResolver`.
 6. Assigns model-facing aliases to resolved sources: `S1`, `S2`, `S3`.
@@ -56,7 +57,15 @@ Core Spotlight indexing for real memories is DEBUG-only in this pass.
 
 When DEBUG Local AI-first Chat is active:
 
-- `MemoryCRUD.backfillSearchIndex(in:)` indexes active, non-archived memories.
+- `MemoryCRUD.backfillSearchIndex(in:)` indexes active, non-archived memories
+  during setup, launch repair, or an explicit AI Lab reindex.
+- The app stores DEBUG backfill completion in
+  `mnemo.debugLocalAIChatBackfillComplete`.
+- Chat no longer runs a full Core Spotlight backfill on every Local AI query.
+- If the completion state is true, Chat queries the existing Spotlight index
+  directly.
+- If backfill fails, the completion state stays false so a later launch, AI Lab
+  action, or Chat query can retry. Chat still falls back to deterministic recall.
 - AI Lab shows progress and reports any DEBUG-only backfill error.
 
 When the AI Lab switch is turned off:
@@ -65,15 +74,23 @@ When the AI Lab switch is turned off:
 - Chat skips Local AI and uses deterministic recall only.
 - `MemoryCRUD.resetSearchIndexItems()` clears Mnemo's DEBUG Core Spotlight
   domain.
+- `mnemo.debugLocalAIChatBackfillComplete` is reset to `false`.
 - SwiftData memories and VectorBridge rows are not deleted.
 
-On DEBUG app launch, `AppState` runs an idempotent backfill unless the
-deterministic-only override is enabled.
+On DEBUG app launch, `AppState` runs a backfill only when Local AI-first Chat is
+active and `mnemo.debugLocalAIChatBackfillComplete` is false. If the completion
+state is true, launch does not reindex the full memory corpus. If the
+deterministic-only override is enabled, launch does not backfill.
 
 Capture-time indexing is centralized in `MemoryCRUD.insertAndIndex`: after a
 memory is saved and vector-indexed, DEBUG builds check the shared
 deterministic-only UserDefaults key and index when Local AI-first Chat is
 active. Capture sheets do not know about the setting.
+
+AI Lab includes `Reindex Local AI memories now` for manual repair/testing. It
+sets the completion state false, runs `MemoryCRUD.backfillSearchIndex(in:)`, and
+sets the completion state true only after success. This does not delete
+SwiftData memories, wipe VectorBridge, or change the deterministic-only override.
 
 ## Release Privacy Boundary
 
@@ -173,12 +190,16 @@ Chat uses deterministic recall.
 3. Confirm the answer mentions Guam and shows a source card.
 4. Tap the source card and confirm it opens the saved memory.
 5. Open Settings -> AI Lab.
-6. Turn off `Use Local AI first in Chat (DEBUG)`.
-7. Ask again and confirm deterministic recall still handles the query or fails safely.
+6. Tap `Reindex Local AI memories now` and confirm the DEBUG backfill completes.
+7. Turn off `Use Local AI first in Chat (DEBUG)`.
+8. Confirm the DEBUG Spotlight domain is cleared and the backfill completion
+   state is reset.
+9. Ask again and confirm deterministic recall still handles the query or fails safely.
 
 AI Lab also includes a `Manual Local AI Chat Test` panel that calls the same
 `ChatAIRecallPipeline` used by Chat, even when the fallback-only override is on.
-The manual path backfills the DEBUG search index before querying.
+The manual path uses the same backfill completion state as Chat: it backfills
+only if the DEBUG index has not been prepared or was reset.
 
 ## Troubleshooting
 

@@ -16,6 +16,7 @@ struct AILabView: View {
     @State private var localAIQuestion = ""
     @State private var localAIManualResult: ChatAIRecallDiagnosticResult?
     @State private var isAskingLocalAI = false
+    @State private var isReindexingLocalAI = false
 
     var body: some View {
         ZStack {
@@ -67,6 +68,15 @@ struct AILabView: View {
                                 .foregroundStyle(DS.Colours.textSecondary)
                         }
                     }
+
+                    AILabRunButton(
+                        title: "Reindex Local AI memories now",
+                        systemImage: "arrow.clockwise.circle.fill",
+                        isRunning: isReindexingLocalAI
+                    ) {
+                        reindexLocalAIChatMemories()
+                    }
+                    .disabled(isUpdatingLocalAIChat || isReindexingLocalAI)
 
                     if let localAIChatErrorMessage {
                         Text(localAIChatErrorMessage)
@@ -172,20 +182,44 @@ struct AILabView: View {
         do {
             if enabled {
                 DebugAIChatSetting.usesLocalAIFirst = true
+                DebugLocalAIBackfillState.isComplete = false
                 try await MemoryCRUD.backfillSearchIndex(in: modelContext)
+                DebugLocalAIBackfillState.isComplete = true
                 localAIChatEnabled = true
             } else {
                 DebugAIChatSetting.usesLocalAIFirst = false
+                DebugLocalAIBackfillState.isComplete = false
                 try await MemoryCRUD.resetSearchIndexItems()
+                DebugLocalAIBackfillState.isComplete = false
                 localAIChatEnabled = false
             }
         } catch {
+            DebugLocalAIBackfillState.isComplete = false
             DebugAIChatSetting.usesLocalAIFirst = !enabled
             localAIChatEnabled = !enabled
             localAIChatErrorMessage = error.localizedDescription
         }
 
         isUpdatingLocalAIChat = false
+    }
+
+    @MainActor
+    private func reindexLocalAIChatMemories() {
+        guard !isReindexingLocalAI else { return }
+        isReindexingLocalAI = true
+        localAIChatErrorMessage = nil
+
+        Task {
+            do {
+                DebugLocalAIBackfillState.isComplete = false
+                try await MemoryCRUD.backfillSearchIndex(in: modelContext)
+                DebugLocalAIBackfillState.isComplete = true
+            } catch {
+                DebugLocalAIBackfillState.isComplete = false
+                localAIChatErrorMessage = error.localizedDescription
+            }
+            isReindexingLocalAI = false
+        }
     }
 
     @MainActor

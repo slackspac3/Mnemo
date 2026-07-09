@@ -287,6 +287,7 @@ enum FoundationModelsMemorySmokeTest {
             searchIndexer: indexer
         )
         try await MemoryCRUD.resetSearchIndexItems(searchIndexer: indexer)
+        DebugLocalAIBackfillState.isComplete = false
     }
 
     private static func singleLine(_ text: String) -> String {

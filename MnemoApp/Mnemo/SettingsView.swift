@@ -286,6 +286,9 @@ struct SettingsView: View {
             try modelContext.save()
             try await VectorBridge.shared.wipe()
             try await MemoryCRUD.resetSearchIndexItems()
+            #if DEBUG
+            DebugLocalAIBackfillState.isComplete = false
+            #endif
             NavigationCoordinator.shared.dismiss()
             appState.resetAfterDeleteAllData()
             dismiss()

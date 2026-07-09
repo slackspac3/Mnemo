@@ -24,4 +24,17 @@ enum DebugAIChatSetting {
         }
     }
 }
+
+enum DebugLocalAIBackfillState {
+    static let userDefaultsKey = "mnemo.debugLocalAIChatBackfillComplete"
+
+    static var isComplete: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: userDefaultsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: userDefaultsKey)
+        }
+    }
+}
 #endif

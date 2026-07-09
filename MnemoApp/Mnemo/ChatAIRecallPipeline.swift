@@ -140,8 +140,7 @@ enum ChatAIRecallPipeline {
         }
         debugLog("LocalAIChat foundationModelsAvailable=true")
 
-        try await MemoryCRUD.backfillSearchIndex(in: context)
-        debugLog("LocalAIChat indexBackfill complete")
+        try await backfillSearchIndexIfNeeded(in: context)
 
         let indexer = CoreSpotlightMemoryIndexer()
         let service = MemorySearchIndexingService(
@@ -332,6 +331,18 @@ enum ChatAIRecallPipeline {
         }
     }
     #endif
+
+    @MainActor
+    private static func backfillSearchIndexIfNeeded(in context: ModelContext) async throws {
+        guard !DebugLocalAIBackfillState.isComplete else {
+            debugLog("LocalAIChat indexBackfill skipped complete=true")
+            return
+        }
+
+        try await MemoryCRUD.backfillSearchIndex(in: context)
+        DebugLocalAIBackfillState.isComplete = true
+        debugLog("LocalAIChat indexBackfill complete")
+    }
 
     private struct AliasedMemorySource {
         let alias: String

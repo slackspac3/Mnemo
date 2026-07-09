@@ -256,8 +256,19 @@ final class AppState {
     @MainActor
     private func backfillLocalAIChatIndexIfNeeded() async {
         guard DebugAIChatSetting.usesLocalAIFirst else { return }
+        guard !DebugLocalAIBackfillState.isComplete else {
+            debugLog("LocalAIChat launchBackfill skipped complete=true")
+            return
+        }
+
         let context = MemoryStore.shared.container.mainContext
-        try? await MemoryCRUD.backfillSearchIndex(in: context)
+        do {
+            try await MemoryCRUD.backfillSearchIndex(in: context)
+            DebugLocalAIBackfillState.isComplete = true
+            debugLog("LocalAIChat launchBackfill complete")
+        } catch {
+            debugLog("LocalAIChat launchBackfill failed error=\(error.localizedDescription)")
+        }
     }
     #endif
 }

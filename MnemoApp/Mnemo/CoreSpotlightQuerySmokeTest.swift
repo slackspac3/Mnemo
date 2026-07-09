@@ -135,6 +135,7 @@ enum CoreSpotlightQuerySmokeTest {
             deletedRejected = deletedRecordRejected && deletedQueryAbsent
 
             try await MemoryCRUD.resetSearchIndexItems(searchIndexer: indexer)
+            DebugLocalAIBackfillState.isComplete = false
             cleared = try await waitForSourceIDToDisappear(
                 record.id,
                 matching: token,
@@ -163,6 +164,7 @@ enum CoreSpotlightQuerySmokeTest {
                 searchIndexer: indexer
             )
             try? await MemoryCRUD.resetSearchIndexItems(searchIndexer: indexer)
+            DebugLocalAIBackfillState.isComplete = false
 
             return CoreSpotlightQuerySmokeTestResult(
                 indexed: indexed,
