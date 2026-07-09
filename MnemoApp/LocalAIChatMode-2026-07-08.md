@@ -101,6 +101,22 @@ those aliases back to UUID source identifiers and then runs the existing
 `SourceGroundedAnswerValidator`. This keeps the final app citation contract
 strict while avoiding brittle UUID copying by the model.
 
+## Answer Style Tuning
+
+Local AI Chat asks Foundation Models to answer in a short natural sentence,
+extract the relevant fact, and avoid dumping the full memory unless the full
+memory is itself the answer. Product names, people, places, numbers, dates, and
+qualifiers should be preserved.
+
+OCR-noisy text should not be corrected with outside knowledge. The model should
+use the clearest supported phrase from the saved memory and cite the source
+alias. Source cards remain the place to inspect the original capture and any raw
+OCR text.
+
+Grounding and citation validation are unchanged: aliases are mapped back to UUID
+source identifiers, `SourceGroundedAnswerValidator` still runs on UUIDs, and the
+source-card payload is still rehydrated from SwiftData.
+
 ## Foundation Models Unavailable
 
 If Apple Foundation Models are unavailable because of OS, device eligibility,

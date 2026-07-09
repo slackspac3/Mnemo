@@ -447,6 +447,39 @@ struct AICoreTests {
         #expect(result.shouldShowAnswer == true)
     }
 
+    @Test("Source-grounded prompt asks for natural answers without raw UUIDs")
+    func sourceGroundedPromptAsksForNaturalAnswersWithoutRawUUIDs() {
+        let hiddenID = UUID().uuidString
+        let prompt = SourceGroundedAnswerPromptBuilder().build(
+            query: "What's my favourite butter?",
+            sources: [
+                SourceGroundedPromptSource(
+                    alias: "S1",
+                    source: "image",
+                    summary: "My favourite butter. PRODUCED RANCE Ille &Vire® BEURRE GASTRONOMIQUE GOURMET BUTTER Unsalted Butter"
+                ),
+                SourceGroundedPromptSource(
+                    alias: "S2",
+                    source: "text",
+                    summary: "The spare car key is in the black pouch."
+                )
+            ]
+        )
+        let combined = "\(prompt.instructions)\n\(prompt.prompt)"
+
+        #expect(combined.localizedCaseInsensitiveContains("short natural sentence"))
+        #expect(combined.localizedCaseInsensitiveContains("extract the relevant fact"))
+        #expect(combined.localizedCaseInsensitiveContains("do not simply copy the full memory"))
+        #expect(combined.localizedCaseInsensitiveContains("preserve important product names"))
+        #expect(combined.localizedCaseInsensitiveContains("do not invent corrections for OCR errors"))
+        #expect(combined.localizedCaseInsensitiveContains("do not use outside knowledge"))
+        #expect(combined.contains("Source S1:"))
+        #expect(combined.contains("Source S2:"))
+        #expect(combined.contains("\"sourceIdentifiers\": [\"S1\"]"))
+        #expect(combined.localizedCaseInsensitiveContains("source aliases"))
+        #expect(!combined.contains(hiddenID))
+    }
+
     @MainActor
     private static func makeMemory(_ text: String) -> MemoryRecord {
         MemoryRecord(

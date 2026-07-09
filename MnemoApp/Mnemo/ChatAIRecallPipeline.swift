@@ -251,51 +251,22 @@ enum ChatAIRecallPipeline {
         query: String,
         sources: [AliasedMemorySource]
     ) async throws -> SourceGroundedAnswerOutput {
-        let instructions = """
-        You are Mnemo's local memory answerer.
-        Answer only from the provided memories.
-        Do not use outside knowledge.
-        Do not guess.
-        Cite only the source aliases exactly as written, such as S1 or S2.
-        Return exactly one JSON object and no Markdown.
-        """
-        let memoryBlock = sources.map { source in
-            """
-            Source \(source.alias):
-            source: \(source.payload.source)
-            summary: \(source.payload.summary)
-            """
-        }.joined(separator: "\n\n")
-        let aliases = sources.map(\.alias).joined(separator: ", ")
-        let prompt = """
-        Memories:
-        \(memoryBlock)
-
-        Question: \(query)
-
-        Return this JSON shape:
-        {
-          "answer": "short answer supported by the memories",
-          "sourceIdentifiers": ["S1"],
-          "insufficientEvidence": false
-        }
-
-        In this prompt, sourceIdentifiers means source aliases. Use only these aliases:
-        \(aliases)
-
-        If the memories do not support an answer, return:
-        {
-          "answer": "",
-          "sourceIdentifiers": [],
-          "insufficientEvidence": true
-        }
-        """
+        let promptPayload = SourceGroundedAnswerPromptBuilder().build(
+            query: query,
+            sources: sources.map { source in
+                SourceGroundedPromptSource(
+                    alias: source.alias,
+                    source: source.payload.source,
+                    summary: source.payload.summary
+                )
+            }
+        )
         let session = LanguageModelSession(
             model: model,
-            instructions: instructions
+            instructions: promptPayload.instructions
         )
         let response = try await session.respond(
-            to: prompt,
+            to: promptPayload.prompt,
             options: GenerationOptions(
                 sampling: .greedy,
                 temperature: 0.0,
