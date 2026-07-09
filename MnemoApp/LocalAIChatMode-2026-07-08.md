@@ -117,6 +117,23 @@ Grounding and citation validation are unchanged: aliases are mapped back to UUID
 source identifiers, `SourceGroundedAnswerValidator` still runs on UUIDs, and the
 source-card payload is still rehydrated from SwiftData.
 
+## Answer Extraction vs. Fidelity
+
+The answer can omit irrelevant OCR or source-label words when they do not answer
+the question. For example, if a butter label memory contains `PRODUCED RANCE`
+before the product name, Local AI may omit `PRODUCED RANCE` when answering
+`What's my favourite butter?`.
+
+Omission is not the same as substitution. Local AI must preserve exact supported
+tokens for names, product names, codes, numbers, dates, places, and sizes.
+`GOURMET` cannot become `Gourmand`, and OCR text must not be translated,
+normalised, autocorrected, or improved with outside knowledge.
+
+The model-facing prompt now asks for the shortest relevant phrase from the cited
+memory rather than a raw OCR transcript. If the model introduces unsupported
+significant tokens, the fidelity guard rejects the answer and Chat falls back to
+deterministic recall. Source cards remain the raw source of truth.
+
 ## Answer Fidelity Guard
 
 The butter device test exposed a second Local AI trust issue: the saved memory

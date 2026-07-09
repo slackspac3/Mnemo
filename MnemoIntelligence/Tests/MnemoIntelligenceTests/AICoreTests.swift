@@ -468,13 +468,18 @@ struct AICoreTests {
         let combined = "\(prompt.instructions)\n\(prompt.prompt)"
 
         #expect(combined.localizedCaseInsensitiveContains("short natural sentence"))
+        #expect(combined.localizedCaseInsensitiveContains("shortest relevant phrase"))
         #expect(combined.localizedCaseInsensitiveContains("extract the relevant fact"))
         #expect(combined.localizedCaseInsensitiveContains("do not simply copy the full memory"))
+        #expect(combined.localizedCaseInsensitiveContains("omit irrelevant source words"))
+        #expect(combined.localizedCaseInsensitiveContains("do not dump full OCR or product-label text"))
         #expect(combined.localizedCaseInsensitiveContains("preserve important product names"))
-        #expect(combined.localizedCaseInsensitiveContains("copy the exact wording from the memory"))
-        #expect(combined.localizedCaseInsensitiveContains("do not translate, normalize, autocorrect, or improve OCR text"))
+        #expect(combined.localizedCaseInsensitiveContains("preserve the exact wording from the memory"))
+        #expect(combined.localizedCaseInsensitiveContains("do not translate, normalize, autocorrect, replace, or improve OCR text"))
         #expect(combined.contains("If the memory says \"GOURMET\", do not answer \"Gourmand\"."))
-        #expect(combined.localizedCaseInsensitiveContains("exact factual tokens are more important"))
+        #expect(combined.localizedCaseInsensitiveContains("entire label text"))
+        #expect(combined.localizedCaseInsensitiveContains("omission of irrelevant source words is allowed; invention or substitution is not"))
+        #expect(combined.localizedCaseInsensitiveContains("exact relevant factual tokens are more important"))
         #expect(combined.localizedCaseInsensitiveContains("do not invent corrections for OCR errors"))
         #expect(combined.localizedCaseInsensitiveContains("do not use outside knowledge"))
         #expect(combined.contains("Source S1:"))
@@ -502,6 +507,19 @@ struct AICoreTests {
             answer: "Your butter is GOURMET BUTTER.",
             question: "What's my favourite butter?",
             sourceSummaries: ["GOURMET BUTTER"]
+        )
+
+        #expect(result.isValid == true)
+    }
+
+    @Test("Answer fidelity accepts omission of irrelevant OCR source words")
+    func answerFidelityAcceptsOmissionOfIrrelevantOCRSourceWords() {
+        let result = SourceGroundedAnswerFidelityValidator().validate(
+            answer: "Ille &Vire® BEURRE GASTRONOMIQUE GOURMET BUTTER Unsalted Butter",
+            question: "What's my favourite butter?",
+            sourceSummaries: [
+                "My favourite butter. PRODUCED RANCE Ille &Vire® BEURRE GASTRONOMIQUE GOURMET BUTTER Unsalted Butter"
+            ]
         )
 
         #expect(result.isValid == true)
