@@ -376,6 +376,34 @@ private struct AILabManualLocalAIResultView: View {
                 value: "\(result.citedSourceIdentifiers.count)"
             )
             AILabResultRow(
+                label: "retrieved",
+                value: "\(result.retrievedSourceCount)"
+            )
+            AILabResultRow(
+                label: "resolved",
+                value: "\(result.resolvedSourceCount)"
+            )
+            AILabResultRow(
+                label: "rawModelIDs",
+                value: result.rawModelSourceIdentifiers.isEmpty
+                    ? "none"
+                    : result.rawModelSourceIdentifiers.joined(separator: ", ")
+            )
+            AILabResultRow(
+                label: "mappedIDs",
+                value: result.mappedSourceIdentifiers.isEmpty
+                    ? "none"
+                    : result.mappedSourceIdentifiers.joined(separator: ", ")
+            )
+            AILabResultRow(
+                label: "validation",
+                value: result.validationError ?? "none"
+            )
+            AILabResultRow(
+                label: "rawAnswer",
+                value: result.rawModelAnswer.isEmpty ? "none" : result.rawModelAnswer
+            )
+            AILabResultRow(
                 label: "sourceIDs",
                 value: result.citedSourceIdentifiers.isEmpty
                     ? "none"

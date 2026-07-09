@@ -331,6 +331,122 @@ struct AICoreTests {
         #expect(result.reason?.localizedCaseInsensitiveContains("insufficient evidence") == true)
     }
 
+    @Test("Source alias mapper maps S1 to the correct UUID")
+    func sourceAliasMapperMapsS1ToCorrectUUID() throws {
+        let id = UUID().uuidString
+        let output = SourceGroundedAnswerOutput(
+            answer: "Your favourite butter is Ille & Vire.",
+            sourceIdentifiers: ["S1"],
+            insufficientEvidence: false
+        )
+
+        let mapped = try SourceAliasCitationMapper(mappings: [
+            SourceAliasMapping(alias: "S1", sourceIdentifier: id)
+        ]).mapToSourceIdentifiers(output)
+
+        #expect(mapped.sourceIdentifiers == [id])
+        #expect(mapped.answer == output.answer)
+    }
+
+    @Test("Source alias mapper maps S2 to the correct UUID")
+    func sourceAliasMapperMapsS2ToCorrectUUID() throws {
+        let first = UUID().uuidString
+        let second = UUID().uuidString
+        let output = SourceGroundedAnswerOutput(
+            answer: "The second source has the answer.",
+            sourceIdentifiers: ["S2"],
+            insufficientEvidence: false
+        )
+
+        let mapped = try SourceAliasCitationMapper(mappings: [
+            SourceAliasMapping(alias: "S1", sourceIdentifier: first),
+            SourceAliasMapping(alias: "S2", sourceIdentifier: second)
+        ]).mapToSourceIdentifiers(output)
+
+        #expect(mapped.sourceIdentifiers == [second])
+    }
+
+    @Test("Source alias mapper rejects unknown alias")
+    func sourceAliasMapperRejectsUnknownAlias() {
+        let output = SourceGroundedAnswerOutput(
+            answer: "Answer",
+            sourceIdentifiers: ["S99"],
+            insufficientEvidence: false
+        )
+
+        #expect(throws: SourceAliasCitationMappingError.unknownAlias("S99")) {
+            _ = try SourceAliasCitationMapper(mappings: [
+                SourceAliasMapping(alias: "S1", sourceIdentifier: UUID().uuidString)
+            ]).mapToSourceIdentifiers(output)
+        }
+    }
+
+    @Test("Source alias mapper rejects raw malformed UUID text")
+    func sourceAliasMapperRejectsRawMalformedUUIDText() {
+        let output = SourceGroundedAnswerOutput(
+            answer: "Answer",
+            sourceIdentifiers: ["not-a-uuid"],
+            insufficientEvidence: false
+        )
+
+        #expect(throws: SourceAliasCitationMappingError.unknownAlias("not-a-uuid")) {
+            _ = try SourceAliasCitationMapper(mappings: [
+                SourceAliasMapping(alias: "S1", sourceIdentifier: UUID().uuidString)
+            ]).mapToSourceIdentifiers(output)
+        }
+    }
+
+    @Test("Source alias mapper rejects empty source identifiers")
+    func sourceAliasMapperRejectsEmptySourceIdentifiers() {
+        let output = SourceGroundedAnswerOutput(
+            answer: "Answer",
+            sourceIdentifiers: [],
+            insufficientEvidence: false
+        )
+
+        #expect(throws: SourceAliasCitationMappingError.emptySourceIdentifiers) {
+            _ = try SourceAliasCitationMapper(mappings: [
+                SourceAliasMapping(alias: "S1", sourceIdentifier: UUID().uuidString)
+            ]).mapToSourceIdentifiers(output)
+        }
+    }
+
+    @Test("Source alias mapper rejects insufficient evidence")
+    func sourceAliasMapperRejectsInsufficientEvidence() {
+        let output = SourceGroundedAnswerOutput(
+            answer: "",
+            sourceIdentifiers: [],
+            insufficientEvidence: true
+        )
+
+        #expect(throws: SourceAliasCitationMappingError.insufficientEvidence) {
+            _ = try SourceAliasCitationMapper(mappings: [
+                SourceAliasMapping(alias: "S1", sourceIdentifier: UUID().uuidString)
+            ]).mapToSourceIdentifiers(output)
+        }
+    }
+
+    @Test("Mapped UUID output still passes source-grounded validator")
+    func mappedUUIDOutputStillPassesSourceGroundedValidator() throws {
+        let id = UUID().uuidString
+        let output = SourceGroundedAnswerOutput(
+            answer: "Your favourite butter is Ille & Vire.",
+            sourceIdentifiers: ["S1"],
+            insufficientEvidence: false
+        )
+
+        let mapped = try SourceAliasCitationMapper(mappings: [
+            SourceAliasMapping(alias: "S1", sourceIdentifier: id)
+        ]).mapToSourceIdentifiers(output)
+        let result = SourceGroundedAnswerValidator().validate(
+            mapped,
+            candidateSourceIdentifiers: [id]
+        )
+
+        #expect(result.isValid == true)
+        #expect(result.shouldShowAnswer == true)
+    }
+
     @MainActor
     private static func makeMemory(_ text: String) -> MemoryRecord {
         MemoryRecord(

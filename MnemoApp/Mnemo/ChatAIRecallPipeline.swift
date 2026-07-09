@@ -24,6 +24,12 @@ struct ChatAIRecallDiagnosticResult: Equatable, Sendable {
     let answered: Bool
     let answer: String
     let citedSourceIdentifiers: [String]
+    let retrievedSourceCount: Int
+    let resolvedSourceCount: Int
+    let rawModelSourceIdentifiers: [String]
+    let mappedSourceIdentifiers: [String]
+    let validationError: String?
+    let rawModelAnswer: String
     let errorMessage: String?
 }
 
@@ -48,29 +54,16 @@ enum ChatAIRecallPipeline {
         context: ModelContext
     ) async -> ChatAIRecallDiagnosticResult {
         guard DebugAIChatSetting.isEnabled else {
-            return ChatAIRecallDiagnosticResult(
-                answered: false,
-                answer: "",
-                citedSourceIdentifiers: [],
-                errorMessage: "Local AI Chat is off."
-            )
+            return failureDiagnostic("Local AI Chat is off.")
         }
 
         do {
-            let result = try await answer(query: query, context: context)
-            return ChatAIRecallDiagnosticResult(
-                answered: true,
-                answer: result.text,
-                citedSourceIdentifiers: result.citations.map { $0.id.uuidString },
-                errorMessage: nil
-            )
+            let details = try await answerDetails(query: query, context: context)
+            return details.diagnostic(answered: true, errorMessage: nil)
+        } catch let error as LocalAIChatFailure {
+            return error.diagnostic ?? failureDiagnostic(error.localizedDescription)
         } catch {
-            return ChatAIRecallDiagnosticResult(
-                answered: false,
-                answer: "",
-                citedSourceIdentifiers: [],
-                errorMessage: error.localizedDescription
-            )
+            return failureDiagnostic(error.localizedDescription)
         }
     }
 
@@ -79,6 +72,14 @@ enum ChatAIRecallPipeline {
         query: String,
         context: ModelContext
     ) async throws -> ChatAIRecallResult {
+        try await answerDetails(query: query, context: context).result
+    }
+
+    @MainActor
+    private static func answerDetails(
+        query: String,
+        context: ModelContext
+    ) async throws -> ChatAIRecallAnswerDetails {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedQuery.isEmpty else {
             throw LocalAIChatError.emptyQuery
@@ -95,13 +96,28 @@ enum ChatAIRecallPipeline {
         #endif
     }
 
+    private static func failureDiagnostic(_ message: String) -> ChatAIRecallDiagnosticResult {
+        ChatAIRecallDiagnosticResult(
+            answered: false,
+            answer: "",
+            citedSourceIdentifiers: [],
+            retrievedSourceCount: 0,
+            resolvedSourceCount: 0,
+            rawModelSourceIdentifiers: [],
+            mappedSourceIdentifiers: [],
+            validationError: nil,
+            rawModelAnswer: "",
+            errorMessage: message
+        )
+    }
+
     #if canImport(FoundationModels)
     @available(iOS 26.0, *)
     @MainActor
     private static func answerWithFoundationModels(
         query: String,
         context: ModelContext
-    ) async throws -> ChatAIRecallResult {
+    ) async throws -> ChatAIRecallAnswerDetails {
         let model = SystemLanguageModel.default
         guard case .available = model.availability else {
             throw LocalAIChatError.foundationModelsUnavailable(
@@ -142,22 +158,63 @@ enum ChatAIRecallPipeline {
             throw LocalAIChatError.noResolvedSources
         }
 
+        let aliasedSources = payloads.enumerated().map { index, payload in
+            AliasedMemorySource(alias: "S\(index + 1)", payload: payload)
+        }
         let output = try await generateAnswer(
             model: model,
             query: query,
-            payloads: payloads
+            sources: aliasedSources
         )
+        var diagnostics = LocalAIChatDiagnostics(
+            retrievedSourceCount: sourceIdentifiers.count,
+            resolvedSourceCount: payloads.count,
+            rawModelSourceIdentifiers: output.sourceIdentifiers,
+            rawModelAnswer: output.answer
+        )
+
+        let mappedOutput: SourceGroundedAnswerOutput
+        do {
+            mappedOutput = try SourceAliasCitationMapper(
+                mappings: aliasedSources.map { source in
+                    SourceAliasMapping(
+                        alias: source.alias,
+                        sourceIdentifier: source.payload.sourceIdentifier
+                    )
+                }
+            ).mapToSourceIdentifiers(output)
+            diagnostics.mappedSourceIdentifiers = mappedOutput.sourceIdentifiers
+        } catch {
+            let message = error.localizedDescription
+            diagnostics.validationError = message
+            throw LocalAIChatFailure(
+                message: message,
+                diagnostic: diagnostics.result(
+                    answered: false,
+                    errorMessage: message
+                )
+            )
+        }
+
         let candidateSourceIdentifiers = Set(payloads.map(\.sourceIdentifier))
         let validation = SourceGroundedAnswerValidator().validate(
-            output,
+            mappedOutput,
             candidateSourceIdentifiers: candidateSourceIdentifiers
         )
         guard validation.isValid, validation.shouldShowAnswer else {
-            throw LocalAIChatError.invalidModelOutput(validation.reason ?? "Invalid model output.")
+            let reason = validation.reason ?? "Invalid model output."
+            diagnostics.validationError = reason
+            throw LocalAIChatFailure(
+                message: reason,
+                diagnostic: diagnostics.result(
+                    answered: false,
+                    errorMessage: reason
+                )
+            )
         }
 
         var citedPayloads: [MemorySourceCardPayload] = []
-        for sourceIdentifier in output.sourceIdentifiers {
+        for sourceIdentifier in mappedOutput.sourceIdentifiers {
             guard let payload = try resolver.resolve(
                 sourceIdentifier: sourceIdentifier,
                 in: context
@@ -170,8 +227,8 @@ enum ChatAIRecallPipeline {
             throw LocalAIChatError.invalidModelOutput("No cited sources resolved.")
         }
 
-        return ChatAIRecallResult(
-            text: output.answer.trimmingCharacters(in: .whitespacesAndNewlines),
+        let result = ChatAIRecallResult(
+            text: mappedOutput.answer.trimmingCharacters(in: .whitespacesAndNewlines),
             citedMemoryIds: citedPayloads.map(\.id),
             citations: citedPayloads.map { payload in
                 ChatAIRecallResult.Citation(
@@ -181,28 +238,35 @@ enum ChatAIRecallPipeline {
                 )
             }
         )
+
+        return ChatAIRecallAnswerDetails(
+            result: result,
+            diagnostics: diagnostics
+        )
     }
 
     @available(iOS 26.0, *)
     private static func generateAnswer(
         model: SystemLanguageModel,
         query: String,
-        payloads: [MemorySourceCardPayload]
+        sources: [AliasedMemorySource]
     ) async throws -> SourceGroundedAnswerOutput {
         let instructions = """
         You are Mnemo's local memory answerer.
         Answer only from the provided memories.
         Do not use outside knowledge.
         Do not guess.
+        Cite only the source aliases exactly as written, such as S1 or S2.
         Return exactly one JSON object and no Markdown.
         """
-        let memoryBlock = payloads.map { payload in
+        let memoryBlock = sources.map { source in
             """
-            sourceIdentifier: \(payload.sourceIdentifier)
-            source: \(payload.source)
-            summary: \(payload.summary)
+            Source \(source.alias):
+            source: \(source.payload.source)
+            summary: \(source.payload.summary)
             """
         }.joined(separator: "\n\n")
+        let aliases = sources.map(\.alias).joined(separator: ", ")
         let prompt = """
         Memories:
         \(memoryBlock)
@@ -212,9 +276,12 @@ enum ChatAIRecallPipeline {
         Return this JSON shape:
         {
           "answer": "short answer supported by the memories",
-          "sourceIdentifiers": ["source identifier strings used"],
+          "sourceIdentifiers": ["S1"],
           "insufficientEvidence": false
         }
+
+        In this prompt, sourceIdentifiers means source aliases. Use only these aliases:
+        \(aliases)
 
         If the memories do not support an answer, return:
         {
@@ -256,6 +323,57 @@ enum ChatAIRecallPipeline {
         }
     }
     #endif
+
+    private struct AliasedMemorySource {
+        let alias: String
+        let payload: MemorySourceCardPayload
+    }
+
+    private struct ChatAIRecallAnswerDetails {
+        let result: ChatAIRecallResult
+        let diagnostics: LocalAIChatDiagnostics
+
+        func diagnostic(
+            answered: Bool,
+            errorMessage: String?
+        ) -> ChatAIRecallDiagnosticResult {
+            diagnostics.result(
+                answered: answered,
+                answer: result.text,
+                citedSourceIdentifiers: result.citations.map { $0.id.uuidString },
+                errorMessage: errorMessage
+            )
+        }
+    }
+
+    private struct LocalAIChatDiagnostics {
+        var retrievedSourceCount: Int = 0
+        var resolvedSourceCount: Int = 0
+        var rawModelSourceIdentifiers: [String] = []
+        var mappedSourceIdentifiers: [String] = []
+        var validationError: String?
+        var rawModelAnswer: String = ""
+
+        func result(
+            answered: Bool,
+            answer: String = "",
+            citedSourceIdentifiers: [String] = [],
+            errorMessage: String?
+        ) -> ChatAIRecallDiagnosticResult {
+            ChatAIRecallDiagnosticResult(
+                answered: answered,
+                answer: answer,
+                citedSourceIdentifiers: citedSourceIdentifiers,
+                retrievedSourceCount: retrievedSourceCount,
+                resolvedSourceCount: resolvedSourceCount,
+                rawModelSourceIdentifiers: rawModelSourceIdentifiers,
+                mappedSourceIdentifiers: mappedSourceIdentifiers,
+                validationError: validationError,
+                rawModelAnswer: rawModelAnswer,
+                errorMessage: errorMessage
+            )
+        }
+    }
 
     @MainActor
     private static func sourceIdentifiers(
@@ -337,6 +455,15 @@ enum ChatAIRecallPipeline {
             case .invalidModelOutput(let message):
                 return message
             }
+        }
+    }
+
+    private struct LocalAIChatFailure: LocalizedError {
+        let message: String
+        let diagnostic: ChatAIRecallDiagnosticResult?
+
+        var errorDescription: String? {
+            message
         }
     }
 }

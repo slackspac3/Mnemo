@@ -35,12 +35,14 @@ The Local AI path:
 3. Backfills the DEBUG Core Spotlight index with active, non-archived memories.
 4. Queries Core Spotlight for source identifiers.
 5. Resolves every returned identifier through `MemorySourceCardResolver`.
-6. Builds a prompt using only SwiftData-backed memory summaries.
-7. Requests strict JSON from Apple Foundation Models:
+6. Assigns model-facing aliases to resolved sources: `S1`, `S2`, `S3`.
+7. Builds a prompt using only SwiftData-backed memory summaries and aliases.
+8. Requests strict JSON from Apple Foundation Models:
    `{ answer, sourceIdentifiers, insufficientEvidence }`
-8. Parses with `SourceGroundedAnswerParser`.
-9. Validates with `SourceGroundedAnswerValidator`.
-10. Re-resolves cited source identifiers before returning a Chat-compatible answer.
+9. Treats model `sourceIdentifiers` as aliases, not app UUIDs.
+10. Maps aliases back to MemoryRecord UUID source identifiers.
+11. Validates the UUID-mapped output with `SourceGroundedAnswerValidator`.
+12. Re-resolves cited source identifiers before returning a Chat-compatible answer.
 
 The path returns `nil` for unavailable models, missing sources, invalid JSON,
 missing citations, invalid citations, archived/deleted sources, or any other
@@ -93,6 +95,12 @@ are not trusted for display. Returned source IDs are rehydrated through
 `MemorySourceCardResolver`, and the Chat response carries the resolved memory
 IDs and summaries into the existing source-card UI.
 
+Foundation Models does not see raw MemoryRecord UUIDs for citation copying. The
+prompt exposes short aliases such as `S1` and `S2`. After parsing, Mnemo maps
+those aliases back to UUID source identifiers and then runs the existing
+`SourceGroundedAnswerValidator`. This keeps the final app citation contract
+strict while avoiding brittle UUID copying by the model.
+
 ## Foundation Models Unavailable
 
 If Apple Foundation Models are unavailable because of OS, device eligibility,
@@ -112,6 +120,25 @@ Chat uses deterministic recall.
 
 AI Lab also includes a `Manual Local AI Chat Test` panel that calls the same
 `ChatAIRecallPipeline` used by Chat.
+
+## Troubleshooting
+
+Error:
+
+`Model returned malformed source identifiers.`
+
+Meaning:
+
+The old UUID-copying path or UUID validator rejected source IDs copied by the
+model.
+
+Expected after this alias fix:
+
+The model cites aliases such as `S1`, then Mnemo maps those aliases back to
+UUIDs before validation. AI Lab now shows retrieved source count, resolved source
+count, raw model aliases, mapped UUIDs, raw model answer, and validation error so
+future failures identify whether retrieval, source resolution, alias mapping, or
+UUID validation failed.
 
 ## Non-Goals
 
