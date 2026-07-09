@@ -204,7 +204,7 @@ struct SettingsView: View {
                                     Text("AI Lab")
                                         .font(DS.Typography.body)
                                         .foregroundStyle(DS.Colours.textPrimary)
-                                    Text("Internal DEBUG smoke tests. Chat recall stays deterministic.")
+                                    Text("Internal DEBUG diagnostics. Chat tries Local AI first, with deterministic recall as fallback.")
                                         .font(DS.Typography.caption1)
                                         .foregroundStyle(DS.Colours.textSecondary)
                                 }

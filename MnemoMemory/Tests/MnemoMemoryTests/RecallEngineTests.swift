@@ -222,6 +222,27 @@ struct RecallEngineTests {
         #expect(result.citations.isEmpty)
     }
 
+    @Test("Birthday no-answer copy does not expose stemmed name tokens")
+    @MainActor
+    func birthdayNoAnswerPreservesRequestedNameWithCurlyPossessive() {
+        let memory = Self.makeMemory(
+            "Ahmed prefers quiet restaurants.",
+            type: .preference,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is Ahmed\u{2019}s birthday?",
+            memories: [memory]
+        )
+
+        #expect(result.text.localizedCaseInsensitiveContains("do not have Ahmed's birthday saved"))
+        #expect(!result.text.localizedCaseInsensitiveContains("Ahm's"))
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
+    }
+
     @Test("Home Wi-Fi query does not confidently answer with beach house password")
     @MainActor
     func homeWifiUsesCautiousBeachHouseCaveat() {
@@ -290,6 +311,27 @@ struct RecallEngineTests {
         #expect(result.citedMemoryIds.isEmpty)
         #expect(result.citations.isEmpty)
         #expect(result.text.localizedCaseInsensitiveContains("do not have Tania's size saved"))
+    }
+
+    @Test("Person size no-answer copy handles curly possessives as names")
+    @MainActor
+    func personSizeNoAnswerPreservesRequestedNameWithCurlyPossessive() {
+        let memory = Self.makeMemory(
+            "Ahmed prefers oat milk cappuccino.",
+            type: .preference,
+            source: .text,
+            createdAt: referenceDate
+        )
+
+        let result = RecallEngine().recall(
+            query: "What is Ahmed\u{2019}s shoe size?",
+            memories: [memory]
+        )
+
+        #expect(result.text.localizedCaseInsensitiveContains("do not have Ahmed's shoe size saved"))
+        #expect(!result.text.localizedCaseInsensitiveContains("your Ahmed"))
+        #expect(result.citedMemoryIds.isEmpty)
+        #expect(result.citations.isEmpty)
     }
 
     @Test("Fuzzy size correction does not rewrite non-size show query")

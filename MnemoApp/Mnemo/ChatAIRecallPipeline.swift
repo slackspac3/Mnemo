@@ -40,7 +40,7 @@ enum ChatAIRecallPipeline {
         query: String,
         context: ModelContext
     ) async -> ChatAIRecallResult? {
-        guard DebugAIChatSetting.isEnabled else { return nil }
+        guard DebugAIChatSetting.usesLocalAIFirst else { return nil }
 
         do {
             return try await answer(query: query, context: context)
@@ -54,10 +54,6 @@ enum ChatAIRecallPipeline {
         query: String,
         context: ModelContext
     ) async -> ChatAIRecallDiagnosticResult {
-        guard DebugAIChatSetting.isEnabled else {
-            return failureDiagnostic("Local AI Chat is off.")
-        }
-
         do {
             let details = try await answerDetails(query: query, context: context)
             return details.diagnostic(answered: true, errorMessage: nil)

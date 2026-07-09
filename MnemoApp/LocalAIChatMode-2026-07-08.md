@@ -2,35 +2,37 @@
 
 ## Summary
 
-This pass adds a DEBUG-only Local AI Chat experiment. When enabled in AI Lab,
-Chat first tries an on-device Apple Foundation Models answer grounded in saved
-Mnemo memories. If the local AI path cannot return a validated, cited answer,
-Chat falls back to the existing deterministic recall path.
+This pass adds a DEBUG-only Local AI Chat path. In DEBUG builds, Chat first
+tries an on-device Apple Foundation Models answer grounded in saved Mnemo
+memories. If the local AI path cannot return a validated, cited answer, Chat
+falls back to the existing deterministic recall path.
 
 Release builds remain unchanged.
 
-## Enablement
+## Chat Routing
 
-Open Settings -> AI Lab in a DEBUG build and turn on:
+Local AI is the primary Chat path by default in DEBUG builds. AI Lab keeps a
+temporary fallback-only override for comparison:
 
-`Local AI answers in Chat (DEBUG)`
+`Use Local AI first in Chat (DEBUG)`
 
-The setting is stored under:
+Turning that switch off stores:
 
-`mnemo.debugLocalAIChatEnabled`
+`mnemo.debugDeterministicChatOnly = true`
 
-The app target wraps this in `DebugAIChatSetting`. MnemoMemory uses the same raw
-UserDefaults key inside DEBUG-only indexing code because the package cannot
-depend on the app target.
+The app target wraps this in `DebugAIChatSetting`. MnemoMemory reads the same
+raw deterministic-only key inside DEBUG-only indexing code because the package
+cannot depend on the app target.
 
 ## Pipeline
 
-When the DEBUG toggle is on, `ChatViewModel.recall(query:context:)` first calls
-`ChatAIRecallPipeline.attemptAnswer(query:context:)`.
+In DEBUG builds, `ChatViewModel.recall(query:context:)` first calls
+`ChatAIRecallPipeline.attemptAnswer(query:context:)` unless the deterministic
+fallback-only override is enabled.
 
 The Local AI path:
 
-1. Checks the DEBUG toggle.
+1. Checks the DEBUG fallback-only override.
 2. Checks Apple Foundation Models availability.
 3. Backfills the DEBUG Core Spotlight index with active, non-archived memories.
 4. Queries Core Spotlight for source identifiers.
@@ -52,25 +54,26 @@ failure. Chat then falls back to deterministic recall.
 
 Core Spotlight indexing for real memories is DEBUG-only in this pass.
 
-When the toggle is turned on:
+When DEBUG Local AI-first Chat is active:
 
-- `mnemo.debugLocalAIChatEnabled` is set to `true`.
 - `MemoryCRUD.backfillSearchIndex(in:)` indexes active, non-archived memories.
 - AI Lab shows progress and reports any DEBUG-only backfill error.
 
-When the toggle is turned off:
+When the AI Lab switch is turned off:
 
-- `mnemo.debugLocalAIChatEnabled` is set to `false`.
-- `MemoryCRUD.resetSearchIndexItems()` clears Mnemo's Core Spotlight domain.
+- `mnemo.debugDeterministicChatOnly` is set to `true`.
+- Chat skips Local AI and uses deterministic recall only.
+- `MemoryCRUD.resetSearchIndexItems()` clears Mnemo's DEBUG Core Spotlight
+  domain.
 - SwiftData memories and VectorBridge rows are not deleted.
 
-On DEBUG app launch, if the toggle is already on, `AppState` runs an idempotent
-backfill. If the toggle is off, no launch backfill runs.
+On DEBUG app launch, `AppState` runs an idempotent backfill unless the
+deterministic-only override is enabled.
 
 Capture-time indexing is centralized in `MemoryCRUD.insertAndIndex`: after a
-memory is saved and vector-indexed, DEBUG builds check the shared UserDefaults
-key and index only when Local AI Chat is enabled. Capture sheets do not know
-about the setting.
+memory is saved and vector-indexed, DEBUG builds check the shared
+deterministic-only UserDefaults key and index when Local AI-first Chat is
+active. Capture sheets do not know about the setting.
 
 ## Release Privacy Boundary
 
@@ -166,16 +169,16 @@ Chat uses deterministic recall.
 ## Manual Testing
 
 1. Save a memory: `I loved the waterfall in Guam.`
-2. Open Settings -> AI Lab.
-3. Turn on `Local AI answers in Chat (DEBUG)`.
-4. Ask in Chat: `Where was the waterfall I loved?`
-5. Confirm the answer mentions Guam and shows a source card.
-6. Tap the source card and confirm it opens the saved memory.
-7. Turn the toggle off and confirm Mnemo's Spotlight domain is cleared.
-8. Ask again and confirm deterministic recall still handles the query or fails safely.
+2. Ask in Chat: `Where was the waterfall I loved?`
+3. Confirm the answer mentions Guam and shows a source card.
+4. Tap the source card and confirm it opens the saved memory.
+5. Open Settings -> AI Lab.
+6. Turn off `Use Local AI first in Chat (DEBUG)`.
+7. Ask again and confirm deterministic recall still handles the query or fails safely.
 
 AI Lab also includes a `Manual Local AI Chat Test` panel that calls the same
-`ChatAIRecallPipeline` used by Chat.
+`ChatAIRecallPipeline` used by Chat, even when the fallback-only override is on.
+The manual path backfills the DEBUG search index before querying.
 
 ## Troubleshooting
 

@@ -20,15 +20,15 @@ public struct MemorySearchIndexingFlags: Equatable, Sendable {
 }
 
 #if DEBUG
-/// Shared DEBUG-only key for internal Local AI Chat experiments.
+/// Shared DEBUG-only key for the Local AI Chat fallback override.
 ///
 /// MnemoMemory reads this raw UserDefaults key directly because the package
 /// cannot depend on the app target's DebugAIChatSetting wrapper.
 public enum MemoryDebugLocalAIChatIndexing {
-    public static let userDefaultsKey = "mnemo.debugLocalAIChatEnabled"
+    public static let deterministicOnlyUserDefaultsKey = "mnemo.debugDeterministicChatOnly"
 
     public static var isEnabled: Bool {
-        UserDefaults.standard.bool(forKey: userDefaultsKey)
+        !UserDefaults.standard.bool(forKey: deterministicOnlyUserDefaultsKey)
     }
 }
 #endif

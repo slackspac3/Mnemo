@@ -237,7 +237,7 @@ final class AppState {
     #if DEBUG
     @MainActor
     private func backfillLocalAIChatIndexIfNeeded() async {
-        guard DebugAIChatSetting.isEnabled else { return }
+        guard DebugAIChatSetting.usesLocalAIFirst else { return }
         let context = MemoryStore.shared.container.mainContext
         try? await MemoryCRUD.backfillSearchIndex(in: context)
     }

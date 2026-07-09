@@ -424,7 +424,7 @@ public struct RecallEngine {
         }
 
         return RecallResult(
-            text: "I do not have \(subject.capitalized)'s birthday saved.",
+            text: "I do not have \(displayName(for: subject))'s birthday saved.",
             citedMemoryIds: [],
             citations: []
         )
@@ -798,7 +798,7 @@ public struct RecallEngine {
     }
 
     private func birthdaySubject(in query: String) -> String? {
-        let pattern = #"\b([A-Za-z][A-Za-z-]+)(?:'s)?\s+birthday\b"#
+        let pattern = #"\b([A-Za-z][A-Za-z-]+)(?:['’]s)?\s+birthday\b"#
         if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
             let range = NSRange(query.startIndex..<query.endIndex, in: query)
             if let match = regex.firstMatch(in: query, range: range),
@@ -807,13 +807,16 @@ public struct RecallEngine {
             }
         }
 
-        let tokens = Array(meaningfulTokens(in: query, expandingSynonyms: false))
-        guard tokens.contains("birthday") else { return nil }
+        let rawTokens = query.lowercased().split { character in
+            !character.isLetter && !character.isNumber
+        }.map(String.init)
+        guard rawTokens.contains("birthday") || rawTokens.contains("birthdays") else { return nil }
         let nonSubjectTerms: Set<String> = ["birthday", "birthdays", "date"]
-        return tokens
-            .filter { !nonSubjectTerms.contains($0) }
-            .sorted()
-            .first
+        return rawTokens.first { token in
+            token.count > 2 &&
+                !Self.stopWords.contains(token) &&
+                !nonSubjectTerms.contains(token)
+        }
     }
 
     private func hasForgetIntent(_ text: String) -> Bool {
@@ -842,7 +845,7 @@ public struct RecallEngine {
 
         let patterns = [
             #"\bwhat\s+size\s+does\s+([A-Za-z][A-Za-z-]+)\s+wear\b"#,
-            #"\b([A-Za-z][A-Za-z-]+)'s\s+(?:shoe\s+|shirt\s+|t-shirt\s+|t\s+shirt\s+)?size\b"#,
+            #"\b([A-Za-z][A-Za-z-]+)(?:['’]s)\s+(?:shoe\s+|shirt\s+|t-shirt\s+|t\s+shirt\s+)?size\b"#,
         ]
 
         for pattern in patterns {

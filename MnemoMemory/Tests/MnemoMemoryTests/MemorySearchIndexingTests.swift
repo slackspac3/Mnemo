@@ -148,13 +148,24 @@ struct MemorySearchIndexingTests {
     }
 
     #if DEBUG
-    @Test("DEBUG Local AI indexing flag defaults off")
-    func debugLocalAIIndexingFlagDefaultsOff() {
+    @Test("DEBUG Local AI indexing flag defaults on and respects override")
+    func debugLocalAIIndexingFlagDefaultsOnAndRespectsOverride() {
         UserDefaults.standard.removeObject(
-            forKey: MemoryDebugLocalAIChatIndexing.userDefaultsKey
+            forKey: MemoryDebugLocalAIChatIndexing.deterministicOnlyUserDefaultsKey
+        )
+
+        #expect(MemoryDebugLocalAIChatIndexing.isEnabled == true)
+
+        UserDefaults.standard.set(
+            true,
+            forKey: MemoryDebugLocalAIChatIndexing.deterministicOnlyUserDefaultsKey
         )
 
         #expect(MemoryDebugLocalAIChatIndexing.isEnabled == false)
+
+        UserDefaults.standard.removeObject(
+            forKey: MemoryDebugLocalAIChatIndexing.deterministicOnlyUserDefaultsKey
+        )
     }
 
     @Test("Backfill indexes active records and skips archived records")

@@ -10,7 +10,7 @@ struct AILabView: View {
     @State private var coreSpotlightResult: AILabSmokeResult?
     @State private var foundationModelsResult: AILabSmokeResult?
     @State private var runningSmoke: AILabSmoke?
-    @State private var localAIChatEnabled = DebugAIChatSetting.isEnabled
+    @State private var localAIChatEnabled = DebugAIChatSetting.usesLocalAIFirst
     @State private var isUpdatingLocalAIChat = false
     @State private var localAIChatErrorMessage: String?
     @State private var localAIQuestion = ""
@@ -27,7 +27,7 @@ struct AILabView: View {
                         Text("Internal AI Lab")
                             .font(DS.Typography.headline)
                             .foregroundStyle(DS.Colours.textPrimary)
-                        Text("DEBUG-only smoke tests for local Apple-native AI plumbing. These controls do not change Chat recall or enable model answers for normal users.")
+                        Text("DEBUG-only diagnostics for local Apple-native AI recall. Chat tries Local AI first by default, then falls back to deterministic recall when the model path cannot answer safely.")
                             .font(DS.Typography.caption1)
                             .foregroundStyle(DS.Colours.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -46,10 +46,10 @@ struct AILabView: View {
                         }
                     )) {
                         VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                            Text("Local AI answers in Chat (DEBUG)")
+                            Text("Use Local AI first in Chat (DEBUG)")
                                 .font(DS.Typography.body)
                                 .foregroundStyle(DS.Colours.textPrimary)
-                            Text("When on, Chat tries an on-device Foundation Models answer grounded in your saved memories, with deterministic recall as fallback. When off, Chat always uses deterministic recall.")
+                            Text("When on, Chat uses on-device Foundation Models answers grounded in saved memories before deterministic fallback. Turn off only to compare fallback-only behaviour.")
                                 .font(DS.Typography.caption1)
                                 .foregroundStyle(DS.Colours.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -62,7 +62,7 @@ struct AILabView: View {
                         HStack(spacing: DS.Spacing.sm) {
                             ProgressView()
                                 .tint(DS.Colours.accent)
-                            Text("Updating Local AI Chat index...")
+                            Text("Preparing Local AI Chat index...")
                                 .font(DS.Typography.caption1)
                                 .foregroundStyle(DS.Colours.textSecondary)
                         }
@@ -158,7 +158,7 @@ struct AILabView: View {
         .navigationTitle("AI Lab")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            localAIChatEnabled = DebugAIChatSetting.isEnabled
+            localAIChatEnabled = DebugAIChatSetting.usesLocalAIFirst
         }
     }
 
@@ -171,17 +171,16 @@ struct AILabView: View {
 
         do {
             if enabled {
-                DebugAIChatSetting.isEnabled = true
+                DebugAIChatSetting.usesLocalAIFirst = true
                 try await MemoryCRUD.backfillSearchIndex(in: modelContext)
                 localAIChatEnabled = true
             } else {
-                DebugAIChatSetting.isEnabled = false
+                DebugAIChatSetting.usesLocalAIFirst = false
                 try await MemoryCRUD.resetSearchIndexItems()
                 localAIChatEnabled = false
-                localAIManualResult = nil
             }
         } catch {
-            DebugAIChatSetting.isEnabled = !enabled
+            DebugAIChatSetting.usesLocalAIFirst = !enabled
             localAIChatEnabled = !enabled
             localAIChatErrorMessage = error.localizedDescription
         }
