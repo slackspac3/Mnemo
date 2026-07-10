@@ -4,7 +4,7 @@ import MnemoUI
 import MnemoCore
 import MnemoMemory
 
-/// Full memory detail: summary, tags, provenance chain, processing tier badge.
+/// Canonical memory detail, including the original capture and local provenance.
 struct MemoryDetailView: View {
 
     private let snapshot: MemoryDetailSnapshot
@@ -13,14 +13,14 @@ struct MemoryDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
 
     @State private var showingArchiveConfirm = false
     @State private var showingDeleteConfirm = false
     @State private var isArchiving = false
     @State private var isDeleting = false
     @State private var errorMessage: String?
-    @State private var summaryAppeared = false
 
     init(
         record: MemoryRecord,
@@ -39,183 +39,158 @@ struct MemoryDetailView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Spacing.lg) {
-                        HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                            Capsule()
-                                .fill(typeAccentColour(for: memoryTypeEnum))
-                                .frame(width: 3.0)
-                                .frame(maxHeight: .infinity)
-                                .accessibilityHidden(true)
-
-                            ZStack(alignment: .bottomTrailing) {
-                                MnemoThreadMotif(style: .watermark, lineWidth: 1.8)
-                                    .frame(width: 124.0, height: 92.0)
-                                    .padding(.trailing, DS.Spacing.sm)
-
-                                VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                                    Label("Saved memory", systemImage: "bookmark.fill")
-                                        .font(DS.Typography.caption1.weight(.semibold))
-                                        .foregroundStyle(DS.Colours.sourceCardAccent)
-                                        .accessibilityHidden(true)
-
-                                    Text(snapshot.summary)
-                                        .font(DS.Typography.body)
-                                        .lineSpacing(4.0)
-                                        .foregroundStyle(DS.Colours.textPrimary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .padding(DS.Spacing.md)
-                                .padding(.trailing, DS.Spacing.sm)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(DS.Colours.memoryCardSurface)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
-                                .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-                        .shadow(
-                            color: DS.Shadows.subtle.color,
-                            radius: DS.Shadows.subtle.radius,
-                            x: DS.Shadows.subtle.x,
-                            y: DS.Shadows.subtle.y
-                        )
-                        .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
-                        .opacity(summaryAppeared ? 1.0 : 0.0)
-                        .offset(y: reduceMotion || summaryAppeared ? 0.0 : 8.0)
-                        .scaleEffect(reduceMotion ? 1.0 : (summaryAppeared ? 1.0 : 0.98))
-                        .animation(reduceMotion ? DS.Animation.fade : DS.Animation.cardAppear, value: summaryAppeared)
-                        .onAppear {
-                            summaryAppeared = true
-                        }
-                        .accessibilityIdentifier(AccessibilityID.MemoryDetail.title)
-
-                        VStack(spacing: DS.Spacing.sm) {
-                            MetadataRow(label: "Type", value: snapshot.memoryType.capitalized, icon: "tag")
-                            MetadataRow(label: "Source", value: snapshot.inputSource.capitalized, icon: "arrow.down.circle")
-                            MetadataRow(
-                                label: "Captured",
-                                value: snapshot.createdAt.formatted(.dateTime.day().month().year()),
-                                icon: "calendar"
-                            )
-                            Divider()
-                                .overlay(DS.Colours.borderSubtle)
-                            MetadataRow(
-                                label: "Processing",
-                                value: processingLabel,
-                                icon: "cpu",
-                                isSecondary: true
-                            )
-                            MetadataRow(
-                                label: "Recall priority",
-                                value: recallPriorityLabel,
-                                icon: "chart.bar",
-                                isSecondary: true
-                            )
-                            MetadataRow(
-                                label: "Review status",
-                                value: reviewStatusLabel,
-                                icon: "checkmark.seal",
-                                isSecondary: true
-                            )
-                        }
-                        .padding(DS.Spacing.md)
-                        .background(DS.Colours.surfaceElevated)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
-                                .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-                        .shadow(
-                            color: DS.Shadows.subtle.color,
-                            radius: DS.Shadows.subtle.radius,
-                            x: DS.Shadows.subtle.x,
-                            y: DS.Shadows.subtle.y
-                        )
-
-                        if !snapshot.tags.isEmpty {
+                        VStack(alignment: .leading, spacing: DS.Spacing.lg) {
                             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                                Text("Tags")
-                                    .font(DS.Typography.subheadline)
+                                Label("Saved summary", systemImage: "bookmark.fill")
+                                    .font(DS.Typography.subheadline.weight(.semibold))
+                                    .foregroundStyle(
+                                        differentiateWithoutColor
+                                            ? DS.Colours.textPrimary
+                                            : DS.Colours.sourceCardAccent
+                                    )
+
+                                Text(snapshot.summary)
+                                    .font(DS.Typography.title3)
+                                    .lineSpacing(3.0)
+                                    .foregroundStyle(DS.Colours.textPrimary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .accessibilityIdentifier(AccessibilityID.MemoryDetail.title)
+
+                            Divider()
+                                .overlay(detailBorder)
+
+                            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                                Label("Original capture", systemImage: originalCaptureIcon)
+                                    .font(DS.Typography.subheadline.weight(.semibold))
                                     .foregroundStyle(DS.Colours.textSecondary)
 
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: DS.Spacing.xs) {
-                                        ForEach(snapshot.tags, id: \.self) { tag in
-                                            Text(tag)
-                                                .font(DS.Typography.caption1)
-                                                .foregroundStyle(DS.Colours.accent)
-                                                .padding(.horizontal, DS.Spacing.sm)
-                                                .padding(.vertical, DS.Spacing.xs)
-                                                .background(DS.Colours.accentSoft)
-                                                .clipShape(Capsule())
-                                        }
-                                    }
+                                Text(snapshot.rawInput)
+                                    .font(DS.Typography.body)
+                                    .foregroundStyle(DS.Colours.textPrimary)
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            Divider()
+                                .overlay(detailBorder)
+
+                            VStack(spacing: DS.Spacing.sm) {
+                                MetadataRow(
+                                    label: "Source",
+                                    value: snapshot.inputSource.capitalized,
+                                    icon: "arrow.down.circle"
+                                )
+                                MetadataRow(
+                                    label: "Captured",
+                                    value: snapshot.createdAt.formatted(
+                                        .dateTime.day().month().year().hour().minute()
+                                    ),
+                                    icon: "calendar"
+                                )
+                            }
+
+                            Divider()
+                                .overlay(detailBorder)
+
+                            VStack(spacing: DS.Spacing.sm) {
+                                MetadataRow(label: "Type", value: snapshot.memoryType.capitalized, icon: "tag")
+                                MetadataRow(label: "Status", value: statusLabel, icon: statusIcon)
+
+                                if !snapshot.tags.isEmpty {
+                                    MetadataRow(
+                                        label: "Tags",
+                                        value: snapshot.tags.joined(separator: ", "),
+                                        icon: "number"
+                                    )
                                 }
                             }
-                            .padding(DS.Spacing.md)
-                            .background(DS.Colours.surfaceElevated)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: DS.CornerRadius.large)
-                                    .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-                            .shadow(
-                                color: DS.Shadows.subtle.color,
-                                radius: DS.Shadows.subtle.radius,
-                                x: DS.Shadows.subtle.x,
-                                y: DS.Shadows.subtle.y
-                            )
-                        }
-
-                        if snapshot.corroboratingEvidenceCount > 0 {
-                            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                                Text(corroborationText(for: snapshot.corroboratingEvidenceCount))
-                                    .font(DS.Typography.subheadline)
-                                    .foregroundStyle(DS.Colours.success)
-                            }
-                            .padding(DS.Spacing.md)
-                            .background(DS.Colours.successSoft)
-                            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-                        }
-
-                        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                            Text("Original capture")
-                                .font(DS.Typography.subheadline)
-                                .foregroundStyle(DS.Colours.textSecondary)
-                            Text(snapshot.rawInput)
-                                .font(DS.Typography.footnote)
-                                .foregroundStyle(DS.Colours.textTertiary)
                         }
                         .padding(DS.Spacing.md)
-                        .background(DS.Colours.surfaceElevated)
+                        .background(DS.Colours.surfacePrimary)
                         .overlay {
-                            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
-                                .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                                .stroke(detailBorder, lineWidth: 1.0)
                         }
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
+                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+
+                        DisclosureGroup {
+                            VStack(spacing: DS.Spacing.sm) {
+                                MetadataRow(
+                                    label: "Processing",
+                                    value: processingLabel,
+                                    icon: "cpu",
+                                    isSecondary: true
+                                )
+                                MetadataRow(
+                                    label: "Recall priority",
+                                    value: recallPriorityLabel,
+                                    icon: "chart.bar",
+                                    isSecondary: true
+                                )
+                                MetadataRow(
+                                    label: "Review status",
+                                    value: reviewStatusLabel,
+                                    icon: "checkmark.seal",
+                                    isSecondary: true
+                                )
+
+                                if snapshot.corroboratingEvidenceCount > 0 {
+                                    MetadataRow(
+                                        label: "Evidence",
+                                        value: corroborationText(for: snapshot.corroboratingEvidenceCount),
+                                        icon: "link.badge.plus",
+                                        isSecondary: true
+                                    )
+                                }
+                            }
+                            .padding(.top, DS.Spacing.md)
+                        } label: {
+                            Label("Provenance and review", systemImage: "checkmark.shield")
+                                .font(DS.Typography.headline)
+                                .foregroundStyle(DS.Colours.textPrimary)
+                        }
+                        .padding(DS.Spacing.md)
+                        .background(DS.Colours.surfaceSecondary)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                                .stroke(detailBorder, lineWidth: 1.0)
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                        .tint(DS.Colours.accent)
 
                         if let errorMessage {
-                            Text(errorMessage)
+                            Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                                 .font(DS.Typography.footnote)
                                 .foregroundStyle(DS.Colours.destructive)
                         }
 
-                        VStack(spacing: DS.Spacing.sm) {
+                        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                            Text("Memory controls")
+                                .font(DS.Typography.headline)
+                                .foregroundStyle(DS.Colours.textPrimary)
+
                             Button {
                                 showingArchiveConfirm = true
                             } label: {
-                                Text(isArchiving ? "Archiving..." : "Archive Memory")
-                                    .font(DS.Typography.body)
-                                    .foregroundStyle(DS.Colours.textPrimary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(DS.Spacing.md)
-                                    .background(DS.Colours.surfaceSecondary)
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                            .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                                HStack(spacing: DS.Spacing.sm) {
+                                    if isArchiving {
+                                        ProgressView()
+                                    } else {
+                                        Image(systemName: "archivebox")
                                     }
-                                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                                    Text(isArchiving ? "Archiving..." : "Archive Memory")
+                                }
+                                .font(DS.Typography.body.weight(.semibold))
+                                .foregroundStyle(DS.Colours.textPrimary)
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: DS.ComponentTokens.SecondaryButton.height)
+                                .background(DS.Colours.surfaceSecondary)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                                        .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                             }
                             .disabled(isArchiving || isDeleting)
                             .buttonStyle(.mnemoPressable)
@@ -224,19 +199,26 @@ struct MemoryDetailView: View {
                             Button {
                                 showingDeleteConfirm = true
                             } label: {
-                                Text(isDeleting ? "Deleting..." : "Delete Permanently")
-                                    .font(DS.Typography.body)
-                                    .foregroundStyle(DS.Colours.destructive)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(DS.Spacing.md)
-                                    .background(DS.Colours.destructiveSoft)
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                            .stroke(DS.Colours.borderDestructive, lineWidth: 1.0)
+                                HStack(spacing: DS.Spacing.sm) {
+                                    if isDeleting {
+                                        ProgressView()
+                                    } else {
+                                        Image(systemName: "trash")
                                     }
-                                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                                    Text(isDeleting ? "Deleting..." : "Delete Permanently")
+                                }
+                                .font(DS.Typography.body.weight(.semibold))
+                                .foregroundStyle(DS.Colours.destructive)
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: DS.ComponentTokens.DestructiveButton.height)
+                                .background(DS.Colours.destructiveSoft)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                                        .stroke(DS.Colours.borderDestructive, lineWidth: 1.0)
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                             }
-                            .disabled(isDeleting)
+                            .disabled(isArchiving || isDeleting)
                             .buttonStyle(.mnemoPressable)
                             .accessibilityIdentifier(AccessibilityID.MemoryDetail.delete)
                         }
@@ -280,10 +262,38 @@ struct MemoryDetailView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.accent)
                 }
             }
+        }
+    }
+
+    private var detailBorder: Color {
+        colorSchemeContrast == .increased ? DS.Colours.borderStrong : DS.Colours.borderSubtle
+    }
+
+    private var originalCaptureIcon: String {
+        switch InputSource(rawValue: snapshot.inputSource) {
+        case .text: return "text.alignleft"
+        case .voice: return "mic.fill"
+        case .image: return "photo"
+        case .none: return "doc.text"
+        }
+    }
+
+    private var statusLabel: String {
+        snapshot.isDone ? "Done" : snapshot.persistenceState.capitalized
+    }
+
+    private var statusIcon: String {
+        if snapshot.isDone {
+            return "checkmark.circle.fill"
+        }
+
+        switch PersistenceState(rawValue: snapshot.persistenceState) {
+        case .active: return "circle.fill"
+        case .dormant: return "pause.circle"
+        case .review: return "exclamationmark.circle"
+        case .none: return "bookmark"
         }
     }
 
@@ -313,10 +323,6 @@ struct MemoryDetailView: View {
         }
 
         return "Review suggested"
-    }
-
-    private var memoryTypeEnum: MemoryType {
-        MemoryType(rawValue: snapshot.memoryType) ?? .fact
     }
 
     @MainActor
@@ -364,6 +370,8 @@ private struct MemoryDetailSnapshot {
     let memoryType: String
     let inputSource: String
     let processingTier: String
+    let persistenceState: String
+    let isDone: Bool
     let persistenceScore: Double
     let confidence: Double
     let tags: [String]
@@ -377,27 +385,14 @@ private struct MemoryDetailSnapshot {
         self.memoryType = record.memoryType
         self.inputSource = record.inputSource
         self.processingTier = record.processingTier
+        self.persistenceState = record.persistenceState
+        self.isDone = record.isDone
         self.persistenceScore = record.persistenceScore
         self.confidence = record.confidence
         self.tags = record.tags
         self.corroboratingEvidenceCount = record.corroboratingEvidenceIds.count
         self.rawInput = record.rawInput
         self.createdAt = record.createdAt
-    }
-}
-
-private func typeAccentColour(for type: MemoryType) -> Color {
-    switch type {
-    case .preference, .intention:
-        return DS.Colours.sense.opacity(0.8)
-    case .list:
-        return DS.Colours.success.opacity(0.8)
-    case .credential:
-        return DS.Colours.warning.opacity(0.8)
-    case .event:
-        return DS.Colours.accent.opacity(0.8)
-    case .fact, .instruction:
-        return DS.Colours.brandSage.opacity(0.6)
     }
 }
 
@@ -411,23 +406,48 @@ struct MetadataRow: View {
     let icon: String
     var isSecondary = false
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                    labelView
+                    valueView
+                        .padding(.leading, DS.Spacing.xl)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.sm) {
+                    labelView
+                    Spacer(minLength: DS.Spacing.md)
+                    valueView
+                        .multilineTextAlignment(.trailing)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label), \(value)")
+    }
+
+    private var labelView: some View {
         HStack(spacing: DS.Spacing.sm) {
             Image(systemName: icon)
                 .frame(width: DS.Spacing.lg)
                 .foregroundStyle(DS.Colours.textTertiary)
                 .accessibilityHidden(true)
+
             Text(label)
                 .font(labelFont)
                 .foregroundStyle(DS.Colours.textSecondary)
-            Spacer()
-            Text(value)
-                .font(valueFont)
-                .foregroundStyle(DS.Colours.textPrimary)
-                .multilineTextAlignment(.trailing)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label), \(value)")
+    }
+
+    private var valueView: some View {
+        Text(value)
+            .font(valueFont)
+            .foregroundStyle(DS.Colours.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var labelFont: Font {
