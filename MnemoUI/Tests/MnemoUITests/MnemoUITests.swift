@@ -43,6 +43,43 @@ struct MnemoUITests {
         let _ = DS.Colours.privateBadgeSurface
         let _ = DS.Colours.privateBadgeText
         let _ = DS.Colours.sense
+        let _ = DS.Colours.canvas
+        let _ = DS.Colours.canvasSecondary
+        let _ = DS.Colours.contentSurface
+        let _ = DS.Colours.contentSurfaceElevated
+        let _ = DS.Colours.controlFallback
+        let _ = DS.Colours.glassTint
+        let _ = DS.Colours.glassBorder
+        let _ = DS.Colours.controlAccent
+        let _ = DS.Colours.controlAccentPressed
+        let _ = DS.Colours.sourceAccent
+        let _ = DS.Colours.sourceSurface
+        let _ = DS.Colours.sourceBorder
+        let _ = DS.Colours.separator
+        let _ = DS.Colours.focus
+    }
+
+    @Test("Semantic surfaces and component styles are available")
+    func semanticComponents() {
+        let roles: [DS.Materials.Role] = [
+            DS.Materials.navigationChrome,
+            DS.Materials.floatingControl,
+            DS.Materials.compactControl,
+            DS.Materials.sheetChrome,
+            DS.Materials.contentFallback,
+        ]
+
+        for role in roles {
+            let _ = DS.Materials.opaqueFallback(for: role)
+        }
+
+        let _ = MnemoSurfaceModifier(role: .floatingControl, cornerRadius: DS.CornerRadius.full)
+        let _ = MnemoPrimaryButtonStyle()
+        let _ = MnemoSecondaryButtonStyle()
+        let _ = MnemoFloatingControlButtonStyle()
+        let _ = MnemoCardModifier(padding: DS.Spacing.md)
+        let _ = MnemoSourceCardModifier()
+        let _ = MnemoInputSurfaceModifier()
     }
 
     @Test("Logo mark is available to app surfaces")

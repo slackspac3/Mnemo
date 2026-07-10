@@ -13,56 +13,70 @@ public enum DS {
     /// Shared color palette for brand, surfaces, text, states, and Mnemo Sense features.
     public enum Colours {
         #if os(iOS)
-        private static func adaptive(light: UIColor, dark: UIColor) -> Color {
+        private static func adaptive(
+            light: UIColor,
+            dark: UIColor,
+            highContrastLight: UIColor? = nil,
+            highContrastDark: UIColor? = nil
+        ) -> Color {
             Color(uiColor: UIColor { trait in
-                trait.userInterfaceStyle == .dark ? dark : light
+                switch (trait.userInterfaceStyle, trait.accessibilityContrast) {
+                case (.dark, .high):
+                    return highContrastDark ?? dark
+                case (_, .high):
+                    return highContrastLight ?? light
+                case (.dark, _):
+                    return dark
+                default:
+                    return light
+                }
             })
         }
         #endif
 
         // MARK: Brand - fixed values, same in both modes
-        public static let brandInk: Color = Color(.sRGB, red: 13.0 / 255.0, green: 19.0 / 255.0, blue: 33.0 / 255.0, opacity: 1.0)
-        public static let brandIndigo: Color = Color(.sRGB, red: 55.0 / 255.0, green: 48.0 / 255.0, blue: 163.0 / 255.0, opacity: 1.0)
-        public static let brandIndigoLight: Color = Color(.sRGB, red: 99.0 / 255.0, green: 102.0 / 255.0, blue: 241.0 / 255.0, opacity: 1.0)
-        public static let brandParchment: Color = Color(.sRGB, red: 237.0 / 255.0, green: 232.0 / 255.0, blue: 223.0 / 255.0, opacity: 1.0)
+        public static let brandInk: Color = Color(.sRGB, red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, opacity: 1.0)
+        public static let brandIndigo: Color = Color(.sRGB, red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, opacity: 1.0)
+        public static let brandIndigoLight: Color = Color(.sRGB, red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, opacity: 1.0)
+        public static let brandParchment: Color = Color(.sRGB, red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 238.0 / 255.0, opacity: 1.0)
         public static let brandViolet: Color = Color(.sRGB, red: 109.0 / 255.0, green: 40.0 / 255.0, blue: 217.0 / 255.0, opacity: 1.0)
         public static let brandVioletLight: Color = Color(.sRGB, red: 167.0 / 255.0, green: 139.0 / 255.0, blue: 250.0 / 255.0, opacity: 1.0)
 
         #if os(iOS)
         // MARK: Backgrounds
         public static let backgroundPrimary: Color = adaptive(
-            light: UIColor(red: 242.0 / 255.0, green: 237.0 / 255.0, blue: 229.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 13.0 / 255.0, green: 17.0 / 255.0, blue: 23.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 238.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 17.0 / 255.0, green: 19.0 / 255.0, blue: 22.0 / 255.0, alpha: 1.0)
         )
         public static let backgroundSecondary: Color = adaptive(
-            light: UIColor(red: 232.0 / 255.0, green: 226.0 / 255.0, blue: 216.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 19.0 / 255.0, green: 26.0 / 255.0, blue: 36.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 238.0 / 255.0, green: 236.0 / 255.0, blue: 232.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 22.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 1.0)
         )
         public static let backgroundGrouped: Color = adaptive(
-            light: UIColor(red: 237.0 / 255.0, green: 232.0 / 255.0, blue: 223.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 10.0 / 255.0, green: 14.0 / 255.0, blue: 20.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 238.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 17.0 / 255.0, green: 19.0 / 255.0, blue: 22.0 / 255.0, alpha: 1.0)
         )
         public static let backgroundElevated: Color = adaptive(
-            light: UIColor(red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 22.0 / 255.0, green: 30.0 / 255.0, blue: 42.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 252.0 / 255.0, green: 251.0 / 255.0, blue: 249.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 28.0 / 255.0, green: 30.0 / 255.0, blue: 35.0 / 255.0, alpha: 1.0)
         )
 
-        // MARK: Surfaces - cards sit on top of parchment backgrounds
+        // MARK: Surfaces - stable content planes over the canvas
         public static let surfacePrimary: Color = adaptive(
-            light: UIColor(red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 22.0 / 255.0, green: 30.0 / 255.0, blue: 42.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 252.0 / 255.0, green: 251.0 / 255.0, blue: 249.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 28.0 / 255.0, green: 30.0 / 255.0, blue: 35.0 / 255.0, alpha: 1.0)
         )
         public static let surfaceSecondary: Color = adaptive(
-            light: UIColor(red: 248.0 / 255.0, green: 244.0 / 255.0, blue: 238.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 28.0 / 255.0, green: 38.0 / 255.0, blue: 54.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 238.0 / 255.0, green: 236.0 / 255.0, blue: 232.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 35.0 / 255.0, green: 37.0 / 255.0, blue: 43.0 / 255.0, alpha: 1.0)
         )
         public static let surfaceElevated: Color = adaptive(
             light: UIColor(red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 30.0 / 255.0, green: 42.0 / 255.0, blue: 60.0 / 255.0, alpha: 1.0)
+            dark: UIColor(red: 34.0 / 255.0, green: 36.0 / 255.0, blue: 42.0 / 255.0, alpha: 1.0)
         )
         public static let surfacePressed: Color = adaptive(
-            light: UIColor(red: 237.0 / 255.0, green: 233.0 / 255.0, blue: 226.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 38.0 / 255.0, green: 52.0 / 255.0, blue: 72.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 228.0 / 255.0, green: 226.0 / 255.0, blue: 223.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 44.0 / 255.0, green: 46.0 / 255.0, blue: 53.0 / 255.0, alpha: 1.0)
         )
         public static let surfaceDisabled: Color = adaptive(
             light: UIColor(red: 213.0 / 255.0, green: 208.0 / 255.0, blue: 200.0 / 255.0, alpha: 0.5),
@@ -71,49 +85,61 @@ public enum DS {
 
         // MARK: Text
         public static let textPrimary: Color = adaptive(
-            light: UIColor(red: 13.0 / 255.0, green: 19.0 / 255.0, blue: 33.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 240.0 / 255.0, green: 236.0 / 255.0, blue: 227.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 1.0),
+            highContrastLight: .black,
+            highContrastDark: .white
         )
         public static let textSecondary: Color = adaptive(
-            light: UIColor(red: 74.0 / 255.0, green: 82.0 / 255.0, blue: 101.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 154.0 / 255.0, green: 163.0 / 255.0, blue: 184.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 93.0 / 255.0, green: 97.0 / 255.0, blue: 106.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 180.0 / 255.0, green: 177.0 / 255.0, blue: 172.0 / 255.0, alpha: 1.0),
+            highContrastLight: UIColor(red: 62.0 / 255.0, green: 65.0 / 255.0, blue: 72.0 / 255.0, alpha: 1.0),
+            highContrastDark: UIColor(red: 218.0 / 255.0, green: 215.0 / 255.0, blue: 209.0 / 255.0, alpha: 1.0)
         )
         public static let textTertiary: Color = adaptive(
-            light: UIColor(red: 123.0 / 255.0, green: 128.0 / 255.0, blue: 150.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 107.0 / 255.0, green: 117.0 / 255.0, blue: 145.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 112.0 / 255.0, green: 115.0 / 255.0, blue: 123.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 148.0 / 255.0, green: 146.0 / 255.0, blue: 142.0 / 255.0, alpha: 1.0),
+            highContrastLight: UIColor(red: 78.0 / 255.0, green: 81.0 / 255.0, blue: 88.0 / 255.0, alpha: 1.0),
+            highContrastDark: UIColor(red: 196.0 / 255.0, green: 193.0 / 255.0, blue: 188.0 / 255.0, alpha: 1.0)
         )
         public static let textOnAccent: Color = Color.white
 
         // MARK: Accent - indigo, adaptive brightness
         public static let accent: Color = adaptive(
-            light: UIColor(red: 55.0 / 255.0, green: 48.0 / 255.0, blue: 163.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 99.0 / 255.0, green: 102.0 / 255.0, blue: 241.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0),
+            highContrastLight: UIColor(red: 51.0 / 255.0, green: 39.0 / 255.0, blue: 145.0 / 255.0, alpha: 1.0),
+            highContrastDark: UIColor(red: 184.0 / 255.0, green: 181.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0)
         )
         public static let accentSoft: Color = adaptive(
-            light: UIColor(red: 55.0 / 255.0, green: 48.0 / 255.0, blue: 163.0 / 255.0, alpha: 0.10),
-            dark: UIColor(red: 99.0 / 255.0, green: 102.0 / 255.0, blue: 241.0 / 255.0, alpha: 0.15)
+            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 0.11),
+            dark: UIColor(red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, alpha: 0.16)
         )
         public static let accentPressed: Color = adaptive(
-            light: UIColor(red: 45.0 / 255.0, green: 38.0 / 255.0, blue: 138.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 79.0 / 255.0, green: 82.0 / 255.0, blue: 211.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 54.0 / 255.0, green: 43.0 / 255.0, blue: 143.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 130.0 / 255.0, green: 126.0 / 255.0, blue: 232.0 / 255.0, alpha: 1.0)
         )
         public static let accentDisabled: Color = adaptive(
-            light: UIColor(red: 55.0 / 255.0, green: 48.0 / 255.0, blue: 163.0 / 255.0, alpha: 0.28),
-            dark: UIColor(red: 99.0 / 255.0, green: 102.0 / 255.0, blue: 241.0 / 255.0, alpha: 0.30)
+            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 0.28),
+            dark: UIColor(red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, alpha: 0.30)
         )
 
         // MARK: Borders - visible structure, editorial feel
         public static let borderSubtle: Color = adaptive(
-            light: UIColor(red: 13.0 / 255.0, green: 19.0 / 255.0, blue: 33.0 / 255.0, alpha: 0.09),
-            dark: UIColor(red: 240.0 / 255.0, green: 236.0 / 255.0, blue: 227.0 / 255.0, alpha: 0.09)
+            light: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 0.10),
+            dark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.12),
+            highContrastLight: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 0.28),
+            highContrastDark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.30)
         )
         public static let borderStrong: Color = adaptive(
-            light: UIColor(red: 13.0 / 255.0, green: 19.0 / 255.0, blue: 33.0 / 255.0, alpha: 0.16),
-            dark: UIColor(red: 240.0 / 255.0, green: 236.0 / 255.0, blue: 227.0 / 255.0, alpha: 0.16)
+            light: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 0.22),
+            dark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.24),
+            highContrastLight: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 0.48),
+            highContrastDark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.50)
         )
         public static let borderAccent: Color = adaptive(
-            light: UIColor(red: 55.0 / 255.0, green: 48.0 / 255.0, blue: 163.0 / 255.0, alpha: 0.22),
-            dark: UIColor(red: 99.0 / 255.0, green: 102.0 / 255.0, blue: 241.0 / 255.0, alpha: 0.25)
+            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 0.24),
+            dark: UIColor(red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, alpha: 0.28)
         )
         public static let borderDestructive: Color = adaptive(
             light: UIColor(red: 220.0 / 255.0, green: 38.0 / 255.0, blue: 38.0 / 255.0, alpha: 0.30),
@@ -156,12 +182,36 @@ public enum DS {
             dark: UIColor(red: 167.0 / 255.0, green: 139.0 / 255.0, blue: 250.0 / 255.0, alpha: 0.15)
         )
 
+        // MARK: Semantic roles
+        public static let canvas: Color = backgroundPrimary
+        public static let canvasSecondary: Color = backgroundSecondary
+        public static let contentSurface: Color = surfacePrimary
+        public static let contentSurfaceElevated: Color = surfaceElevated
+        public static let controlFallback: Color = surfaceElevated
+        public static let glassTint: Color = accent.opacity(0.12)
+        public static let glassBorder: Color = borderAccent
+        public static let controlAccent: Color = adaptive(
+            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 85.0 / 255.0, green: 74.0 / 255.0, blue: 179.0 / 255.0, alpha: 1.0),
+            highContrastLight: UIColor(red: 51.0 / 255.0, green: 39.0 / 255.0, blue: 145.0 / 255.0, alpha: 1.0),
+            highContrastDark: UIColor(red: 74.0 / 255.0, green: 63.0 / 255.0, blue: 161.0 / 255.0, alpha: 1.0)
+        )
+        public static let controlAccentPressed: Color = adaptive(
+            light: UIColor(red: 54.0 / 255.0, green: 43.0 / 255.0, blue: 143.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 70.0 / 255.0, green: 59.0 / 255.0, blue: 154.0 / 255.0, alpha: 1.0)
+        )
+        public static let sourceAccent: Color = accent
+        public static let sourceSurface: Color = accentSoft
+        public static let sourceBorder: Color = borderAccent
+        public static let separator: Color = borderSubtle
+        public static let focus: Color = accent
+
         // MARK: Component-specific semantic aliases
-        public static let sourceCardSurface: Color = accentSoft
-        public static let sourceCardBorder: Color = borderAccent
-        public static let sourceCardAccent: Color = accent
-        public static let memoryCardSurface: Color = surfacePrimary
-        public static let memoryCardBorder: Color = borderSubtle
+        public static let sourceCardSurface: Color = sourceSurface
+        public static let sourceCardBorder: Color = sourceBorder
+        public static let sourceCardAccent: Color = sourceAccent
+        public static let memoryCardSurface: Color = contentSurface
+        public static let memoryCardBorder: Color = separator
         public static let privateBadgeSurface: Color = accentSoft
         public static let privateBadgeText: Color = accent
         public static let appLockBackground: Color = backgroundGrouped
@@ -211,6 +261,20 @@ public enum DS {
         public static let borderDestructive: Color = Color.red.opacity(0.30)
         public static let sense: Color = brandViolet
         public static let senseLight: Color = brandViolet.opacity(0.10)
+        public static let canvas: Color = backgroundPrimary
+        public static let canvasSecondary: Color = backgroundSecondary
+        public static let contentSurface: Color = surfacePrimary
+        public static let contentSurfaceElevated: Color = surfaceElevated
+        public static let controlFallback: Color = surfaceElevated
+        public static let glassTint: Color = accent.opacity(0.12)
+        public static let glassBorder: Color = borderAccent
+        public static let controlAccent: Color = accent
+        public static let controlAccentPressed: Color = accentPressed
+        public static let sourceAccent: Color = accent
+        public static let sourceSurface: Color = accentSoft
+        public static let sourceBorder: Color = borderAccent
+        public static let separator: Color = borderSubtle
+        public static let focus: Color = accent
         public static let sourceCardSurface: Color = brandIndigo.opacity(0.10)
         public static let sourceCardBorder: Color = brandIndigo.opacity(0.22)
         public static let sourceCardAccent: Color = brandIndigo
@@ -233,13 +297,43 @@ public enum DS {
         #endif
     }
 
+    // MARK: - Materials
+
+    /// Semantic surface roles. Rendering is handled by `View.mnemoSurface` so accessibility fallbacks stay consistent.
+    public enum Materials {
+        public enum Role: Equatable, Sendable {
+            case navigationChrome
+            case floatingControl
+            case compactControl
+            case sheetChrome
+            case contentFallback
+        }
+
+        public static let navigationChrome: Role = .navigationChrome
+        public static let floatingControl: Role = .floatingControl
+        public static let compactControl: Role = .compactControl
+        public static let sheetChrome: Role = .sheetChrome
+        public static let contentFallback: Role = .contentFallback
+
+        public static func opaqueFallback(for role: Role) -> Color {
+            switch role {
+            case .contentFallback:
+                return DS.Colours.contentSurface
+            case .navigationChrome, .sheetChrome:
+                return DS.Colours.contentSurfaceElevated
+            case .floatingControl, .compactControl:
+                return DS.Colours.controlFallback
+            }
+        }
+    }
+
     // MARK: - Typography
 
     /// SF Pro-backed Dynamic Type scale for consistent hierarchy across Mnemo screens.
     public enum Typography {
         public static let largeTitle: Font = .largeTitle.weight(.bold)
-        public static let title1: Font = .title.weight(.bold)
-        public static let title2: Font = .title2.weight(.bold)
+        public static let title1: Font = .title.weight(.semibold)
+        public static let title2: Font = .title2.weight(.semibold)
         public static let title3: Font = .title3.weight(.semibold)
         public static let headline: Font = .headline
         public static let body: Font = .body
@@ -278,9 +372,9 @@ public enum DS {
 
     /// Elevation tokens expressed as reusable shadow structs.
     public enum Shadows {
-        public static let subtle: Shadow = Shadow(opacity: 0.06, radius: 4.0, y: 2.0)
-        public static let medium: Shadow = Shadow(opacity: 0.10, radius: 8.0, y: 4.0)
-        public static let strong: Shadow = Shadow(opacity: 0.15, radius: 16.0, y: 8.0)
+        public static let subtle: Shadow = Shadow(opacity: 0.04, radius: 3.0, y: 1.0)
+        public static let medium: Shadow = Shadow(opacity: 0.07, radius: 7.0, y: 3.0)
+        public static let strong: Shadow = Shadow(opacity: 0.11, radius: 12.0, y: 6.0)
     }
 
     // MARK: - Animation
@@ -290,8 +384,8 @@ public enum DS {
         public static let quick: SwiftUI.Animation = .easeInOut(duration: 0.15)
         public static let standard: SwiftUI.Animation = .easeInOut(duration: 0.24)
         public static let slow: SwiftUI.Animation = .easeInOut(duration: 0.38)
-        public static let gentleSpring: SwiftUI.Animation = .spring(response: 0.36, dampingFraction: 0.86)
-        public static let emphasisSpring: SwiftUI.Animation = .spring(response: 0.42, dampingFraction: 0.78)
+        public static let gentleSpring: SwiftUI.Animation = .spring(response: 0.34, dampingFraction: 0.90)
+        public static let emphasisSpring: SwiftUI.Animation = .spring(response: 0.38, dampingFraction: 0.86)
         public static let fade: SwiftUI.Animation = .easeInOut(duration: 0.18)
         public static let contentTransition: SwiftUI.Animation = standard
         public static let sheetTransition: SwiftUI.Animation = standard
@@ -305,7 +399,7 @@ public enum DS {
         public static let emptyToContent: SwiftUI.Animation = standard
         public static let pressFeedback: SwiftUI.Animation = quick
 
-        public static let scalePress: CGFloat = 0.975
+        public static let scalePress: CGFloat = 0.985
 
         public static func cardAppearTransition(reduceMotion: Bool) -> AnyTransition {
             reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom))
@@ -325,22 +419,22 @@ public enum DS {
     /// Reusable component-level tokens composed from the core design system.
     public enum ComponentTokens {
         public enum Card {
-            public static let background: Color = DS.Colours.memoryCardSurface
-            public static let border: Color = DS.Colours.memoryCardBorder
+            public static let background: Color = DS.Colours.contentSurface
+            public static let border: Color = DS.Colours.separator
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let shadow: Shadow = DS.Shadows.subtle
             public static let padding: CGFloat = DS.Spacing.md
         }
 
         public enum PrimaryButton {
-            public static let background: Color = DS.Colours.accent
+            public static let background: Color = DS.Colours.controlAccent
             public static let foreground: Color = DS.Colours.textOnAccent
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let height: CGFloat = 52.0
         }
 
         public enum SecondaryButton {
-            public static let background: Color = DS.Colours.surfaceSecondary
+            public static let background: Color = DS.Colours.controlFallback
             public static let foreground: Color = DS.Colours.textPrimary
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let height: CGFloat = 52.0
@@ -361,15 +455,15 @@ public enum DS {
         }
 
         public enum InputField {
-            public static let background: Color = DS.Colours.surfaceSecondary
+            public static let background: Color = DS.Colours.controlFallback
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let height: CGFloat = 48.0
             public static let padding: CGFloat = DS.Spacing.sm
         }
 
         public enum SourceCard {
-            public static let background: Color = DS.Colours.sourceCardSurface
-            public static let border: Color = DS.Colours.sourceCardBorder
+            public static let background: Color = DS.Colours.sourceSurface
+            public static let border: Color = DS.Colours.sourceBorder
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let padding: CGFloat = DS.Spacing.md
         }
