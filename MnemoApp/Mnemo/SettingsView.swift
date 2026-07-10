@@ -188,6 +188,12 @@ struct SettingsView: View {
                     #if DEBUG
                     Section {
                         NavigationLink {
+                            DesignExplorationView()
+                        } label: {
+                            Label("Design Exploration", systemImage: "paintpalette")
+                        }
+
+                        NavigationLink {
                             AILabView()
                         } label: {
                             HStack(alignment: .top, spacing: DS.Spacing.sm) {

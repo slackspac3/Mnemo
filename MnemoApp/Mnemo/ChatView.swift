@@ -144,6 +144,7 @@ struct ChatView: View {
                         coordinator.present(.settings)
                     } label: {
                         Image(systemName: "gearshape")
+                            .foregroundStyle(DS.Colours.accent)
                     }
                     .accessibilityLabel("Settings")
                     .accessibilityIdentifier(AccessibilityID.Main.settings)
@@ -161,6 +162,7 @@ struct ChatView: View {
                             }
                         } label: {
                             Image(systemName: "square.and.pencil")
+                                .foregroundStyle(DS.Colours.accent)
                         }
                         .accessibilityLabel("New conversation")
                         .accessibilityHint("Clear this conversation and return to Recall")

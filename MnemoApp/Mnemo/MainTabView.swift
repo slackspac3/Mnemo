@@ -25,7 +25,7 @@ struct MainTabView: View {
                 .tag(NavigationCoordinator.Tab.browse)
         }
         .accessibilityIdentifier(AccessibilityID.Main.tabView)
-        .tint(DS.Colours.controlAccent)
+        .tint(DS.Colours.accent)
         .environment(coordinator)
         .sheet(item: $coordinator.activeSheet) { sheet in
             switch sheet {

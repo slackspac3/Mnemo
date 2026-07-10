@@ -176,6 +176,7 @@ struct BrowseView: View {
                         coordinator.present(.settings)
                     } label: {
                         Image(systemName: "gearshape")
+                            .foregroundStyle(DS.Colours.accent)
                     }
                     .accessibilityLabel("Settings")
                     .accessibilityIdentifier(AccessibilityID.Main.settings)
@@ -208,6 +209,7 @@ struct BrowseView: View {
                         }
                     } label: {
                         Image(systemName: "plus")
+                            .foregroundStyle(DS.Colours.accent)
                     }
                     .accessibilityLabel("Add memory")
                     .accessibilityHint("Choose how to save a memory")
