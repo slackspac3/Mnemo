@@ -35,6 +35,108 @@ Three parallel research tracks were completed:
 
 Only official Apple design and platform sources were used for platform guidance.
 
+## WWDC26 update
+
+The study includes Apple's current WWDC26 design guidance, not only the WWDC25 sessions that introduced Liquid Glass.
+
+The [WWDC26 Design guide](https://developer.apple.com/wwdc26/guides/design/) identifies four directly relevant areas for Mnemo:
+
+- current design principles
+- brand expression within the iOS content layer
+- intentional search placement and filtering
+- continued Icon Composer refinement
+
+### Brand belongs primarily in content
+
+Apple's WWDC26 branding guidance separates an app into a familiar UI layer for global navigation and actions and a content layer where distinctive brand expression belongs. Native tab bars, toolbars, menus, and sheets should provide familiarity. Mnemo's identity should appear through memory content, the returning-path mark, source treatment, palette, writing, and a small number of signature moments rather than through heavily customized bars. [Communicate your brand identity on iOS](https://developer.apple.com/videos/play/wwdc2026/251/)
+
+This strengthens the recommendation to:
+
+- keep navigation chrome native and restrained
+- remove accent tint from secondary toolbar commands
+- stop repeating the logo in utilitarian views
+- express Mnemo through the empty home state, evidence relationship, and memory-saved feedback
+
+### Search placement must communicate scope
+
+WWDC26 search guidance says placement changes people's understanding of what is being searched. Memories currently has a tab-specific search, so an inline field associated with the `Memories` title remains more appropriate than adding a global Search tab. [Design intuitive search experiences](https://developer.apple.com/videos/play/wwdc2026/292/)
+
+It also changes the filter recommendation:
+
+- start with broad memory search
+- reveal only contextual filters that help narrow active results
+- avoid presenting two filter controls before any memories exist
+- provide a clear no-results state that includes the search term
+- consider recent searches only if they provide enough value to justify retaining that private local history
+
+### Names must belong, set expectations, and work everywhere
+
+Apple's WWDC26 naming criteria are that a name belongs in the app, sets the right expectation, and works everywhere. [Craft clear names for features and labels in your app](https://developer.apple.com/videos/play/wwdc2026/290/)
+
+Mnemo implications:
+
+- `Memories` is clear and consistent with the product model
+- `Recall` is distinctive but must be tested against the more literal `Ask` for first-use comprehension
+- capture actions should consistently use verbs such as `Write`, `Record`, `Take Photo`, and `Choose Photo`
+- internal or speculative labels such as `Mnemo Sense` need a clear user outcome before appearing in production Settings
+- source labels must set an evidence expectation without exposing implementation terminology
+
+### WWDC26 SwiftUI APIs target the next toolchain
+
+`What's new in SwiftUI` at WWDC26 describes refreshed Liquid Glass behavior and new toolbar visibility, overflow, pinned-placement, minimize-on-scroll, prominent-tab, and resizability APIs for the 2027 OS releases and Xcode 27. [What's new in SwiftUI](https://developer.apple.com/videos/play/wwdc2026/269/)
+
+Mnemo is currently verified with Xcode 26.6 and an iOS 26.5 SDK. Therefore:
+
+- WWDC26 design principles and interaction guidance apply now
+- Xcode 27 and iOS 27 APIs must not be copied into the implementation yet
+- toolbar priority and overflow behavior should first be achieved with APIs available in the installed SDK
+- new APIs can be evaluated only after a deliberate toolchain upgrade and exact availability inspection
+- the iOS 18 minimum deployment target must remain unchanged
+
+This distinction prevents a current design study from becoming an accidental beta SDK migration.
+
+Do not use the following Xcode 27 or iOS 27 features in the current implementation:
+
+- prominent tab roles
+- toolbar-item `visibilityPriority`, `ToolbarOverflowMenu`, or `topBarPinnedTrailing`
+- navigation-bar `toolbarMinimizeBehavior`
+- `swipeActionsContainer`
+- Xcode 27 resizable Live Previews
+- SF Symbols 8-only names, Draw effects, or Variable Draw behavior
+
+`tabBarMinimizeBehavior` is an iOS 26-era API discussed at WWDC25. It must not be confused with the new WWDC26 navigation-bar `toolbarMinimizeBehavior` API.
+
+### Accessibility and long-form memory content
+
+Apple's WWDC26 accessibility sessions reinforce that Mnemo's saved memories and answers are reading content, not merely labels inside cards. Native `Text`, selectable text, and `TextEditor` behavior should be preserved so VoiceOver, Speak Screen, text selection, and granular navigation remain available. Custom-rendered text would create unnecessary accessibility work. [Enhance the accessibility of your reading app](https://developer.apple.com/videos/play/wwdc2026/219/)
+
+Any custom capture, source, waveform, or branded control must translate visual cues into explicit labels, values, traits, and actions. Switch Control, Voice Control, and VoiceOver must reach the same operations as direct touch. Familiar actions should continue to use native buttons and controls wherever possible. [Refine accessibility for custom controls](https://developer.apple.com/videos/play/wwdc2026/220/)
+
+### Scrolling and responsiveness
+
+WWDC26's lazy-stack guidance applies directly to Chat and large memory collections. Mnemo should keep persistent row state in models or bindings, avoid filtering by conditionally omitting leaf views inside `ForEach`, avoid layout-changing work in `onAppear`, and avoid changing row geometry after it appears. Prefetch-friendly setup and stable subview counts reduce hitches and scroll-position jumps. [Dive into lazy stacks and scrolling with SwiftUI](https://developer.apple.com/videos/play/wwdc2026/321/)
+
+Responsiveness must be measured rather than inferred from screenshots. The implementation review should use Time Profiler, Swift Concurrency, and System Trace when launch, capture processing, Chat generation, or list scrolling shows a hitch. [Profile, fix, and verify: Improve app responsiveness with Instruments](https://developer.apple.com/videos/play/wwdc2026/268/)
+
+### AI responsibility safeguards
+
+Apple's Responsibility principle requires anticipating inaccurate intelligent output and adding safeguards where it can change a person's data. For Mnemo:
+
+- never silently rewrite the meaning of a saved memory
+- present spelling and capitalization changes as a preview requiring confirmation
+- preserve the original capture
+- keep grounded source evidence and deterministic fallback as trust safeguards
+- do not present technical model confidence as factual certainty
+- keep meaning-changing and destructive actions reversible or explicitly confirmed
+
+These requirements support the existing correction-review behavior and prevent visual polish from obscuring uncertainty.
+
+### Icon Composer is available now
+
+The installed environment contains Xcode 26.6 build 17F113 and Icon Composer 1.6 at `/Applications/Xcode.app/Contents/Applications/Icon Composer.app`. Production icon work does not need to wait for Xcode 27.
+
+The editable `.icon` source should define Default, Dark, and Mono authoring modes, then be reviewed in default, dark, clear light/dark, and tinted light/dark contexts. Flattened exports are for marketing and communication assets, not the canonical production source. [Icon Composer](https://developer.apple.com/icon-composer/)
+
 ## Apple principles applied to Mnemo
 
 Apple's current principles are Purpose, Agency, Responsibility, Familiarity, Flexibility, Simplicity, Craft, and Delight. Apple explicitly distinguishes simplicity from visual minimalism and delight from decorative effects. [Design principles](https://developer.apple.com/design/human-interface-guidelines/design-principles) [Principles of great design](https://developer.apple.com/videos/play/wwdc2026/250/)
@@ -552,7 +654,7 @@ Do not continue with another broad screen-by-screen restyle.
 
 - create three related mark/icon candidates
 - render all required appearance and size matrices
-- verify Icon Composer availability and exact installed workflow
+- use the confirmed installed Icon Composer 1.6 workflow and preserve the editable `.icon` source
 - request human selection before replacing production AppIcon
 
 ### Phase 2: launch and identity unification
@@ -618,9 +720,15 @@ The redesign is not complete until:
 
 ### Current principles and platform system
 
+- [WWDC26 Design guide](https://developer.apple.com/wwdc26/guides/design/)
 - [Design principles](https://developer.apple.com/design/human-interface-guidelines/design-principles)
 - [Principles of great design, WWDC26](https://developer.apple.com/videos/play/wwdc2026/250/)
 - [Communicate your brand identity on iOS, WWDC26](https://developer.apple.com/videos/play/wwdc2026/251/)
+- [Design intuitive search experiences, WWDC26](https://developer.apple.com/videos/play/wwdc2026/292/)
+- [Craft clear names for features and labels in your app, WWDC26](https://developer.apple.com/videos/play/wwdc2026/290/)
+- [What's new in SwiftUI, WWDC26](https://developer.apple.com/videos/play/wwdc2026/269/)
+- [Dive into lazy stacks and scrolling with SwiftUI, WWDC26](https://developer.apple.com/videos/play/wwdc2026/321/)
+- [Profile, fix, and verify: Improve app responsiveness with Instruments, WWDC26](https://developer.apple.com/videos/play/wwdc2026/268/)
 - [Meet Liquid Glass, WWDC25](https://developer.apple.com/videos/play/wwdc2025/219/)
 - [Get to know the new design system, WWDC25](https://developer.apple.com/videos/play/wwdc2025/356/)
 - [Build a SwiftUI app with the new design, WWDC25](https://developer.apple.com/videos/play/wwdc2025/323/)
@@ -640,6 +748,8 @@ The redesign is not complete until:
 
 ### Interaction and accessibility
 
+- [Enhance the accessibility of your reading app, WWDC26](https://developer.apple.com/videos/play/wwdc2026/219/)
+- [Refine accessibility for custom controls, WWDC26](https://developer.apple.com/videos/play/wwdc2026/220/)
 - [Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)
 - [Color](https://developer.apple.com/design/human-interface-guidelines/color)
 - [Typography](https://developer.apple.com/design/human-interface-guidelines/typography)
