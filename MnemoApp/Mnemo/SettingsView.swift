@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 import MnemoUI
 import MnemoCore
 import MnemoMemory
@@ -39,14 +40,15 @@ struct SettingsView: View {
                                 bottom: DS.Spacing.md,
                                 trailing: DS.Spacing.md
                             ))
-                            .listRowBackground(DS.Colours.surfaceElevated)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
 
                     Section {
                         DeviceTierRow(capability: appState.deviceCapability)
                             .listRowBackground(DS.Colours.surfaceElevated)
                     } header: {
-                        SettingsSectionHeader("Your Device")
+                        SettingsSectionHeader("Privacy & Security")
                     }
 
                     Section {
@@ -83,7 +85,7 @@ struct SettingsView: View {
                                 .foregroundStyle(DS.Colours.textSecondary)
                         }
                     } header: {
-                        SettingsSectionHeader("Privacy")
+                        SettingsSectionHeader("On This iPhone")
                     }
                     .listRowBackground(DS.Colours.surfaceElevated)
 
@@ -133,30 +135,24 @@ struct SettingsView: View {
                                 .foregroundStyle(DS.Colours.textSecondary)
                         }
                     } header: {
-                        SettingsSectionHeader("Security")
+                        SettingsSectionHeader("App Lock")
                     }
                     .listRowBackground(DS.Colours.surfaceElevated)
                     .accessibilityIdentifier(AccessibilityID.Settings.securitySection)
 
                     Section {
-                        if userModel != nil {
-                            SenseComingSoonRow(
-                                title: "Memory Moments",
-                                detail: "Coming soon"
-                            )
-                            SenseComingSoonRow(
-                                title: "Pattern Insights",
-                                detail: "Coming soon"
-                            )
-                            SenseComingSoonRow(
-                                title: "Thread Suggestions",
-                                detail: "Coming soon"
-                            )
-                        } else {
-                            Text("Mnemo Sense settings will appear after onboarding.")
-                                .font(DS.Typography.footnote)
-                                .foregroundStyle(DS.Colours.textSecondary)
-                        }
+                        SenseComingSoonRow(
+                            title: "Memory Moments",
+                            detail: "Coming soon"
+                        )
+                        SenseComingSoonRow(
+                            title: "Pattern Insights",
+                            detail: "Coming soon"
+                        )
+                        SenseComingSoonRow(
+                            title: "Thread Suggestions",
+                            detail: "Coming soon"
+                        )
                     } header: {
                         SettingsSectionHeader("Mnemo Sense")
                     }
@@ -166,7 +162,7 @@ struct SettingsView: View {
                         Section {
                             PersonalisationIndexRow(userModel: model)
                         } header: {
-                            SettingsSectionHeader("Personalisation")
+                            SettingsSectionHeader("Memory")
                         }
                         .listRowBackground(DS.Colours.surfaceElevated)
                     }
@@ -250,6 +246,8 @@ struct SettingsView: View {
                         } message: {
                             Text("This permanently deletes all your memories, threads, and settings. This cannot be undone.")
                         }
+                    } header: {
+                        SettingsSectionHeader("Data Management")
                     }
                     .listRowBackground(DS.Colours.surfaceElevated)
                 }
@@ -271,6 +269,14 @@ struct SettingsView: View {
         .task {
             refreshAppLockAvailability()
             enforceLocalOnlySetting()
+        }
+        .onChange(of: appLockErrorMessage) { _, message in
+            guard let message else { return }
+            UIAccessibility.post(notification: .announcement, argument: message)
+        }
+        .onChange(of: destructiveErrorMessage) { _, message in
+            guard let message else { return }
+            UIAccessibility.post(notification: .announcement, argument: message)
         }
     }
 
@@ -393,14 +399,14 @@ struct SettingsBrandHeader: View {
                 Text("Mnemo")
                     .font(DS.Typography.headline)
                     .foregroundStyle(DS.Colours.textPrimary)
-                Text("Private memory on this iPhone. No Mnemo account required.")
+                Text("Private memory on this iPhone.")
                     .font(DS.Typography.caption1)
                     .foregroundStyle(DS.Colours.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Mnemo. Private memory on this iPhone. No Mnemo account required.")
+        .accessibilityLabel("Mnemo. Private memory on this iPhone.")
     }
 }
 
@@ -423,20 +429,31 @@ struct SenseComingSoonRow: View {
     let detail: String
 
     var body: some View {
-        HStack {
-            Text(title)
-                .font(DS.Typography.body)
-                .foregroundStyle(DS.Colours.textPrimary)
-            Spacer()
-            Text(detail)
-                .font(DS.Typography.caption1)
-                .foregroundStyle(DS.Colours.textSecondary)
-                .lineLimit(1)
-                .padding(.horizontal, DS.Spacing.sm)
-                .padding(.vertical, DS.Spacing.xs)
-                .background(DS.Colours.surfaceDisabled)
-                .clipShape(Capsule())
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                titleView
+                Spacer()
+                statusView
+            }
+
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                titleView
+                statusView
+            }
         }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var titleView: some View {
+        Text(title)
+            .font(DS.Typography.body)
+            .foregroundStyle(DS.Colours.textPrimary)
+    }
+
+    private var statusView: some View {
+        Label(detail, systemImage: "clock")
+            .font(DS.Typography.caption1)
+            .foregroundStyle(DS.Colours.textSecondary)
     }
 }
 
@@ -481,7 +498,7 @@ struct DeviceTierRow: View {
                 Text(tierLabel)
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.textPrimary)
-                Text("Mnemo stores memories on this iPhone and uses local recall.")
+                Text("Memories and recall stay on this iPhone.")
                     .font(DS.Typography.caption1)
                     .foregroundStyle(DS.Colours.textSecondary)
             }
@@ -498,20 +515,17 @@ struct PersonalisationIndexRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-            HStack {
-                Text("Memory Profile")
-                    .font(DS.Typography.subheadline)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                Spacer()
-                Text(statusLabel)
-                    .font(DS.ComponentTokens.SenseBadge.font)
-                    .foregroundStyle(DS.Colours.sense)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .padding(.horizontal, DS.Spacing.sm)
-                    .padding(.vertical, DS.Spacing.xs)
-                    .background(DS.Colours.senseLight)
-                    .clipShape(Capsule())
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    profileTitle
+                    Spacer()
+                    statusView
+                }
+
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                    profileTitle
+                    statusView
+                }
             }
 
             ProgressView(value: index.overall)
@@ -540,5 +554,22 @@ struct PersonalisationIndexRow: View {
         case .fullyPersonalised:
             return "Tuned"
         }
+    }
+
+    private var profileTitle: some View {
+        Text("Memory Profile")
+            .font(DS.Typography.subheadline)
+            .foregroundStyle(DS.Colours.textPrimary)
+    }
+
+    private var statusView: some View {
+        Label(statusLabel, systemImage: "waveform.path.ecg")
+            .font(DS.ComponentTokens.SenseBadge.font)
+            .foregroundStyle(DS.Colours.sense)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, DS.Spacing.sm)
+            .padding(.vertical, DS.Spacing.xs)
+            .background(DS.Colours.senseLight)
+            .clipShape(Capsule())
     }
 }

@@ -5,7 +5,6 @@ import MnemoUI
 struct OnboardingStepView: View {
 
     let step: OnboardingViewModel.Step
-    let viewModel: OnboardingViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var contentAppeared = false
 
@@ -26,8 +25,6 @@ struct OnboardingStepView: View {
 
     private var onboardingContent: some View {
         VStack(spacing: DS.Spacing.lg) {
-            Spacer(minLength: DS.Spacing.sm)
-
             ZStack {
                 MnemoThreadMotif(style: .hero, lineWidth: 2.0)
                     .frame(width: 128.0, height: 96.0)
@@ -53,7 +50,6 @@ struct OnboardingStepView: View {
             stepContent
                 .onboardingStaggered(appeared: contentAppeared, delay: 0.22, reduceMotion: reduceMotion)
 
-            Spacer(minLength: DS.Spacing.sm)
         }
         .padding(.horizontal, DS.Spacing.xl)
         .padding(.top, DS.Spacing.md)
@@ -63,26 +59,20 @@ struct OnboardingStepView: View {
     @ViewBuilder
     private var stepContent: some View {
         switch step {
-        case .welcome:
+        case .remember:
             WelcomeStepContent()
-        case .processingMode:
+        case .ask:
             RecallStepContent()
-        case .notifications:
-            ProtectionStepContent()
-        case .done:
-            DoneStepContent(viewModel: viewModel)
+        case .verify:
+            VerificationStepContent()
         }
     }
 
     private var iconColor: Color {
         switch step {
-        case .welcome:
+        case .remember:
             return DS.Colours.brandInk
-        case .notifications:
-            return DS.Colours.accent
-        case .done:
-            return DS.Colours.success
-        case .processingMode:
+        case .ask, .verify:
             return DS.Colours.accent
         }
     }
@@ -90,11 +80,9 @@ struct OnboardingStepView: View {
     @ViewBuilder
     private var stepMark: some View {
         switch step {
-        case .welcome:
+        case .remember:
             MnemoLogoMark(size: 80.0, style: .filled)
-        case .done:
-            MnemoLogoMark(size: 72.0, style: .subtle)
-        default:
+        case .ask, .verify:
             Image(systemName: step.icon)
                 .font(DS.Typography.title1)
                 .foregroundStyle(iconColor)
@@ -114,9 +102,6 @@ struct OnboardingStepView: View {
 }
 
 struct WelcomeStepContent: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var appeared = false
-
     private let features: [(icon: String, color: Color, text: String)] = [
         (
             icon: "lock.shield.fill",
@@ -129,24 +114,19 @@ struct WelcomeStepContent: View {
             text: "No Mnemo account, email, or sign-in required"
         ),
         (
-            icon: "bookmark.fill",
-            color: DS.Colours.success,
-            text: "Every answer can show the saved memory it used"
+            icon: "lock.open.fill",
+            color: DS.Colours.accent,
+            text: "Optional App Lock uses Face ID, Touch ID, or your passcode"
         ),
     ]
 
     var body: some View {
         VStack(spacing: DS.Spacing.md) {
-            ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
+            ForEach(Array(features.enumerated()), id: \.offset) { _, feature in
                 FeatureRow(
                     icon: feature.icon,
                     color: feature.color,
                     text: feature.text
-                )
-                .onboardingStaggered(
-                    appeared: appeared,
-                    delay: Double(index) * 0.06,
-                    reduceMotion: reduceMotion
                 )
             }
         }
@@ -157,20 +137,6 @@ struct WelcomeStepContent: View {
                 .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
         }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-        .shadow(
-            color: DS.Shadows.subtle.color,
-            radius: DS.Shadows.subtle.radius,
-            x: DS.Shadows.subtle.x,
-            y: DS.Shadows.subtle.y
-        )
-        .onAppear {
-            withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.gentleSpring) {
-                appeared = true
-            }
-        }
-        .onDisappear {
-            appeared = false
-        }
     }
 }
 
@@ -216,20 +182,20 @@ struct RecallStepContent: View {
     }
 }
 
-struct ProtectionStepContent: View {
+struct VerificationStepContent: View {
     var body: some View {
         VStack(spacing: DS.Spacing.sm) {
             OnboardingInfoCard(
-                icon: "lock.open.fill",
-                title: "Optional App Lock",
-                description: "Unlock with Face ID, Touch ID or your passcode.",
+                icon: "bookmark.fill",
+                title: "Source cards",
+                description: "Open the saved memory behind an answer.",
                 color: DS.Colours.accent
             )
             OnboardingInfoCard(
-                icon: "person.crop.circle.badge.xmark",
-                title: "No Mnemo account",
-                description: "No email, password, or remote account is required.",
-                color: DS.Colours.sense
+                icon: "lock.shield.fill",
+                title: "You stay in control",
+                description: "Use optional App Lock, archive memories, or delete them permanently.",
+                color: DS.Colours.success
             )
         }
     }
@@ -254,10 +220,10 @@ struct OnboardingInfoCard: View {
                     .font(DS.Typography.headline)
                     .foregroundStyle(DS.Colours.textPrimary)
                 Text(description)
-                    .font(DS.Typography.footnote)
+                    .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textSecondary)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
@@ -269,25 +235,6 @@ struct OnboardingInfoCard: View {
                 .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
         }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-        .shadow(
-            color: DS.Shadows.subtle.color,
-            radius: DS.Shadows.subtle.radius,
-            x: DS.Shadows.subtle.x,
-            y: DS.Shadows.subtle.y
-        )
-    }
-}
-
-struct DoneStepContent: View {
-    let viewModel: OnboardingViewModel
-
-    var body: some View {
-        VStack(spacing: DS.Spacing.md) {
-            Text("Save one detail now. Later, ask Mnemo in plain language and check the source memory it used.")
-                .font(DS.Typography.body)
-                .foregroundStyle(DS.Colours.textSecondary)
-                .multilineTextAlignment(.center)
-        }
     }
 }
 
@@ -298,20 +245,8 @@ private extension View {
             .animation(
                 reduceMotion
                     ? DS.Animation.fade
-                    : DS.Animation.gentleSpring.delay(delay),
+                    : DS.Animation.standard.delay(min(delay, 0.08)),
                 value: appeared
             )
-    }
-
-    @ViewBuilder
-    func selectedBorder(_ isSelected: Bool) -> some View {
-        if isSelected {
-            overlay(
-                RoundedRectangle(cornerRadius: DS.CornerRadius.large)
-                    .strokeBorder(DS.Colours.accent, lineWidth: DS.Spacing.xs / DS.Spacing.xs)
-            )
-        } else {
-            self
-        }
     }
 }

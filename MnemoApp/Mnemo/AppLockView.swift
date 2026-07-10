@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import MnemoUI
 
 /// Local-only app lock gate. Uses the device authentication prompt through SecurityLayer.
@@ -6,6 +7,7 @@ struct AppLockView: View {
 
     @Environment(AppState.self) private var appState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AccessibilityFocusState private var isErrorFocused: Bool
 
     var body: some View {
         ZStack {
@@ -13,39 +15,35 @@ struct AppLockView: View {
 
             ScrollView {
                 VStack(spacing: DS.Spacing.xl) {
-                    VStack(spacing: DS.Spacing.md) {
-                        MnemoLogoMark(size: 76.0, style: .filled)
-                            .accessibilityHidden(true)
+                    MnemoLogoMark(size: 76.0, style: .filled)
+                        .accessibilityHidden(true)
 
+                    VStack(spacing: DS.Spacing.sm) {
                         Text("Mnemo is locked")
                             .font(DS.Typography.title1)
                             .foregroundStyle(DS.Colours.textPrimary)
                             .multilineTextAlignment(.center)
                             .accessibilityAddTraits(.isHeader)
 
-                        Text("Use Face ID, Touch ID or your device passcode to unlock.")
+                        Text("Unlock with Face ID, Touch ID, or your device passcode.")
                             .font(DS.Typography.body)
                             .foregroundStyle(DS.Colours.textSecondary)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, DS.Spacing.md)
                     }
-                    .padding(DS.ComponentTokens.LockState.cardPadding)
-                    .frame(maxWidth: 360.0)
-                    .background(DS.Colours.appLockSurface)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge)
-                            .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge))
+                    .frame(maxWidth: 320.0)
                     .transition(DS.Animation.lockAppearTransition(reduceMotion: reduceMotion))
 
                     if let message = appState.appLockErrorMessage {
-                        Text(message)
+                        Label(message, systemImage: "exclamationmark.circle")
                             .font(DS.Typography.footnote)
                             .foregroundStyle(DS.Colours.destructive)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, DS.Spacing.lg)
+                            .multilineTextAlignment(.leading)
+                            .padding(DS.Spacing.md)
+                            .frame(maxWidth: 360.0, alignment: .leading)
+                            .background(DS.Colours.destructiveSoft)
+                            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                             .accessibilityLabel("App Lock error. \(message)")
+                            .accessibilityFocused($isErrorFocused)
                             .accessibilityIdentifier(AccessibilityID.AppLock.errorMessage)
                     }
 
@@ -63,30 +61,27 @@ struct AppLockView: View {
                             }
                             Text(appState.isAuthenticatingAppLock ? "Unlocking..." : "Unlock")
                         }
-                        .font(DS.Typography.headline)
-                        .foregroundStyle(DS.Colours.textOnAccent)
-                        .frame(maxWidth: 360.0)
-                        .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .background(DS.Colours.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                     }
                     .disabled(appState.isAuthenticatingAppLock)
-                    .buttonStyle(.mnemoPressable)
+                    .buttonStyle(.mnemoPrimary)
+                    .frame(maxWidth: 360.0)
                     .accessibilityLabel("Unlock Mnemo")
                     .accessibilityHint("Use Face ID, Touch ID or your device passcode")
                     .accessibilityIdentifier(AccessibilityID.AppLock.unlockButton)
 
-                    Text("No Mnemo account is required.")
-                        .font(DS.Typography.caption1)
-                        .foregroundStyle(DS.Colours.textTertiary)
-                        .multilineTextAlignment(.center)
+                    Label("Protected on this device", systemImage: "lock.shield")
+                        .font(DS.Typography.footnote)
+                        .foregroundStyle(DS.Colours.textSecondary)
                 }
                 .padding(.horizontal, DS.Spacing.xl)
-                .padding(.vertical, DS.Spacing.xxxl)
+                .padding(.vertical, DS.Spacing.xxl)
                 .frame(maxWidth: .infinity)
             }
             .scrollBounceBehavior(.basedOnSize)
+        }
+        .onChange(of: appState.appLockErrorMessage) { _, message in
+            guard message != nil else { return }
+            isErrorFocused = true
         }
         .accessibilityIdentifier(AccessibilityID.AppLock.screen)
     }

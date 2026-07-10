@@ -1,9 +1,10 @@
 import SwiftUI
 import SwiftData
+import UIKit
 import MnemoUI
 import MnemoCore
 
-/// Root onboarding container. Forward-only setup steps.
+/// Root onboarding container for Mnemo's private capture, recall, and source story.
 /// Gated: main app is inaccessible until complete.
 struct OnboardingView: View {
 
@@ -14,20 +15,29 @@ struct OnboardingView: View {
         ZStack {
             DS.Colours.backgroundGrouped.ignoresSafeArea()
 
-            VStack(spacing: DS.Spacing.xs) {
-                OnboardingProgressBar(progress: viewModel.progress)
+            VStack(spacing: 0) {
+                OnboardingProgressBar(
+                    progress: viewModel.progress,
+                    currentStep: viewModel.currentStep.rawValue + 1,
+                    stepCount: OnboardingViewModel.Step.allCases.count
+                )
                     .padding(.horizontal, DS.Spacing.md)
                     .padding(.top, DS.Spacing.lg)
 
-                OnboardingStepView(
-                    step: viewModel.currentStep,
-                    viewModel: viewModel
-                )
+                ScrollView {
+                    OnboardingStepView(
+                        step: viewModel.currentStep
+                    )
+                    .id(viewModel.currentStep)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .trailing)))
+                }
+                .scrollBounceBehavior(.basedOnSize)
                 .animation(reduceMotion ? DS.Animation.fade : DS.Animation.standard, value: viewModel.currentStep)
 
                 OnboardingNavigationBar(viewModel: viewModel)
-                    .padding(.horizontal, DS.Spacing.xl)
-                    .padding(.bottom, DS.Spacing.xl)
+                    .padding(.horizontal, DS.Spacing.md)
+                    .padding(.vertical, DS.Spacing.md)
+                    .background(DS.Colours.backgroundGrouped)
             }
         }
         .environment(viewModel)
@@ -36,6 +46,8 @@ struct OnboardingView: View {
 
 struct OnboardingProgressBar: View {
     let progress: Double
+    let currentStep: Int
+    let stepCount: Int
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -55,6 +67,9 @@ struct OnboardingProgressBar: View {
             }
         }
         .frame(height: DS.Spacing.xs)
+        .accessibilityElement()
+        .accessibilityLabel("Onboarding progress")
+        .accessibilityValue("Step \(currentStep) of \(stepCount)")
     }
 }
 
@@ -73,41 +88,53 @@ struct OnboardingNavigationBar: View {
                     .multilineTextAlignment(.center)
             }
 
-            switch viewModel.currentStep {
-            case .done:
-                Button {
-                    HapticManager.success()
-                    viewModel.complete(context: modelContext, appState: appState)
-                } label: {
-                    Text("Start Mnemo")
-                        .font(DS.Typography.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .background(DS.Colours.accent)
-                        .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DS.Spacing.sm) {
+                    navigationButtons
                 }
-                .buttonStyle(.mnemoPressable)
-                .accessibilityIdentifier(AccessibilityID.Onboarding.completeButton)
 
-            default:
-                Button {
-                    HapticManager.selection()
-                    viewModel.advance()
-                } label: {
-                    Text("Continue")
-                        .font(DS.Typography.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .background(DS.Colours.accent)
-                        .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                VStack(spacing: DS.Spacing.sm) {
+                    navigationButtons
                 }
-                .buttonStyle(.mnemoPressable)
-                .accessibilityIdentifier(AccessibilityID.Onboarding.continueButton)
             }
         }
+    }
+
+    @ViewBuilder
+    private var navigationButtons: some View {
+        if viewModel.currentStep != .remember {
+            Button {
+                HapticManager.selection()
+                viewModel.retreat()
+                announceCurrentStep()
+            } label: {
+                Label("Back", systemImage: "chevron.left")
+            }
+            .buttonStyle(.mnemoSecondary)
+            .accessibilityIdentifier("onboarding.back")
+        }
+
+        Button {
+            if viewModel.currentStep == .verify {
+                HapticManager.success()
+                viewModel.complete(context: modelContext, appState: appState)
+            } else {
+                HapticManager.selection()
+                viewModel.advance()
+                announceCurrentStep()
+            }
+        } label: {
+            Text(viewModel.currentStep == .verify ? "Start Mnemo" : "Continue")
+        }
+        .buttonStyle(.mnemoPrimary)
+        .accessibilityIdentifier(
+            viewModel.currentStep == .verify
+                ? AccessibilityID.Onboarding.completeButton
+                : AccessibilityID.Onboarding.continueButton
+        )
+    }
+
+    private func announceCurrentStep() {
+        UIAccessibility.post(notification: .screenChanged, argument: viewModel.currentStep.title)
     }
 }

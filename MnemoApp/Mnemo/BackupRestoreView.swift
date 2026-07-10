@@ -8,7 +8,6 @@ import MnemoCore
 struct BackupRestoreView: View {
 
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
 
     @State private var isBackingUp = false
     @State private var isRestoring = false
@@ -20,8 +19,7 @@ struct BackupRestoreView: View {
     @State private var selectedManifest: BackupManifest?
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
                 DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 List {
@@ -139,15 +137,6 @@ struct BackupRestoreView: View {
             }
             .navigationTitle("iCloud Backup")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.accent)
-                }
-            }
             .confirmationDialog(
                 "Restore from backup?",
                 isPresented: $showingRestoreConfirm,
@@ -165,7 +154,6 @@ struct BackupRestoreView: View {
             .task {
                 await loadBackups()
             }
-        }
     }
 
     private func performBackup() {
