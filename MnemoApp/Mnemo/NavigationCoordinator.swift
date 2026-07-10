@@ -13,15 +13,13 @@ final class NavigationCoordinator {
     var activeSheet: Sheet?
 
     enum Tab: String, CaseIterable {
-        case chat = "Chat"
-        case browse = "Browse"
-        case capture = "Capture"
+        case chat = "Recall"
+        case browse = "Memories"
 
         var icon: String {
             switch self {
-            case .chat: return "bubble.left.and.bubble.right"
-            case .browse: return "square.grid.2x2"
-            case .capture: return "plus.circle.fill"
+            case .chat: return "text.bubble"
+            case .browse: return "books.vertical"
             }
         }
     }

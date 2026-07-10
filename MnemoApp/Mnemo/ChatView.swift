@@ -26,7 +26,7 @@ struct ChatView: View {
 
         NavigationStack {
             ZStack {
-                DS.Colours.backgroundGrouped.ignoresSafeArea()
+                DS.Colours.canvas.ignoresSafeArea()
 
                 VStack(spacing: DS.Spacing.xs) {
                     ScrollViewReader { proxy in
@@ -140,53 +140,32 @@ struct ChatView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: DS.Spacing.sm) {
-                        if !viewModel.messages.isEmpty {
-                            Button {
-                                if reduceMotion {
-                                    viewModel.resetConversation()
-                                } else {
-                                    withAnimation(DS.Animation.standard) {
-                                        viewModel.resetConversation()
-                                    }
-                                }
-                            } label: {
-                                Image(systemName: "house")
-                                    .font(DS.Typography.headline)
-                                    .foregroundStyle(DS.Colours.accent)
-                                    .frame(width: 44.0, height: 44.0)
-                            }
-                            .accessibilityLabel("Home")
-                            .accessibilityHint("Return to the memory landing screen")
-                            .accessibilityIdentifier("chat.homeButton")
-                            .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
-                        }
-
-                        Button {
-                            coordinator.present(.settings)
-                        } label: {
-                            Image(systemName: "gearshape")
-                                .font(DS.Typography.headline)
-                                .foregroundStyle(DS.Colours.accent)
-                                .frame(width: 44.0, height: 44.0)
-                        }
-                        .accessibilityLabel("Settings")
-                        .accessibilityIdentifier(AccessibilityID.Main.settings)
+                    Button {
+                        coordinator.present(.settings)
+                    } label: {
+                        Image(systemName: "gearshape")
                     }
+                    .accessibilityLabel("Settings")
+                    .accessibilityIdentifier(AccessibilityID.Main.settings)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
                     if !viewModel.messages.isEmpty {
                         Button {
-                            coordinator.present(.captureText)
+                            if reduceMotion {
+                                viewModel.resetConversation()
+                            } else {
+                                withAnimation(DS.Animation.standard) {
+                                    viewModel.resetConversation()
+                                }
+                            }
                         } label: {
                             Image(systemName: "square.and.pencil")
-                                .font(DS.Typography.headline)
-                                .foregroundStyle(DS.Colours.accent)
-                                .frame(width: 44.0, height: 44.0)
                         }
-                        .accessibilityLabel("Write memory")
-                        .accessibilityIdentifier(AccessibilityID.CaptureText.open)
+                        .accessibilityLabel("New conversation")
+                        .accessibilityHint("Clear this conversation and return to Recall")
+                        .accessibilityIdentifier(AccessibilityID.Chat.newConversation)
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
                     }
                 }
             }
@@ -235,52 +214,67 @@ struct MessageBubble: View {
     let message: ChatViewModel.Message
     let onSourceTap: (UUID) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     private var isUser: Bool {
         message.role == .user
     }
 
     var body: some View {
-        HStack(alignment: .bottom) {
+        HStack(alignment: .top) {
             if isUser {
-                Spacer(minLength: DS.Spacing.xxxl)
+                Spacer(minLength: DS.Spacing.xxl)
             }
 
-            VStack(alignment: isUser ? .trailing : .leading, spacing: DS.Spacing.xs) {
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                if !isUser {
+                    Label("Mnemo", systemImage: "bookmark")
+                        .font(DS.Typography.caption1.weight(.semibold))
+                        .foregroundStyle(DS.Colours.sourceAccent)
+                        .accessibilityHidden(true)
+                }
+
                 Text(message.content)
                     .font(DS.Typography.body)
-                    .foregroundStyle(isUser ? DS.ComponentTokens.PrimaryButton.foreground : DS.Colours.textPrimary)
-                    .multilineTextAlignment(isUser ? .trailing : .leading)
+                    .foregroundStyle(isUser ? DS.Colours.textOnAccent : DS.Colours.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    .textSelection(.enabled)
                     .padding(.horizontal, DS.Spacing.md)
-                    .padding(.vertical, DS.Spacing.md)
-                    .background(isUser ? DS.Colours.accent : DS.Colours.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-                    .shadow(
-                        color: DS.Shadows.subtle.color,
-                        radius: DS.Shadows.subtle.radius,
-                        x: DS.Shadows.subtle.x,
-                        y: DS.Shadows.subtle.y
-                    )
+                    .padding(.vertical, DS.Spacing.sm + DS.Spacing.xs)
+                    .background(isUser ? DS.Colours.controlAccent : DS.Colours.contentSurfaceElevated)
+                    .overlay {
+                        if !isUser || colorSchemeContrast == .increased {
+                            RoundedRectangle(cornerRadius: bubbleCornerRadius)
+                                .stroke(bubbleBorder, lineWidth: colorSchemeContrast == .increased ? 1.5 : 1.0)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: bubbleCornerRadius))
 
                 if !isUser && !message.citedMemoryIds.isEmpty {
                     CitationSection(
                         citations: message.citations,
-                        fallbackCount: message.citedMemoryIds.count,
+                        citedMemoryIDs: message.citedMemoryIds,
                         onSourceTap: onSourceTap
                     )
                 }
-
-                Text(message.timestamp.formatted(.dateTime.hour().minute()))
-                    .font(DS.Typography.caption2)
-                    .foregroundStyle(DS.Colours.textTertiary)
             }
 
             if !isUser {
-                Spacer(minLength: DS.Spacing.xxxl)
+                Spacer(minLength: DS.Spacing.xl)
             }
         }
         .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: isUser ? .trailing : .leading)))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(isUser ? "You" : "Mnemo answer")
         .accessibilityIdentifier(isUser ? AccessibilityID.Chat.messageUser : AccessibilityID.Chat.messageAssistant)
+    }
+
+    private var bubbleCornerRadius: CGFloat {
+        isUser ? DS.CornerRadius.large : DS.CornerRadius.medium
+    }
+
+    private var bubbleBorder: Color {
+        isUser ? DS.Colours.textOnAccent.opacity(0.72) : (colorSchemeContrast == .increased ? DS.Colours.borderStrong : DS.Colours.separator)
     }
 }
 
@@ -288,105 +282,225 @@ private struct ChatSelectedMemory: Identifiable {
     let id: UUID
 }
 
+private struct CitationSourceItem: Identifiable {
+    let id: UUID
+    let citation: ChatViewModel.Message.Citation?
+}
+
 struct CitationSection: View {
 
     let citations: [ChatViewModel.Message.Citation]
-    let fallbackCount: Int
+    let citedMemoryIDs: [UUID]
     let onSourceTap: (UUID) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @State private var showsAllSources = false
+
+    private var sourceCount: Int {
+        sourceItems.count
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
             Label(title, systemImage: "bookmark.fill")
                 .font(DS.Typography.caption1.weight(.semibold))
-                .foregroundStyle(DS.Colours.sourceCardAccent)
+                .foregroundStyle(DS.Colours.sourceAccent)
                 .accessibilityLabel(title)
 
-            if citations.isEmpty {
-                Text(fallbackCount == 1 ? "Source memory is saved locally." : "\(fallbackCount) source memories are saved locally.")
-                    .font(DS.Typography.caption1)
-                    .foregroundStyle(DS.Colours.textSecondary)
-                    .padding(DS.Spacing.sm)
-                    .background(DS.Colours.sourceCardSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-            } else {
-                ForEach(Array(citations.prefix(3).enumerated()), id: \.element.id) { index, citation in
-                    let isPrimary = citation.id == citations.first?.id
-                    Button {
-                        onSourceTap(citation.id)
-                    } label: {
-                        ZStack(alignment: .trailing) {
-                            if isPrimary {
-                                MnemoThreadMotif(style: .source, lineWidth: 1.8)
-                                    .frame(width: 92.0, height: 72.0)
-                                    .padding(.trailing, DS.Spacing.xs)
-                            }
-
-                            HStack(alignment: .center, spacing: DS.Spacing.sm) {
-                                Capsule()
-                                    .fill(isPrimary ? DS.Colours.sourceCardAccent : DS.Colours.borderStrong)
-                                    .frame(width: 3.0, height: 40.0)
-                                    .accessibilityHidden(true)
-
-                                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                                    Text(citation.source)
-                                        .font(DS.Typography.caption2.weight(.semibold))
-                                        .foregroundStyle(isPrimary ? DS.Colours.sourceCardAccent : DS.Colours.textTertiary)
-                                        .accessibilityIdentifier(AccessibilityID.Chat.sourceType)
-                                    Text("\"\(citation.summary)\"")
-                                        .font(DS.Typography.caption1)
-                                        .foregroundStyle(DS.Colours.textSecondary)
-                                        .lineLimit(4)
-                                        .multilineTextAlignment(.leading)
-                                }
-
-                                Spacer(minLength: DS.Spacing.xs)
-
-                                Image(systemName: "chevron.right")
-                                    .font(DS.Typography.caption1)
-                                    .foregroundStyle(DS.Colours.textTertiary)
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                        .padding(DS.ComponentTokens.SourceCard.padding)
-                        .background(isPrimary ? DS.ComponentTokens.SourceCard.background : DS.Colours.surfaceElevated)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius)
-                                .stroke(isPrimary ? DS.ComponentTokens.SourceCard.border : DS.Colours.memoryCardBorder, lineWidth: 1.0)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius))
-                    }
-                    .buttonStyle(.mnemoPressable)
-                    .accessibilityLabel(sourceAccessibilityLabel(for: citation, index: index, isPrimary: isPrimary))
-                    .accessibilityValue(citation.summary)
-                    .accessibilityHint("Open source memory details")
-                    .accessibilityIdentifier(citation.id == citations.first?.id ? AccessibilityID.Chat.sourceCardPrimary : AccessibilityID.Chat.sourceCard)
+            ForEach(Array(visibleSourceItems.enumerated()), id: \.element.id) { index, item in
+                if let citation = item.citation {
+                    SourceCitationButton(
+                        citation: citation,
+                        index: index,
+                        count: sourceCount,
+                        isPrimary: index == 0,
+                        increasedContrast: colorSchemeContrast == .increased,
+                        onSourceTap: onSourceTap
+                    )
                     .transition(DS.Animation.sourceRevealTransition(reduceMotion: reduceMotion))
+                } else {
+                    SourceFallbackButton(
+                        id: item.id,
+                        index: index,
+                        count: sourceCount,
+                        onSourceTap: onSourceTap
+                    )
                 }
+            }
 
-                if citations.count > 3 {
-                    Text("\(citations.count - 3) more source\(citations.count - 3 == 1 ? "" : "s") not shown")
-                        .font(DS.Typography.caption2)
-                        .foregroundStyle(DS.Colours.textTertiary)
-                        .padding(.leading, DS.Spacing.md)
+            if sourceCount > 2 {
+                Button {
+                    withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.standard) {
+                        showsAllSources.toggle()
+                    }
+                } label: {
+                    Label(
+                        showsAllSources ? "Show fewer sources" : "Show \(sourceCount - 2) more source\(sourceCount - 2 == 1 ? "" : "s")",
+                        systemImage: showsAllSources ? "chevron.up" : "chevron.down"
+                    )
+                    .font(DS.Typography.caption1.weight(.semibold))
+                    .foregroundStyle(DS.Colours.sourceAccent)
+                    .frame(minHeight: 44.0)
                 }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(AccessibilityID.Chat.sourceDisclosure)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
         .transition(DS.Animation.sourceRevealTransition(reduceMotion: reduceMotion))
     }
 
     private var title: String {
-        fallbackCount == 1 ? "Memory used" : "Sources"
+        sourceCount == 1 ? "Memory used" : "\(sourceCount) memories used"
     }
 
-    private func sourceAccessibilityLabel(
-        for citation: ChatViewModel.Message.Citation,
-        index: Int,
-        isPrimary: Bool
-    ) -> String {
-        let sourcePosition = isPrimary ? "Primary source" : "Source \(index + 1) of \(min(citations.count, 3))"
-        return "\(sourcePosition). \(citation.source) source memory"
+    private var sourceItems: [CitationSourceItem] {
+        var items = citedMemoryIDs.map { id in
+            CitationSourceItem(id: id, citation: citations.first(where: { $0.id == id }))
+        }
+        let citedIDs = Set(citedMemoryIDs)
+        items.append(contentsOf: citations.compactMap { citation in
+            guard !citedIDs.contains(citation.id) else { return nil }
+            return CitationSourceItem(id: citation.id, citation: citation)
+        })
+        return items
+    }
+
+    private var visibleSourceItems: ArraySlice<CitationSourceItem> {
+        sourceItems.prefix(showsAllSources ? sourceItems.count : 2)
+    }
+}
+
+private struct SourceCitationButton: View {
+    let citation: ChatViewModel.Message.Citation
+    let index: Int
+    let count: Int
+    let isPrimary: Bool
+    let increasedContrast: Bool
+    let onSourceTap: (UUID) -> Void
+
+    var body: some View {
+        Button {
+            onSourceTap(citation.id)
+        } label: {
+            HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                Image(systemName: sourceIcon)
+                    .font(DS.Typography.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.Colours.sourceAccent)
+                    .frame(width: 24.0, height: 24.0)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                    HStack(spacing: DS.Spacing.xs) {
+                        Text(citation.source)
+                            .font(DS.Typography.caption1.weight(.semibold))
+                            .foregroundStyle(DS.Colours.sourceAccent)
+                            .accessibilityIdentifier(AccessibilityID.Chat.sourceType)
+
+                        if isPrimary {
+                            Text("Primary")
+                                .font(DS.Typography.caption2.weight(.semibold))
+                                .foregroundStyle(DS.Colours.textPrimary)
+                                .padding(.horizontal, DS.Spacing.sm)
+                                .padding(.vertical, DS.Spacing.xs)
+                                .background(DS.Colours.contentSurfaceElevated)
+                                .clipShape(Capsule())
+                        }
+                    }
+
+                    Text(citation.summary)
+                        .font(DS.Typography.footnote)
+                        .foregroundStyle(DS.Colours.textSecondary)
+                        .lineLimit(4)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: DS.Spacing.xs)
+
+                Image(systemName: "chevron.right")
+                    .font(DS.Typography.caption1.weight(.semibold))
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .frame(minHeight: 24.0)
+                    .accessibilityHidden(true)
+            }
+            .padding(DS.ComponentTokens.SourceCard.padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isPrimary ? DS.ComponentTokens.SourceCard.background : DS.Colours.contentSurfaceElevated)
+            .overlay {
+                RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius)
+                    .stroke(
+                        isPrimary || increasedContrast ? DS.ComponentTokens.SourceCard.border : DS.Colours.memoryCardBorder,
+                        lineWidth: increasedContrast ? 1.5 : 1.0
+                    )
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius))
+        }
+        .buttonStyle(.mnemoPressable)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(citation.summary)
+        .accessibilityHint("Open source memory details")
+        .accessibilityIdentifier(isPrimary ? AccessibilityID.Chat.sourceCardPrimary : AccessibilityID.Chat.sourceCard)
+    }
+
+    private var accessibilityLabel: String {
+        let position = isPrimary ? "Primary source" : "Source \(index + 1) of \(count)"
+        return "\(position), \(citation.source) memory"
+    }
+
+    private var sourceIcon: String {
+        let source = citation.source.lowercased()
+        if source.contains("voice") || source.contains("audio") {
+            return "waveform"
+        }
+        if source.contains("photo") || source.contains("image") || source.contains("camera") {
+            return "photo"
+        }
+        return "doc.text"
+    }
+}
+
+private struct SourceFallbackButton: View {
+    let id: UUID
+    let index: Int
+    let count: Int
+    let onSourceTap: (UUID) -> Void
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+
+    var body: some View {
+        Button {
+            onSourceTap(id)
+        } label: {
+            HStack(spacing: DS.Spacing.sm) {
+                Image(systemName: "bookmark")
+                    .foregroundStyle(DS.Colours.sourceAccent)
+                    .accessibilityHidden(true)
+
+                Text(count == 1 ? "Open source memory" : "Open source memory \(index + 1)")
+                    .font(DS.Typography.footnote.weight(.semibold))
+                    .foregroundStyle(DS.Colours.textPrimary)
+
+                Spacer(minLength: DS.Spacing.xs)
+
+                Image(systemName: "chevron.right")
+                    .font(DS.Typography.caption1.weight(.semibold))
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .accessibilityHidden(true)
+            }
+            .padding(DS.ComponentTokens.SourceCard.padding)
+            .frame(maxWidth: .infinity, minHeight: 44.0, alignment: .leading)
+            .background(DS.Colours.sourceSurface)
+            .overlay {
+                RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius)
+                    .stroke(DS.Colours.sourceBorder, lineWidth: colorSchemeContrast == .increased ? 1.5 : 1.0)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius))
+        }
+        .buttonStyle(.mnemoPressable)
+        .accessibilityLabel(count == 1 ? "Source memory" : "Source \(index + 1) of \(count)")
+        .accessibilityHint("Open source memory details")
+        .accessibilityIdentifier(index == 0 ? AccessibilityID.Chat.sourceCardPrimary : AccessibilityID.Chat.sourceCard)
     }
 }
 
@@ -417,48 +531,37 @@ struct MissingSourceView: View {
 
 struct TypingIndicator: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var animating = false
 
     var body: some View {
         HStack {
-            HStack(spacing: DS.Spacing.xs) {
+            HStack(spacing: DS.Spacing.sm) {
                 if reduceMotion {
-                    dot
+                    Image(systemName: "bookmark")
+                        .foregroundStyle(DS.Colours.sourceAccent)
+                        .accessibilityHidden(true)
                 } else {
-                    ForEach(0..<3, id: \.self) { index in
-                        dot
-                            .offset(y: animating ? -6.0 : 0.0)
-                            .animation(
-                                Animation.easeInOut(duration: 0.45)
-                                    .repeatForever(autoreverses: true)
-                                    .delay(Double(index) * 0.15),
-                                value: animating
-                            )
-                    }
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(DS.Colours.sourceAccent)
+                        .accessibilityHidden(true)
                 }
+
+                Text("Looking through your memories")
+                    .font(DS.Typography.footnote)
+                    .foregroundStyle(DS.Colours.textSecondary)
             }
             .padding(.horizontal, DS.Spacing.md)
-            .padding(.vertical, DS.Spacing.sm)
-            .background(DS.Colours.surfaceElevated)
-            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-                .shadow(
-                    color: DS.Shadows.subtle.color,
-                    radius: DS.Shadows.subtle.radius,
-                    x: DS.Shadows.subtle.x,
-                    y: DS.Shadows.subtle.y
-                )
-            Spacer(minLength: DS.Spacing.xxxl)
+            .padding(.vertical, DS.Spacing.sm + DS.Spacing.xs)
+            .background(DS.Colours.contentSurfaceElevated)
+            .overlay {
+                RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                    .stroke(DS.Colours.separator, lineWidth: 1.0)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+            Spacer(minLength: DS.Spacing.xl)
         }
-        .accessibilityLabel("Looking through saved memories")
-        .onAppear {
-            animating = true
-        }
-    }
-
-    private var dot: some View {
-        Circle()
-            .fill(DS.Colours.textTertiary)
-            .frame(width: 8.0, height: 8.0)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Looking through your memories")
     }
 }
 
@@ -643,11 +746,13 @@ struct EmptyMemoryRecoveryPanel: View {
             }
 
             Button(action: onReset) {
-                Label("Back to start", systemImage: "house")
+                Label("New conversation", systemImage: "square.and.pencil")
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.accent)
             }
             .buttonStyle(.mnemoPressable)
+            .accessibilityHint("Clear this conversation and return to Recall")
+            .accessibilityIdentifier(AccessibilityID.Chat.newConversation)
         }
         .padding(DS.Spacing.md)
         .background(DS.Colours.memoryCardSurface)
@@ -826,8 +931,9 @@ struct ChatInputBar: View {
     let onPhoto: () -> Void
     let onSend: () -> Void
     let onVoice: () -> Void
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @State private var sendIsActive = false
 
     private var canSend: Bool {
@@ -842,10 +948,8 @@ struct ChatInputBar: View {
                         Label("Write Memory", systemImage: "square.and.pencil")
                     }
 
-                    if dynamicTypeSize.isAccessibilitySize {
-                        Button(action: onVoice) {
-                            Label("Record Voice", systemImage: "mic.fill")
-                        }
+                    Button(action: onVoice) {
+                        Label("Record Voice", systemImage: "mic.fill")
                     }
 
                     Button(action: onCamera) {
@@ -858,29 +962,13 @@ struct ChatInputBar: View {
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 24.0, weight: .semibold))
-                        .foregroundStyle(DS.Colours.accent)
+                        .foregroundStyle(DS.Colours.controlAccent)
                         .frame(width: 44.0, height: 44.0)
                 }
                 .buttonStyle(.mnemoPressable)
                 .accessibilityLabel("Add memory")
                 .accessibilityHint("Choose how to save a memory")
-                .accessibilityIdentifier(AccessibilityID.Main.capture)
-            }
-
-            if showsCaptureShortcuts && !dynamicTypeSize.isAccessibilitySize {
-                Button(action: onVoice) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 20.0, weight: .semibold))
-                        .foregroundStyle(DS.Colours.accent)
-                        .frame(width: 36.0, height: 36.0)
-                        .background(DS.Colours.accentSoft)
-                        .clipShape(Circle())
-                        .frame(width: 44.0, height: 44.0)
-                }
-                .buttonStyle(.mnemoPressable)
-                .accessibilityLabel("Record voice memory")
-                .accessibilityHint("Open voice capture")
-                .accessibilityIdentifier("capture.voice.open")
+                .accessibilityIdentifier(AccessibilityID.Chat.captureMenu)
             }
 
             TextField(placeholder, text: $text, axis: .vertical)
@@ -889,10 +977,13 @@ struct ChatInputBar: View {
                 .lineLimit(1...4)
                 .padding(.horizontal, DS.Spacing.md)
                 .padding(.vertical, DS.Spacing.sm)
-                .background(DS.Colours.surfaceSecondary)
+                .background(DS.Colours.controlFallback)
                 .overlay {
                     RoundedRectangle(cornerRadius: DS.CornerRadius.large)
-                        .stroke(DS.Colours.borderSubtle, lineWidth: 0.8)
+                        .stroke(
+                            colorSchemeContrast == .increased ? DS.Colours.borderStrong : DS.Colours.separator,
+                            lineWidth: colorSchemeContrast == .increased ? 1.5 : 1.0
+                        )
                 }
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
                 .onSubmit {
@@ -904,23 +995,29 @@ struct ChatInputBar: View {
             Button(action: onSend) {
                 Image(systemName: isProcessing ? "ellipsis" : "arrow.up.circle.fill")
                     .font(.system(size: 32.0, weight: .semibold))
-                    .foregroundStyle(sendIsActive ? DS.Colours.accent : DS.Colours.textTertiary)
+                    .foregroundStyle(sendIsActive ? DS.Colours.controlAccent : DS.Colours.textTertiary)
                     .frame(width: 44.0, height: 44.0)
-                    .contentTransition(.symbolEffect(.replace))
             }
             .disabled(!canSend)
             .buttonStyle(.mnemoPressable)
             .accessibilityLabel("Send")
+            .accessibilityValue(canSend ? "Available" : "Unavailable")
             .accessibilityHint("Ask Mnemo to recall a saved memory")
             .accessibilityIdentifier(AccessibilityID.Chat.send)
         }
         .padding(.horizontal, DS.Spacing.md)
         .padding(.vertical, DS.Spacing.sm)
-        .background(.regularMaterial)
+        .background {
+            if reduceTransparency {
+                DS.Colours.contentSurfaceElevated
+            } else {
+                Rectangle().fill(.regularMaterial)
+            }
+        }
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(DS.Colours.borderSubtle)
-                .frame(height: DS.Spacing.xs / DS.Spacing.xs)
+                .fill(colorSchemeContrast == .increased ? DS.Colours.borderStrong : DS.Colours.separator)
+                .frame(height: colorSchemeContrast == .increased ? 1.5 : 1.0)
         }
         .onAppear {
             sendIsActive = canSend

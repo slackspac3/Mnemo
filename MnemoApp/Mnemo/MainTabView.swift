@@ -5,7 +5,6 @@ import MnemoUI
 struct MainTabView: View {
 
     @State private var coordinator = NavigationCoordinator.shared
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -26,7 +25,7 @@ struct MainTabView: View {
                 .tag(NavigationCoordinator.Tab.browse)
         }
         .accessibilityIdentifier(AccessibilityID.Main.tabView)
-        .tint(DS.Colours.accent)
+        .tint(DS.Colours.controlAccent)
         .environment(coordinator)
         .sheet(item: $coordinator.activeSheet) { sheet in
             switch sheet {
@@ -40,15 +39,5 @@ struct MainTabView: View {
                 SettingsView()
             }
         }
-        .overlay(alignment: .bottomTrailing) {
-            if coordinator.activeTab != .chat {
-                CaptureButton()
-                    .environment(coordinator)
-                    .padding(.trailing, DS.Spacing.md)
-                    .padding(.bottom, DS.Spacing.xxxl + DS.Spacing.lg)
-                    .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-            }
-        }
-        .animation(reduceMotion ? DS.Animation.fade : DS.Animation.standard, value: coordinator.activeTab)
     }
 }

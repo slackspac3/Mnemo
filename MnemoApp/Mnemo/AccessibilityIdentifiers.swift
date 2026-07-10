@@ -35,6 +35,9 @@ enum AccessibilityID {
         static let sourceCard = "chat.sourceCard"
         static let sourceCardPrimary = "chat.sourceCard.primary"
         static let sourceType = "chat.sourceCard.sourceType"
+        static let newConversation = "chat.newConversation"
+        static let captureMenu = "chat.captureMenu"
+        static let sourceDisclosure = "chat.sourceDisclosure"
     }
 
     enum MemoryDetail {
