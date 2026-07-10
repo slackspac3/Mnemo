@@ -231,6 +231,7 @@ struct CaptureVoiceSheet: View {
                 await MainActor.run {
                     errorMessage = "Could not save voice memory. Try again."
                     isSaving = false
+                    UIAccessibility.post(notification: .announcement, argument: errorMessage)
                 }
             }
         }
@@ -402,7 +403,7 @@ struct RecordingWaveform: View {
         let low = DS.Spacing.sm
         let high = DS.Spacing.lg
         let multipliers = [0.50, 0.78, 1.0, 0.72, 0.46]
-        let shapedLevel = max(0.06, min(1.0, level))
+        let shapedLevel = reduceMotion ? 0.24 : max(0.06, min(1.0, level))
         return low + ((high - low) * CGFloat(shapedLevel * multipliers[index]))
     }
 }
@@ -444,18 +445,11 @@ struct VoiceConfirmView: View {
                             .tint(DS.ComponentTokens.PrimaryButton.foreground)
                     } else {
                         Text("Save Memory")
-                            .font(DS.Typography.headline)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                .padding(.vertical, DS.Spacing.xs)
-                .background(transcript.isEmpty ? DS.Colours.accentDisabled : DS.ComponentTokens.PrimaryButton.background)
-                .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
             .disabled(transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
-            .buttonStyle(.mnemoPressable)
+            .buttonStyle(.mnemoPrimary)
 
             Button(action: onRetry) {
                 Text("Record again")

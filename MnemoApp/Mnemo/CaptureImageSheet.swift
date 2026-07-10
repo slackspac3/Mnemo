@@ -19,6 +19,7 @@ struct CaptureImageSheet: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var cameraImage: UIImage?
     @State private var isShowingCamera = false
+    @State private var hasAutoOpenedCamera = false
     @State private var payload: ClarifyingQuestionPayload?
     @State private var clarifyingAnswer = ""
     @State private var isProcessing = false
@@ -87,6 +88,12 @@ struct CaptureImageSheet: View {
                 guard let image else { return }
                 processImage(image)
             }
+            .onAppear {
+                if source == .camera, !hasAutoOpenedCamera {
+                    hasAutoOpenedCamera = true
+                    openCamera()
+                }
+            }
             .fullScreenCover(isPresented: $isShowingCamera) {
                 CameraImagePicker(image: $cameraImage)
                     .ignoresSafeArea()
@@ -117,6 +124,7 @@ struct CaptureImageSheet: View {
                 await MainActor.run {
                     errorMessage = "Could not read image. Try another photo."
                     isProcessing = false
+                    UIAccessibility.post(notification: .announcement, argument: errorMessage)
                 }
             }
         }
@@ -133,6 +141,7 @@ struct CaptureImageSheet: View {
                 await MainActor.run {
                     errorMessage = "Could not read image. Try another photo."
                     isProcessing = false
+                    UIAccessibility.post(notification: .announcement, argument: errorMessage)
                 }
             }
         }
@@ -208,6 +217,7 @@ struct CaptureImageSheet: View {
                 await MainActor.run {
                     errorMessage = "Could not save memory. Try again."
                     isProcessing = false
+                    UIAccessibility.post(notification: .announcement, argument: errorMessage)
                 }
             }
         }
@@ -251,31 +261,13 @@ struct ImageSelectionView: View {
             } else {
                 Button(action: onCamera) {
                     Label("Take Photo", systemImage: "camera.fill")
-                        .font(DS.Typography.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .background(DS.ComponentTokens.PrimaryButton.background)
-                        .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
-                .buttonStyle(.mnemoPressable)
+                .buttonStyle(.mnemoPrimary)
 
                 PhotosPicker(selection: $selectedPhoto, matching: .images) {
                     Label("Choose Photo", systemImage: "photo")
-                        .font(DS.Typography.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: DS.ComponentTokens.SecondaryButton.height)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .background(DS.Colours.surfaceSecondary)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
-                        }
-                        .foregroundStyle(DS.Colours.textPrimary)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
-                .buttonStyle(.mnemoPressable)
+                .buttonStyle(.mnemoSecondary)
             }
         }
         .frame(maxWidth: .infinity)
@@ -368,6 +360,7 @@ struct ClarifyingQuestionView: View {
                 TextEditor(text: $answer)
                     .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textPrimary)
+                    .scrollContentBackground(.hidden)
                     .padding(DS.Spacing.sm)
                     .frame(minHeight: 96.0)
                     .background(alignment: .topLeading) {
@@ -377,6 +370,7 @@ struct ClarifyingQuestionView: View {
                                 .foregroundStyle(DS.Colours.textTertiary)
                                 .padding(DS.Spacing.md)
                                 .allowsHitTesting(false)
+                                .accessibilityHidden(true)
                         }
                     }
                     .background(DS.Colours.surfaceSecondary)
@@ -391,18 +385,11 @@ struct ClarifyingQuestionView: View {
                             .tint(DS.ComponentTokens.PrimaryButton.foreground)
                     } else {
                         Text("Save Memory")
-                            .font(DS.Typography.headline)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                .padding(.vertical, DS.Spacing.xs)
-                .background(DS.ComponentTokens.PrimaryButton.background)
-                .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
             .disabled(isSaving)
-            .buttonStyle(.mnemoPressable)
+            .buttonStyle(.mnemoPrimary)
 
             Button(action: onRetry) {
                 Label("Choose another image", systemImage: "arrow.counterclockwise")

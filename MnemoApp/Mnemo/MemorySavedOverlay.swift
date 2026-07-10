@@ -7,6 +7,7 @@ struct MemorySavedOverlay: View {
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AccessibilityFocusState private var isAccessibilityFocused: Bool
     @State private var isVisible = false
 
@@ -26,7 +27,7 @@ struct MemorySavedOverlay: View {
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textSecondary)
                 .multilineTextAlignment(.center)
-                .lineLimit(4)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 4)
                 .padding(.horizontal, DS.Spacing.lg)
         }
         .padding(DS.Spacing.xl)

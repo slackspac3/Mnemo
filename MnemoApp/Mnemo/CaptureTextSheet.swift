@@ -150,6 +150,7 @@ struct CaptureTextSheet: View {
                 await MainActor.run {
                     isSaving = false
                     errorMessage = "Could not save memory. Try again."
+                    UIAccessibility.post(notification: .announcement, argument: errorMessage)
                 }
             }
         }
@@ -204,18 +205,11 @@ struct TextInputView: View {
                             .tint(DS.ComponentTokens.PrimaryButton.foreground)
                     } else {
                         Text("Review Memory")
-                            .font(DS.Typography.headline)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                .padding(.vertical, DS.Spacing.xs)
-                .background(canSave ? DS.ComponentTokens.PrimaryButton.background : DS.Colours.accentDisabled)
-                .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
             .disabled(!canSave || isExtracting)
-            .buttonStyle(.mnemoPressable)
+            .buttonStyle(.mnemoPrimary)
             .accessibilityLabel("Review memory")
             .accessibilityIdentifier(AccessibilityID.CaptureText.extract)
 
@@ -309,36 +303,18 @@ struct ExtractionConfirmView: View {
                                 .tint(DS.ComponentTokens.PrimaryButton.foreground)
                         } else {
                             Text("Save Memory")
-                                .font(DS.Typography.headline)
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                    .padding(.vertical, DS.Spacing.xs)
-                    .background(DS.ComponentTokens.PrimaryButton.background)
-                    .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
                 .disabled(isSaving)
-                .buttonStyle(.mnemoPressable)
+                .buttonStyle(.mnemoPrimary)
                 .accessibilityIdentifier(AccessibilityID.CaptureText.save)
 
                 Button(action: onEdit) {
                     Text("Edit")
-                        .font(DS.Typography.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: DS.ComponentTokens.SecondaryButton.height)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .background(DS.Colours.surfaceSecondary)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
-                        }
-                        .foregroundStyle(DS.Colours.textPrimary)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
                 .disabled(isSaving)
-                .buttonStyle(.mnemoPressable)
+                .buttonStyle(.mnemoSecondary)
 
                 Button(action: onDiscard) {
                     Text("Discard")
