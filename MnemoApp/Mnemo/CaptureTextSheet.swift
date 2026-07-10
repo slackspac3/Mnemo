@@ -22,10 +22,11 @@ struct CaptureTextSheet: View {
     @State private var savedSummary: String?
 
     private let handler = TextCaptureHandler()
-    private let normalizer = MemoryTextNormalizer()
     #if DEBUG
+    private let normalizer = MemoryTextNormalizer(aiCoreFlags: .debugLocalFoundationModelsExtraction)
     private let engine = ExtractionEngine(aiCoreFlags: .debugLocalFoundationModelsExtraction)
     #else
+    private let normalizer = MemoryTextNormalizer()
     private let engine = ExtractionEngine()
     #endif
 
@@ -78,9 +79,11 @@ struct CaptureTextSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
+                        guard !isSaving else { return }
                         dismiss()
                     }
                     .foregroundStyle(DS.Colours.textSecondary)
+                    .disabled(isSaving)
                     .accessibilityIdentifier(AccessibilityID.CaptureText.dismiss)
                 }
             }
@@ -92,6 +95,7 @@ struct CaptureTextSheet: View {
                 }
             }
         }
+        .interactiveDismissDisabled(isSaving)
         .accessibilityIdentifier("capture.text.sheet")
     }
 

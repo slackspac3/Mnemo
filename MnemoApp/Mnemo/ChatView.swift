@@ -16,6 +16,7 @@ struct ChatView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: \MemoryRecord.createdAt, order: .reverse) private var records: [MemoryRecord]
     @State private var selectedSourceMemory: ChatSelectedMemory?
+    @State private var sendTask: Task<Void, Never>?
 
     private var activeRecords: [MemoryRecord] {
         records.filter { !$0.isArchived }
@@ -78,7 +79,7 @@ struct ChatView: View {
                                             coordinator.present(.captureImage(.photoLibrary))
                                         },
                                         onReset: {
-                                            viewModel.resetConversation()
+                                            resetConversation()
                                         }
                                     )
                                 }
@@ -128,7 +129,13 @@ struct ChatView: View {
                         },
                         onSend: {
                             HapticManager.impact(.light)
-                            Task { await viewModel.send(context: modelContext) }
+                            sendTask?.cancel()
+                            sendTask = Task { @MainActor in
+                                await viewModel.send(context: modelContext)
+                                if !Task.isCancelled {
+                                    sendTask = nil
+                                }
+                            }
                         },
                         onVoice: {
                             coordinator.present(.captureVoice)
@@ -154,10 +161,10 @@ struct ChatView: View {
                     if !viewModel.messages.isEmpty {
                         Button {
                             if reduceMotion {
-                                viewModel.resetConversation()
+                                resetConversation()
                             } else {
                                 withAnimation(DS.Animation.standard) {
-                                    viewModel.resetConversation()
+                                    resetConversation()
                                 }
                             }
                         } label: {
@@ -165,7 +172,11 @@ struct ChatView: View {
                                 .foregroundStyle(DS.Colours.accent)
                         }
                         .accessibilityLabel("New conversation")
-                        .accessibilityHint("Clear this conversation and return to Recall")
+                        .accessibilityHint(
+                            viewModel.isProcessing
+                                ? "Clear this conversation and ignore the pending answer"
+                                : "Clear this conversation and return to Recall"
+                        )
                         .accessibilityIdentifier(AccessibilityID.Chat.newConversation)
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
                     }
@@ -182,7 +193,24 @@ struct ChatView: View {
                     MissingSourceView()
                 }
             }
+            .onChange(of: viewModel.isProcessing) { _, isProcessing in
+                guard isProcessing else { return }
+                announceForAccessibility("Looking through your memories")
+            }
+            .onChange(of: viewModel.messages.count) { _, _ in
+                guard let answer = viewModel.messages.last,
+                      answer.role == .assistant
+                else { return }
+                announceForAccessibility("Mnemo answered. \(answer.content)")
+            }
         }
+    }
+
+    @MainActor
+    private func resetConversation() {
+        sendTask?.cancel()
+        sendTask = nil
+        viewModel.resetConversation()
     }
 
     @MainActor
@@ -203,6 +231,12 @@ struct ChatView: View {
             from: nil,
             for: nil
         )
+        #endif
+    }
+
+    private func announceForAccessibility(_ message: String) {
+        #if os(iOS)
+        UIAccessibility.post(notification: .announcement, argument: message)
         #endif
     }
 }
@@ -232,7 +266,11 @@ struct MessageBubble: View {
                 if !isUser {
                     Label("Mnemo", systemImage: "bookmark")
                         .font(DS.Typography.caption1.weight(.semibold))
-                        .foregroundStyle(DS.Colours.sourceAccent)
+                        .foregroundStyle(
+                            message.citedMemoryIds.isEmpty
+                                ? DS.Colours.accent
+                                : DS.Colours.sourceAccent
+                        )
                         .accessibilityHidden(true)
                 }
 
@@ -514,6 +552,8 @@ private struct SourceFallbackButton: View {
 
 struct MissingSourceView: View {
 
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         NavigationStack {
             VStack(spacing: DS.Spacing.md) {
@@ -533,6 +573,14 @@ struct MissingSourceView: View {
             .padding(DS.Spacing.xl)
             .navigationTitle("Source")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .accessibilityHint("Close source details")
+                }
+            }
         }
     }
 }
@@ -545,12 +593,12 @@ struct TypingIndicator: View {
             HStack(spacing: DS.Spacing.sm) {
                 if reduceMotion {
                     Image(systemName: "bookmark")
-                        .foregroundStyle(DS.Colours.sourceAccent)
+                        .foregroundStyle(DS.Colours.accent)
                         .accessibilityHidden(true)
                 } else {
                     ProgressView()
                         .controlSize(.small)
-                        .tint(DS.Colours.sourceAccent)
+                        .tint(DS.Colours.accent)
                         .accessibilityHidden(true)
                 }
 
@@ -989,7 +1037,12 @@ struct ChatInputBar: View {
                 .accessibilityIdentifier(AccessibilityID.Chat.captureMenu)
             }
 
-            TextField(placeholder, text: $text, axis: .vertical)
+            TextField(
+                placeholder,
+                text: $text,
+                prompt: Text(placeholder).foregroundStyle(DS.Colours.textSecondary),
+                axis: .vertical
+            )
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textPrimary)
                 .lineLimit(1...4)

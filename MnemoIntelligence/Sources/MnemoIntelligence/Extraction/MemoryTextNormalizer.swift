@@ -4,16 +4,31 @@ import MnemoCore
 public struct MemoryTextNormalizer: Sendable {
     public typealias Generator = @Sendable (_ prompt: String, _ maxTokens: Int) async throws -> String?
 
-    private let generator: Generator
+    private let generator: Generator?
 
-    public init(foundationLoader: FoundationModelLoader = .shared) {
-        self.generator = { prompt, maxTokens in
-            try await foundationLoader.generate(prompt: prompt, maxTokens: maxTokens)
+    public init(
+        foundationLoader: FoundationModelLoader = .shared,
+        aiCoreFlags: AICoreFlags = .testFlightDefault
+    ) {
+        if aiCoreFlags.aiCoreEnabled, aiCoreFlags.foundationModelsEnabled {
+            self.generator = { prompt, maxTokens in
+                try await foundationLoader.generate(prompt: prompt, maxTokens: maxTokens)
+            }
+        } else {
+            self.generator = nil
         }
     }
 
-    public init(generator: @escaping Generator) {
-        self.generator = generator
+    init(
+        generator: @escaping Generator,
+        aiCoreFlags: AICoreFlags? = nil
+    ) {
+        if let aiCoreFlags,
+           !(aiCoreFlags.aiCoreEnabled && aiCoreFlags.foundationModelsEnabled) {
+            self.generator = nil
+        } else {
+            self.generator = generator
+        }
     }
 
     public func normalize(
@@ -31,22 +46,33 @@ public struct MemoryTextNormalizer: Sendable {
         var proposal = Self.deterministicProposal(
             rawInput: rawInput,
             originalSummary: baseline,
-            reconciledSummary: reconciled
+            reconciledSummary: reconciled,
+            memoryType: extractionResult.memoryType
         )
 
-        do {
-            let deterministicSummary = proposal.proposedSummary
-            if let response = try await generator(Self.prompt(rawInput: rawInput, summary: deterministicSummary), 420),
-               let modelProposal = Self.parse(response: response, originalSummary: deterministicSummary),
-               Self.isFaithful(original: deterministicSummary, proposed: modelProposal.proposedSummary) {
-                proposal = Self.merge(
-                    deterministic: proposal,
-                    model: modelProposal,
-                    baseline: baseline
-                )
+        if extractionResult.memoryType != .credential, let generator {
+            do {
+                let deterministicSummary = proposal.proposedSummary
+                if let response = try await generator(Self.prompt(rawInput: rawInput, summary: deterministicSummary), 420),
+                   let modelProposal = Self.parse(response: response, originalSummary: deterministicSummary),
+                   Self.isFaithful(
+                       original: deterministicSummary,
+                       proposed: modelProposal.proposedSummary,
+                       sourceCasingReference: reconciled
+                   ) {
+                    let presentedModelProposal = Self.applyingSentenceCapitalization(
+                        to: modelProposal,
+                        memoryType: extractionResult.memoryType
+                    )
+                    proposal = Self.merge(
+                        deterministic: proposal,
+                        model: presentedModelProposal,
+                        baseline: baseline
+                    )
+                }
+            } catch {
+                // Deterministic review remains available when the on-device model is unavailable.
             }
-        } catch {
-            // Deterministic review remains available when the on-device model is unavailable.
         }
 
         return ExtractionResult(
@@ -130,7 +156,7 @@ public struct MemoryTextNormalizer: Sendable {
             if ".!?".contains(character) { count += 1 }
         }
 
-        if memoryType == .credential || !protectedValues(in: original).isEmpty {
+        if memoryType == .credential {
             return original
         }
         if original.count <= 240, lineCount <= 2, sentenceEndCount <= 2 {
@@ -142,7 +168,8 @@ public struct MemoryTextNormalizer: Sendable {
     private static func deterministicProposal(
         rawInput: String,
         originalSummary: String,
-        reconciledSummary: String
+        reconciledSummary: String,
+        memoryType: MemoryType
     ) -> MemoryNormalizationProposal {
         var proposed = reconciledSummary
         var corrections = sourceCasingCorrections(
@@ -150,20 +177,10 @@ public struct MemoryTextNormalizer: Sendable {
             reconciledSummary: reconciledSummary
         )
 
-        if let firstToken = tokens(in: proposed).first,
-           let firstCharacter = firstToken.text.first,
-           firstCharacter.isLowercase {
-            let replacement = String(firstCharacter).uppercased(with: Locale.current) + String(firstToken.text.dropFirst())
-            proposed.replaceSubrange(firstToken.range, with: replacement)
-            corrections.append(
-                MemoryCorrection(
-                    original: firstToken.text,
-                    replacement: replacement,
-                    kind: .capitalization,
-                    confidence: 1.0,
-                    reason: "Sentence capitalization"
-                )
-            )
+        let sentenceCapitalization = sentenceCapitalization(in: proposed, memoryType: memoryType)
+        proposed = sentenceCapitalization.summary
+        if let correction = sentenceCapitalization.correction {
+            corrections.append(correction)
         }
 
         corrections.append(contentsOf: capitalizationCorrections(
@@ -179,19 +196,70 @@ public struct MemoryTextNormalizer: Sendable {
         )
     }
 
+    private static func applyingSentenceCapitalization(
+        to proposal: MemoryNormalizationProposal,
+        memoryType: MemoryType
+    ) -> MemoryNormalizationProposal {
+        let result = sentenceCapitalization(in: proposal.proposedSummary, memoryType: memoryType)
+        guard let correction = result.correction else { return proposal }
+
+        return MemoryNormalizationProposal(
+            originalSummary: proposal.originalSummary,
+            proposedSummary: result.summary,
+            corrections: deduplicated(proposal.corrections + [correction]),
+            requiresClarification: proposal.requiresClarification,
+            clarificationQuestion: proposal.clarificationQuestion
+        )
+    }
+
+    private static func sentenceCapitalization(
+        in summary: String,
+        memoryType: MemoryType
+    ) -> (summary: String, correction: MemoryCorrection?) {
+        guard memoryType != .credential,
+              let firstToken = tokens(in: summary).first,
+              let firstCharacter = firstToken.text.first,
+              firstCharacter.isLowercase,
+              !hasDistinctiveCasing(firstToken),
+              !protectedRanges(in: summary).contains(where: { $0.overlaps(firstToken.range) })
+        else { return (summary, nil) }
+
+        let replacement = String(firstCharacter).uppercased(with: Locale.current) + String(firstToken.text.dropFirst())
+        var capitalized = summary
+        capitalized.replaceSubrange(firstToken.range, with: replacement)
+        return (
+            capitalized,
+            MemoryCorrection(
+                original: firstToken.text,
+                replacement: replacement,
+                kind: .capitalization,
+                confidence: 1.0,
+                reason: "Sentence capitalization"
+            )
+        )
+    }
+
     private static func reconcileSourceCasing(rawInput: String, summary: String) -> String {
-        let sourceTokens = tokens(in: rawInput)
-        let canonicalByLowercase = Dictionary(grouping: sourceTokens, by: lowercaseKey)
-            .compactMapValues { variants -> String? in
-                let distinctive = Set(variants.map(\.text).filter(hasDistinctiveCasing))
-                return distinctive.count == 1 ? distinctive.first : nil
+        let sourceByKey = Dictionary(grouping: tokens(in: rawInput), by: lowercaseKey)
+        let summaryByKey = Dictionary(grouping: tokens(in: summary), by: lowercaseKey)
+        var replacements: [(range: Range<String.Index>, text: String)] = []
+
+        for (key, summaryOccurrences) in summaryByKey {
+            guard let sourceOccurrences = sourceByKey[key],
+                  sourceOccurrences.count == summaryOccurrences.count,
+                  Set(sourceOccurrences.map(\.text)).count == 1 else { continue }
+
+            for (source, destination) in zip(sourceOccurrences, summaryOccurrences)
+            where source.text != destination.text &&
+                !hasDistinctiveCasing(destination) &&
+                hasRestorableSourceCasing(source) {
+                replacements.append((destination.range, source.text))
             }
+        }
 
         var result = summary
-        for token in tokens(in: summary).reversed() {
-            let key = lowercaseKey(token)
-            guard let canonical = canonicalByLowercase[key], canonical != token.text else { continue }
-            result.replaceSubrange(token.range, with: canonical)
+        for replacement in replacements.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
+            result.replaceSubrange(replacement.range, with: replacement.text)
         }
         return result
     }
@@ -222,24 +290,29 @@ public struct MemoryTextNormalizer: Sendable {
         excluding existing: [MemoryCorrection]
     ) -> [MemoryCorrection] {
         let existingPairs = Set(existing.map { "\($0.original)|\($0.replacement)" })
+        let originalsByKey = Dictionary(grouping: tokens(in: rawInput), by: lowercaseKey)
         let proposedByKey = Dictionary(grouping: tokens(in: proposedSummary), by: lowercaseKey)
         var result: [MemoryCorrection] = []
 
-        for original in tokens(in: rawInput) where !hasDistinctiveCasing(original) {
-            guard let candidates = proposedByKey[lowercaseKey(original)],
-                  let replacement = candidates.map(\.text).first(where: hasDistinctiveCasing),
-                  replacement != original.text,
-                  !existingPairs.contains("\(original.text)|\(replacement)") else { continue }
+        for (key, originals) in originalsByKey {
+            guard let proposed = proposedByKey[key], originals.count == proposed.count else { continue }
 
-            result.append(
-                MemoryCorrection(
-                    original: original.text,
-                    replacement: replacement,
-                    kind: .capitalization,
-                    confidence: 0.95,
-                    reason: "Possible proper name"
+            for (original, replacement) in zip(originals, proposed)
+            where !hasDistinctiveCasing(original) &&
+                hasDistinctiveCasing(replacement) &&
+                original.text != replacement.text &&
+                !existingPairs.contains("\(original.text)|\(replacement.text)") {
+
+                result.append(
+                    MemoryCorrection(
+                        original: original.text,
+                        replacement: replacement.text,
+                        kind: .capitalization,
+                        confidence: 0.95,
+                        reason: "Possible proper name"
+                    )
                 )
-            )
+            }
         }
         return result
     }
@@ -288,7 +361,29 @@ public struct MemoryTextNormalizer: Sendable {
         model: MemoryNormalizationProposal,
         baseline: String
     ) -> MemoryNormalizationProposal {
-        var corrections = deterministic.corrections + model.corrections
+        var deterministicCorrections = deterministic.corrections
+        var modelCorrections = model.corrections
+
+        for index in modelCorrections.indices {
+            let modelCorrection = modelCorrections[index]
+            guard let deterministicIndex = deterministicCorrections.firstIndex(where: {
+                $0.replacement == modelCorrection.original
+            }) else { continue }
+
+            let deterministicCorrection = deterministicCorrections.remove(at: deterministicIndex)
+            modelCorrections[index] = MemoryCorrection(
+                original: deterministicCorrection.original,
+                replacement: modelCorrection.replacement,
+                kind: modelCorrection.kind,
+                confidence: modelCorrection.confidence,
+                reason: modelCorrection.reason
+            )
+        }
+
+        deterministicCorrections.removeAll { correction in
+            !model.proposedSummary.contains(correction.replacement)
+        }
+        var corrections = deterministicCorrections + modelCorrections
         if model.proposedSummary != model.originalSummary, model.corrections.isEmpty {
             corrections.append(
                 MemoryCorrection(
@@ -310,18 +405,33 @@ public struct MemoryTextNormalizer: Sendable {
         )
     }
 
-    static func isFaithful(original: String, proposed: String) -> Bool {
+    static func isFaithful(
+        original: String,
+        proposed: String,
+        sourceCasingReference: String? = nil
+    ) -> Bool {
         let originalTrimmed = original.trimmingCharacters(in: .whitespacesAndNewlines)
         let proposedTrimmed = proposed.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !originalTrimmed.isEmpty, !proposedTrimmed.isEmpty else { return false }
 
-        let protected = protectedValues(in: originalTrimmed)
-        guard protected.allSatisfy({ proposedTrimmed.contains($0) }) else { return false }
+        let casingReference = (sourceCasingReference ?? original)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let proposedTokens = Dictionary(grouping: tokens(in: proposedTrimmed), by: lowercaseKey)
-        for token in tokens(in: originalTrimmed) where hasDistinctiveCasing(token) {
-            guard let matches = proposedTokens[lowercaseKey(token)],
-                  matches.contains(where: { $0.text == token.text }) else { return false }
+        guard protectedValueCounts(in: originalTrimmed) == protectedValueCounts(in: proposedTrimmed) else {
+            return false
+        }
+        guard preservesAmbiguousCasing(original: casingReference, proposed: proposedTrimmed) else { return false }
+
+        let requiredDistinctiveCasing = Dictionary(
+            grouping: tokens(in: casingReference).enumerated().compactMap { index, token in
+                requiresExactSourceCasing(token, tokenIndex: index) ? token : nil
+            },
+            by: \.text
+        ).mapValues(\.count)
+        let proposedExactTokens = Dictionary(grouping: tokens(in: proposedTrimmed), by: \.text)
+            .mapValues(\.count)
+        for (token, requiredCount) in requiredDistinctiveCasing {
+            guard proposedExactTokens[token, default: 0] >= requiredCount else { return false }
         }
 
         let originalNegation = negationTokens(in: originalTrimmed)
@@ -334,22 +444,46 @@ public struct MemoryTextNormalizer: Sendable {
         return levenshteinDistance(lhs, rhs) <= allowedDistance
     }
 
+    private static func preservesAmbiguousCasing(original: String, proposed: String) -> Bool {
+        let originalByKey = Dictionary(grouping: tokens(in: original), by: lowercaseKey)
+        let proposedByKey = Dictionary(grouping: tokens(in: proposed), by: lowercaseKey)
+
+        for (key, originals) in originalByKey
+        where Set(originals.map(\.text)).count > 1 {
+            guard let replacements = proposedByKey[key],
+                  replacements.count == originals.count,
+                  zip(originals, replacements).allSatisfy({ original, replacement in
+                      original.text == replacement.text
+                  }) else { return false }
+        }
+        return true
+    }
+
     private static func protectedValues(in text: String) -> [String] {
+        protectedRanges(in: text).map { String(text[$0]) }
+    }
+
+    private static func protectedValueCounts(in text: String) -> [String: Int] {
+        Dictionary(grouping: protectedValues(in: text), by: { $0 })
+            .mapValues(\.count)
+    }
+
+    private static func protectedRanges(in text: String) -> [Range<String.Index>] {
         let patterns = [
-            #"https?://[^\s]+"#,
+            #"\b(?:[A-Z][A-Z0-9+.-]*://|www\.)[^\s]+"#,
             #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#,
             #"(?<!\w)@[\p{L}\p{N}._-]+"#,
-            #"\b[\p{L}]*\d[\p{L}\p{N}:/.,+-]*\b"#
+            #"\b[\p{L}\p{N}_:/.,+-]*\d[\p{L}\p{N}_:/.,+-]*\b"#
         ]
 
-        return patterns.flatMap { pattern -> [String] in
+        return patterns.flatMap { pattern -> [Range<String.Index>] in
             guard let regex = try? NSRegularExpression(
                 pattern: pattern,
                 options: [.caseInsensitive]
             ) else { return [] }
             let range = NSRange(text.startIndex..., in: text)
-            return regex.matches(in: text, range: range).compactMap { match in
-                Range(match.range, in: text).map { String(text[$0]) }
+            return regex.matches(in: text, range: range).compactMap { match -> Range<String.Index>? in
+                Range(match.range, in: text)
             }
         }
     }
@@ -370,7 +504,7 @@ public struct MemoryTextNormalizer: Sendable {
 
     private static func tokens(in text: String) -> [Token] {
         guard let regex = try? NSRegularExpression(
-            pattern: #"[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}'’.-]*"#
+            pattern: #"[\p{L}\p{M}\p{N}](?:[\p{L}\p{M}\p{N}'’.-]*[\p{L}\p{M}\p{N}])?"#
         ) else { return [] }
         let fullRange = NSRange(text.startIndex..., in: text)
         return regex.matches(in: text, range: fullRange).compactMap { match in
@@ -389,6 +523,30 @@ public struct MemoryTextNormalizer: Sendable {
 
     private static func hasDistinctiveCasing(_ text: String) -> Bool {
         text.contains(where: \Character.isUppercase)
+    }
+
+    private static func requiresExactSourceCasing(_ token: Token, tokenIndex: Int) -> Bool {
+        guard hasDistinctiveCasing(token) else { return false }
+        return tokenIndex != 0 || !isSimpleTitlecase(token.text)
+    }
+
+    private static func isSimpleTitlecase(_ text: String) -> Bool {
+        let letters = text.filter(\.isLetter)
+        guard letters.count > 1, letters.first?.isUppercase == true else { return false }
+        return letters.dropFirst().allSatisfy(\.isLowercase)
+    }
+
+    private static func hasRestorableSourceCasing(_ token: Token) -> Bool {
+        let letters = token.text.filter(\.isLetter)
+        guard !letters.isEmpty else { return false }
+
+        if letters.allSatisfy(\.isUppercase) {
+            return letters.count <= 4
+        }
+
+        guard letters.contains(where: \.isUppercase),
+              letters.contains(where: \.isLowercase) else { return false }
+        return letters.first?.isLowercase == true || letters.dropFirst().contains(where: \.isUppercase)
     }
 
     private static func comparisonForm(_ text: String) -> [Character] {

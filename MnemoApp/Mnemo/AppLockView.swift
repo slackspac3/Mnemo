@@ -56,6 +56,7 @@ struct AppLockView: View {
                             if appState.isAuthenticatingAppLock {
                                 ProgressView()
                                     .tint(DS.Colours.textOnAccent)
+                                    .accessibilityHidden(true)
                             } else {
                                 Image(systemName: "lock.open.fill")
                             }
@@ -66,6 +67,7 @@ struct AppLockView: View {
                     .buttonStyle(.mnemoPrimary)
                     .frame(maxWidth: 360.0)
                     .accessibilityLabel("Unlock Mnemo")
+                    .accessibilityValue(appState.isAuthenticatingAppLock ? "Authentication in progress" : "Ready")
                     .accessibilityHint("Use Face ID, Touch ID or your device passcode")
                     .accessibilityIdentifier(AccessibilityID.AppLock.unlockButton)
 
@@ -82,6 +84,13 @@ struct AppLockView: View {
         .onChange(of: appState.appLockErrorMessage) { _, message in
             guard message != nil else { return }
             isErrorFocused = true
+        }
+        .onChange(of: appState.isAuthenticatingAppLock) { _, isAuthenticating in
+            guard isAuthenticating else { return }
+            UIAccessibility.post(
+                notification: .announcement,
+                argument: "Authenticating Mnemo"
+            )
         }
         .accessibilityIdentifier(AccessibilityID.AppLock.screen)
     }

@@ -114,62 +114,37 @@ struct BrowseView: View {
                             }
                         )
                     } else {
-                        ScrollView {
-                            LazyVStack(spacing: DS.Spacing.sm) {
-                                ForEach(filteredRecords) { record in
-                                    Button {
+                        List {
+                            ForEach(filteredRecords) { record in
+                                BrowseMemoryRow(
+                                    record: record,
+                                    typeLabel: typeLabel(for: record.memoryTypeEnum ?? .fact),
+                                    onOpen: {
                                         selectedMemory = SelectedMemory(id: record.id)
-                                    } label: {
-                                        MemoryCard(record: record)
+                                    },
+                                    onArchive: {
+                                        archiveRecord(record.id)
+                                    },
+                                    onMarkDone: {
+                                        markRecordDone(record.id)
                                     }
-                                    .buttonStyle(.mnemoPressable)
-                                    .accessibilityLabel(record.summary)
-                                    .accessibilityValue(
-                                        "\(typeLabel(for: record.memoryTypeEnum ?? .fact)), "
-                                            + (record.isDone ? "Done" : record.persistenceState.capitalized)
+                                )
+                                .listRowInsets(
+                                    EdgeInsets(
+                                        top: DS.Spacing.xs,
+                                        leading: DS.Spacing.md,
+                                        bottom: DS.Spacing.xs,
+                                        trailing: DS.Spacing.md
                                     )
-                                    .accessibilityHint("Open memory details")
-                                    .accessibilityIdentifier(AccessibilityID.Browse.memoryCell)
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            Task {
-                                                do {
-                                                    try await archiveMemory(id: record.id)
-                                                    HapticManager.impact(.medium)
-                                                } catch {
-                                                    HapticManager.error()
-                                                }
-                                            }
-                                        } label: {
-                                            Label("Archive", systemImage: "archivebox")
-                                        }
-                                        .tint(DS.Colours.warning)
-                                    }
-                                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                        Button {
-                                            Task { @MainActor in
-                                                if let found = records.first(where: { $0.id == record.id }) {
-                                                    found.isDone = true
-                                                    found.updatedAt = Date()
-                                                    do {
-                                                        try modelContext.save()
-                                                        HapticManager.success()
-                                                    } catch {
-                                                        HapticManager.error()
-                                                    }
-                                                }
-                                            }
-                                        } label: {
-                                            Label("Done", systemImage: "checkmark.circle.fill")
-                                        }
-                                        .tint(DS.Colours.success)
-                                    }
-                                }
+                                )
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
                             }
-                            .padding(.horizontal, DS.Spacing.md)
-                            .padding(.top, DS.Spacing.sm)
-                            .padding(.bottom, DS.Spacing.xxxl)
                         }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .background(DS.Colours.backgroundGrouped)
+                        .contentMargins(.bottom, DS.Spacing.xxxl, for: .scrollContent)
                     }
                 }
             }
@@ -246,10 +221,68 @@ struct BrowseView: View {
     private func deleteMemoryPermanently(id: UUID) async throws {
         try await MemoryCRUD.deletePermanently(id: id, in: modelContext)
     }
+
+    private func archiveRecord(_ id: UUID) {
+        Task {
+            do {
+                try await archiveMemory(id: id)
+                HapticManager.impact(.medium)
+            } catch {
+                HapticManager.error()
+            }
+        }
+    }
+
+    private func markRecordDone(_ id: UUID) {
+        Task { @MainActor in
+            guard let record = records.first(where: { $0.id == id }) else { return }
+            record.isDone = true
+            record.updatedAt = Date()
+            do {
+                try modelContext.save()
+                HapticManager.success()
+            } catch {
+                HapticManager.error()
+            }
+        }
+    }
 }
 
 private struct SelectedMemory: Identifiable {
     let id: UUID
+}
+
+private struct BrowseMemoryRow: View {
+    let record: MemoryRecord
+    let typeLabel: String
+    let onOpen: () -> Void
+    let onArchive: () -> Void
+    let onMarkDone: () -> Void
+
+    var body: some View {
+        Button(action: onOpen) {
+            MemoryCard(record: record)
+        }
+        .buttonStyle(.mnemoPressable)
+        .accessibilityLabel(record.summary)
+        .accessibilityValue(
+            "\(typeLabel), " + (record.isDone ? "Done" : record.persistenceState.capitalized)
+        )
+        .accessibilityHint("Open memory details. Swipe for Done or Archive actions")
+        .accessibilityIdentifier(AccessibilityID.Browse.memoryCell)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive, action: onArchive) {
+                Label("Archive", systemImage: "archivebox")
+            }
+            .tint(DS.Colours.warning)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button(action: onMarkDone) {
+                Label("Done", systemImage: "checkmark.circle.fill")
+            }
+            .tint(DS.Colours.success)
+        }
+    }
 }
 
 private struct BrowseFilterBar: View {

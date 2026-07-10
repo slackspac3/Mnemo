@@ -170,6 +170,9 @@ struct SettingsView: View {
     private func deleteAllData() async {
         destructiveErrorMessage = nil
         do {
+            #if DEBUG
+            await DebugLocalAIBackfillState.prepareForReset()
+            #endif
             try modelContext.delete(model: MemoryRecord.self)
             try modelContext.delete(model: MemoryThread.self)
             try modelContext.delete(model: UserModel.self)

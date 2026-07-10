@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Status: Historical Gate B proposal. The navigation and interaction direction remains current. The palette and identity sections were superseded by the user-approved `MnemoBrandBrief-2026-07-10.md`: Sage & Olive, Notebook N-A, and the outlined Newsreader wordmark.
+Status: Historical Gate B proposal. The navigation and interaction direction remains current. The palette and identity sections were superseded by the user-approved `Design/BrandBrief-2026-07-10/MnemoBrandBrief-2026-07-10.md`: Sage & Olive, Notebook N-A, and the outlined Newsreader wordmark.
 
 ## Product position
 
@@ -449,7 +449,7 @@ Business logic, retrieval, Foundation Models integration, citations, fidelity va
 The user subsequently approved:
 
 1. Navigation Alternative A: retain two native tabs and consolidate capture.
-2. Sage & Olive semantic palette from `MnemoBrandBrief-2026-07-10.md`.
+2. Sage & Olive semantic palette from `Design/BrandBrief-2026-07-10/MnemoBrandBrief-2026-07-10.md`.
 3. Notebook N-A production mark and AppIcon direction.
 4. Outlined Newsreader wordmark for brand lockups only; SF remains the functional UI font.
 5. A static, nonanimated in-app initialization frame with no sound, spinner, or cinematic delay.

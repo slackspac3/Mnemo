@@ -107,6 +107,7 @@ struct MemoryCaptureReviewView: View {
                         if isSaving {
                             ProgressView()
                                 .tint(DS.ComponentTokens.PrimaryButton.foreground)
+                                .accessibilityHidden(true)
                         } else {
                             Text(primaryActionLabel)
                         }
@@ -114,6 +115,8 @@ struct MemoryCaptureReviewView: View {
                 }
                 .disabled(trimmedSummary.isEmpty || isSaving)
                 .buttonStyle(.mnemoPrimary)
+                .accessibilityLabel(isSaving ? "Saving memory" : primaryActionLabel)
+                .accessibilityValue(isSaving ? "In progress" : "")
                 .accessibilityIdentifier(AccessibilityID.CaptureText.save)
 
                 if let proposal, proposal.hasChanges {

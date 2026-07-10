@@ -182,13 +182,13 @@ struct AILabView: View {
         do {
             if enabled {
                 DebugAIChatSetting.usesLocalAIFirst = true
-                DebugLocalAIBackfillState.isComplete = false
-                try await MemoryCRUD.backfillSearchIndex(in: modelContext)
-                DebugLocalAIBackfillState.isComplete = true
+                try await DebugLocalAIBackfillState.rebuild {
+                    try await MemoryCRUD.backfillSearchIndex(in: modelContext)
+                }
                 localAIChatEnabled = true
             } else {
                 DebugAIChatSetting.usesLocalAIFirst = false
-                DebugLocalAIBackfillState.isComplete = false
+                await DebugLocalAIBackfillState.prepareForReset()
                 try await MemoryCRUD.resetSearchIndexItems()
                 DebugLocalAIBackfillState.isComplete = false
                 localAIChatEnabled = false
@@ -211,9 +211,9 @@ struct AILabView: View {
 
         Task {
             do {
-                DebugLocalAIBackfillState.isComplete = false
-                try await MemoryCRUD.backfillSearchIndex(in: modelContext)
-                DebugLocalAIBackfillState.isComplete = true
+                try await DebugLocalAIBackfillState.rebuild {
+                    try await MemoryCRUD.backfillSearchIndex(in: modelContext)
+                }
             } catch {
                 DebugLocalAIBackfillState.isComplete = false
                 localAIChatErrorMessage = error.localizedDescription

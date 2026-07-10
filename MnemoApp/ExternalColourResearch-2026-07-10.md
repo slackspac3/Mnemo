@@ -159,4 +159,3 @@ Before production adoption, Mineral Recall must be rendered on real Mnemo screen
 - Settings
 
 Each screen needs light, dark, Increased Contrast, Reduce Transparency, grayscale, and at least one color-vision simulation. The palette should be accepted only after the source relationship remains clearer than the brand accent on actual content.
-

@@ -8,7 +8,7 @@ Branch: `ui-redesign-liquid-glass`
 
 The redesign keeps Mnemo's native two-tab architecture and privacy-first behavior while clarifying the product around Recall, Memories, Capture, and source evidence. It replaces screen-local visual decisions with a semantic design system, removes competing capture patterns, makes every cited memory reachable, improves memory/source hierarchy, and adds explicit accessibility policies for transparency, contrast, motion, color differentiation, focus, and large text.
 
-No Local AI, Foundation Models, retrieval, citation validation, fidelity validation, persistence, Core Spotlight, capture-processing, archive/delete, App Lock policy, or Release AI behavior was changed.
+Local AI answer generation, retrieval, citation/fidelity validation, persistence, archive/delete behavior, App Lock policy, and Release AI behavior remain unchanged. Capture review now includes an explicitly gated orthographic-normalization proposal: DEBUG may use on-device Foundation Models, while Release remains deterministic and never starts a normalization model session. Every proposal remains editable and requires the existing explicit save action.
 
 ## Final design principles
 
@@ -103,7 +103,9 @@ Typography remains SF system typography with Dynamic Type. The `Mnemo` wordmark 
 - OCR text is presented as reviewable `Text found in image`, not as guaranteed truth.
 - Image context is multiline, and users can choose another image before saving.
 - Save/process errors are announced to VoiceOver.
-- Save confirmation remains longer when VoiceOver is running and receives accessibility focus.
+- Save confirmation receives accessibility focus and remains until explicit dismissal for VoiceOver, Switch Control, or accessibility Dynamic Type.
+- Text, voice, and image sheets cannot be dismissed while persistence is committing; noncommitting preparation can still be cancelled.
+- Credentials, URLs, email addresses, handles, identifiers, quantities, dates, intentional casing, and negation are protected before a model proposal can reach review.
 
 ## Onboarding, App Lock, and Settings
 
@@ -131,7 +133,7 @@ Selected and installed on the redesign branch: Notebook N-A, a flat closed pocke
 
 - Production `MnemoLogoMark`: replaced with exact N-A geometry and reused by Recall, onboarding, App Lock, privacy shield, splash, and the DEBUG gallery.
 - Production wordmark: outlined Newsreader Regular with one shared `MnemoBrandLockup` ratio; the wordmark uses the primary ink/text role rather than olive in the approved lockup.
-- Redesign-branch `AppIcon`: opaque 1024 RGB Default, Dark, and Tinted catalog variants generated from editable SVG masters. A monochrome SVG master is retained. These are installed pre-release artwork, not a substitute for final Icon Composer/Clear validation.
+- Redesign-branch `AppIcon`: an opaque RGB Default, transparent-background RGB Dark, and Gray Gamma 2.2 Tinted 1024 catalog variant generated from editable SVG masters. A monochrome SVG master is retained. These are installed pre-release artwork, not a substitute for final Icon Composer/Clear validation.
 - Production `AccentColor`: adaptive Olive values for light and dark.
 - Similarity review covers Apple Notes, Goodnotes, Notability, Zoho Notebook, Bear, Day One, Agenda, and Notebooks.
 - Static system launch behavior remains unchanged.
@@ -146,6 +148,7 @@ Icon Composer 1.6 is installed, but its CLI only exports existing `.icon` docume
 - Reduce Motion changes spatial transitions to fades and stabilizes the recording waveform.
 - Per-row Browse entrance animation was removed.
 - Chat source disclosure and state changes remain brief and interruptible.
+- Starting a new conversation invalidates and cancels pending recall presentation, preventing late orphan answers.
 - Haptics no longer disappear merely because Reduce Motion is enabled; tactile feedback is independent nonvisual confirmation.
 
 ## Accessibility results
@@ -156,6 +159,7 @@ Icon Composer 1.6 is installed, but its CLI only exports existing `.icon` docume
 - Onboarding exposes its scroll region, progress, Back, Continue, and Start actions.
 - Source cards group labels, summaries, positions, values, and actions.
 - Capture save, recording, transcription, processing, and error states announce or receive focus.
+- Busy capture, restore, and App Lock controls retain stable accessible names and expose progress values.
 
 ### Dynamic Type and Bold Text
 
@@ -197,7 +201,8 @@ The review directory includes existing local populated Memories and Memory Detai
 - `git diff --check`: passed throughout implementation
 - `MnemoUI`: 3 tests passed
 - `MnemoMemory`: 91 tests passed
-- `MnemoIntelligence`: 62 tests passed
+- `MnemoIntelligence`: 72 tests passed in Debug and Release package configurations
+- All seven Swift packages: 197 tests passed
 - `Scripts/run_local_checks.sh fast`: passed
 - `Scripts/run_local_checks.sh efficiency`: passed
 - Debug iOS 26.5 simulator build: passed
@@ -218,15 +223,16 @@ The review directory includes existing local populated Memories and Memory Detai
 
 ## Known compromises and human review
 
-1. A canonical Icon Composer `.icon` and real Clear/system-tinted exports require human GUI access; flattened catalog variants and editable SVG masters are present.
+1. A canonical Icon Composer `.icon` and real Clear/system-rendered review require human GUI access; standards-compliant catalog variants and editable SVG masters are present.
 2. The notebook metaphor has moderate category-level similarity risk even though the rendering review found low direct-rendering overlap; formal trademark clearance is outside this engineering pass.
 3. iOS 18 fallback is compile-checked through the deployment target but no iOS 18 simulator runtime is installed.
 4. Accessibility Dynamic Type runtime screenshots still require system text-size setup; layouts and previews compile and critical content line limits are removed at accessibility sizes.
 5. Real Face ID/Touch ID/passcode, microphone, camera, OCR quality, and physical-device haptics remain device-only validation.
 6. Generated system launch background cannot be color-matched without a project/build-setting change, which is explicitly excluded from this branch. The in-app initialization frame is static and nonanimated.
+7. Lowercase proper-name inference requires the explicitly enabled on-device Foundation Models path. On iOS 18 or when that model is unavailable, Mnemo preserves source casing and sentence capitalization conservatively rather than guessing from a brittle name dictionary; the summary remains editable before saving.
 
 ## Safety confirmation
 
-The redesign did not change application behavior or implementation for Local AI grounding, Foundation Models answer generation, source alias mapping, citation/fidelity validation, deterministic fallback, persistence, capture processing, archive/delete safety, Core Spotlight privacy, App Lock policy, or Release AI behavior.
+The redesign did not change Local AI grounding, Foundation Models answer generation, source alias mapping, citation/fidelity validation, deterministic recall fallback, persistence transactions, archive/delete safety, Core Spotlight privacy policy, App Lock policy, or Release AI behavior. Capture adds only the review-stage orthographic proposal described above; Release does not invoke Foundation Models for it, credentials never enter its generator, protected factual values are count-validated, and no correction is committed without the user's save action.
 
 No backend, authentication, cloud LLM, Private Cloud Compute, analytics, telemetry, StoreKit, advertising, third-party UI framework, third-party font, Lottie, Rive, or remote image dependency was added.

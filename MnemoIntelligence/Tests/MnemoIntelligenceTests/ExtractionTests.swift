@@ -177,6 +177,257 @@ struct ExtractionTests {
     }
 
     @Test(
+        "Normalizer preserves protected and stylized first tokens",
+        arguments: [
+            FirstTokenFixture(
+                raw: "https://example.com is my reference",
+                invalidProposal: "Https://example.com is my reference"
+            ),
+            FirstTokenFixture(
+                raw: "sam@example.com is my contact",
+                invalidProposal: "Sam@example.com is my contact"
+            ),
+            FirstTokenFixture(
+                raw: "@sam_91 replied yesterday",
+                invalidProposal: "@Sam_91 replied yesterday"
+            ),
+            FirstTokenFixture(
+                raw: "abc-123 is the reference code",
+                invalidProposal: "Abc-123 is the reference code"
+            ),
+            FirstTokenFixture(
+                raw: "eBay has my saved basket",
+                invalidProposal: "EBay has my saved basket"
+            ),
+            FirstTokenFixture(
+                raw: "iPhone is my preferred phone",
+                invalidProposal: "IPhone is my preferred phone"
+            )
+        ]
+    )
+    func normalizerPreservesSpecialFirstToken(fixture: FirstTokenFixture) async {
+        let normalizer = MemoryTextNormalizer(generator: { _, _ in
+            normalizationJSON(
+                original: fixture.raw,
+                proposed: fixture.invalidProposal,
+                kind: "capitalization"
+            )
+        })
+        let result = await normalizer.normalize(
+            rawInput: fixture.raw,
+            extractionResult: extraction(summary: fixture.raw)
+        )
+
+        #expect(result.summary == fixture.raw)
+        #expect(result.normalizationProposal?.hasChanges == false)
+    }
+
+    @Test(
+        "Normalizer can correct lowercase stylized names at sentence start",
+        arguments: [
+            EntityFixture(raw: "ebay order arrived", proposed: "eBay order arrived", kind: "capitalization"),
+            EntityFixture(raw: "iphone reminder", proposed: "iPhone reminder", kind: "capitalization"),
+            EntityFixture(raw: "youtube queue", proposed: "YouTube queue", kind: "capitalization"),
+            EntityFixture(raw: "mcdonalds booking", proposed: "McDonald's booking", kind: "punctuation")
+        ]
+    )
+    func normalizerCorrectsStylizedFirstName(fixture: EntityFixture) async {
+        let normalizer = MemoryTextNormalizer(generator: { _, _ in
+            normalizationJSON(
+                original: fixture.raw.capitalized,
+                proposed: fixture.proposed,
+                kind: fixture.kind,
+                correctionOriginal: fixture.raw.split(separator: " ").first.map(String.init),
+                correctionReplacement: fixture.proposed.split(separator: " ").first.map(String.init)
+            )
+        })
+        let result = await normalizer.normalize(
+            rawInput: fixture.raw,
+            extractionResult: extraction(summary: fixture.raw)
+        )
+
+        #expect(result.summary == fixture.proposed)
+        #expect(result.normalizationProposal?.corrections.contains {
+            $0.replacement == fixture.proposed.split(separator: " ").first.map(String.init)
+        } == true)
+        #expect(result.normalizationProposal?.corrections.contains {
+            $0.replacement == fixture.raw.capitalized.split(separator: " ").first.map(String.init)
+        } == false)
+    }
+
+    @Test(
+        "Normalizer can review a simple keyboard-capitalized first-word typo",
+        arguments: [
+            EntityFixture(raw: "Teh meeting is tomorrow", proposed: "The meeting is tomorrow", kind: "spelling"),
+            EntityFixture(raw: "Mcdonalds booking", proposed: "McDonald's booking", kind: "punctuation")
+        ]
+    )
+    func normalizerCorrectsAutoCapitalizedFirstWord(fixture: EntityFixture) async {
+        let normalizer = MemoryTextNormalizer(generator: { _, _ in
+            normalizationJSON(
+                original: fixture.raw,
+                proposed: fixture.proposed,
+                kind: fixture.kind,
+                correctionOriginal: fixture.raw.split(separator: " ").first.map(String.init),
+                correctionReplacement: fixture.proposed.split(separator: " ").first.map(String.init)
+            )
+        })
+        let result = await normalizer.normalize(
+            rawInput: fixture.raw,
+            extractionResult: extraction(summary: fixture.raw)
+        )
+
+        #expect(result.summary == fixture.proposed)
+    }
+
+    @Test("Normalizer never rewrites credential memories")
+    func normalizerPreservesCredential() async {
+        let calls = GeneratorCallCounter()
+        let normalizer = MemoryTextNormalizer(generator: { _, _ in
+            await calls.recordCall()
+            return normalizationJSON(
+                original: "hunter2 is the password",
+                proposed: "Hunter2 is the password",
+                kind: "capitalization"
+            )
+        })
+        let result = await normalizer.normalize(
+            rawInput: "hunter2 is the password",
+            extractionResult: extraction(
+                summary: "Hunter2 is the password",
+                memoryType: .credential
+            )
+        )
+
+        let callCount = await calls.callCount
+        #expect(callCount == 0)
+        #expect(result.summary == "hunter2 is the password")
+        #expect(result.normalizationProposal?.hasChanges == false)
+    }
+
+    @Test("Disabled AI Core flags skip the normalization generator")
+    func normalizerHonorsDisabledAICoreFlags() async {
+        let calls = GeneratorCallCounter()
+        let normalizer = MemoryTextNormalizer(
+            generator: { _, _ in
+                await calls.recordCall()
+                return normalizationJSON(
+                    original: "Waterfall in guam",
+                    proposed: "Waterfall in Guam",
+                    kind: "capitalization",
+                    correctionOriginal: "guam",
+                    correctionReplacement: "Guam"
+                )
+            },
+            aiCoreFlags: .testFlightDefault
+        )
+        let result = await normalizer.normalize(
+            rawInput: "waterfall in guam",
+            extractionResult: extraction(summary: "waterfall in guam")
+        )
+
+        let callCount = await calls.callCount
+        #expect(callCount == 0)
+        #expect(result.summary == "Waterfall in guam")
+    }
+
+    @Test("Enabled Foundation Models flags allow proper-name normalization")
+    func normalizerUsesEnabledGenerator() async {
+        let calls = GeneratorCallCounter()
+        let normalizer = MemoryTextNormalizer(
+            generator: { _, _ in
+                await calls.recordCall()
+                return normalizationJSON(
+                    original: "Waterfall in guam",
+                    proposed: "Waterfall in Guam",
+                    kind: "capitalization",
+                    correctionOriginal: "guam",
+                    correctionReplacement: "Guam"
+                )
+            },
+            aiCoreFlags: .debugLocalFoundationModelsExtraction
+        )
+        let result = await normalizer.normalize(
+            rawInput: "waterfall in guam",
+            extractionResult: extraction(summary: "waterfall in guam")
+        )
+
+        let callCount = await calls.callCount
+        #expect(callCount == 1)
+        #expect(result.summary == "Waterfall in Guam")
+    }
+
+    @Test("Protected values do not replace a concise extraction with long OCR")
+    func normalizerKeepsConciseSummaryForLongProtectedInput() async {
+        let itemLines = String(repeating: "Seasonal lunch item AED 24.00\n", count: 10)
+        let raw = """
+        CEDAR CAFE RECEIPT
+        Order 2026
+        \(itemLines)
+        Thank you for visiting Cedar Cafe.
+        """
+        let extracted = "Lunch receipt from Cedar Cafe, order 2026"
+        let normalizer = MemoryTextNormalizer(generator: { _, _ in nil })
+        let result = await normalizer.normalize(
+            rawInput: raw,
+            extractionResult: extraction(summary: extracted)
+        )
+
+        #expect(raw.count > 240)
+        #expect(result.summary == extracted)
+    }
+
+    @Test("Normalizer preserves occurrence-specific homograph casing")
+    func normalizerPreservesHomographCasing() async {
+        let raw = "US staff asked us to call in May, but we may wait"
+        let normalizer = MemoryTextNormalizer(generator: { _, _ in
+            normalizationJSON(
+                original: raw,
+                proposed: "US staff asked US to call in May, but we May wait",
+                kind: "capitalization"
+            )
+        })
+        let result = await normalizer.normalize(
+            rawInput: raw,
+            extractionResult: extraction(summary: raw)
+        )
+
+        #expect(result.summary == raw)
+        #expect(result.normalizationProposal?.hasChanges == false)
+    }
+
+    @Test("Normalizer does not remap reordered homographs in an extracted summary")
+    func normalizerDoesNotRemapReorderedHomographs() async {
+        let raw = "The update helps us and the US team. "
+            + String(repeating: "Additional receipt context without another occurrence. ", count: 6)
+        let extracted = "The US team says the update helps us"
+        let normalizer = MemoryTextNormalizer(generator: { _, _ in nil })
+        let result = await normalizer.normalize(
+            rawInput: raw,
+            extractionResult: extraction(summary: extracted)
+        )
+
+        #expect(raw.count > 240)
+        #expect(result.summary == extracted)
+        #expect(result.normalizationProposal?.hasChanges == false)
+    }
+
+    @Test("Source casing reconciliation restores unambiguous names but skips mixed homographs")
+    func normalizerReconcilesOnlyUnambiguousSourceCasing() async {
+        let filler = String(repeating: "Background details remain unchanged. ", count: 8)
+        let raw = "\(filler)iPhone and eBay are saved. US staff asked us to call."
+        let extracted = "saved iphone and ebay. us staff asked us to call."
+        let normalizer = MemoryTextNormalizer(generator: { _, _ in nil })
+        let result = await normalizer.normalize(
+            rawInput: raw,
+            extractionResult: extraction(summary: extracted)
+        )
+
+        #expect(raw.count > 240)
+        #expect(result.summary == "Saved iPhone and eBay. us staff asked us to call.")
+    }
+
+    @Test(
         "Normalizer covers common proper-name categories",
         arguments: [
             EntityFixture(raw: "meet aoife murphy", proposed: "Meet Aoife Murphy", kind: "capitalization"),
@@ -252,6 +503,30 @@ struct ExtractionTests {
             original: "Loved the waterfall in Guam",
             proposed: "Loved the waterfall in guam"
         ))
+        #expect(!MemoryTextNormalizer.isFaithful(
+            original: "Paid AED 10",
+            proposed: "Paid AED 10 plus AED 20"
+        ))
+        #expect(!MemoryTextNormalizer.isFaithful(
+            original: "Open https://example.com",
+            proposed: "Open https://example.com and https://example.com"
+        ))
+        #expect(!MemoryTextNormalizer.isFaithful(
+            original: "Email sam@example.com",
+            proposed: "Email sam@example.com or sara@example.com"
+        ))
+        #expect(!MemoryTextNormalizer.isFaithful(
+            original: "Message @sam_91",
+            proposed: "Message @sam_91 and @admin"
+        ))
+        #expect(!MemoryTextNormalizer.isFaithful(
+            original: "Flight EK202 on 10/07/2026",
+            proposed: "Flight EK202 or EK203 on 10/07/2026"
+        ))
+        #expect(!MemoryTextNormalizer.isFaithful(
+            original: "US office called US",
+            proposed: "US office called us"
+        ))
     }
 
     @Test("Normalizer surfaces ambiguous entity questions without guessing")
@@ -288,10 +563,30 @@ struct ProtectedFixture: Sendable, CustomTestStringConvertible {
     var testDescription: String { "\(original) != \(proposed)" }
 }
 
-private func extraction(summary: String) -> ExtractionResult {
+struct FirstTokenFixture: Sendable, CustomTestStringConvertible {
+    let raw: String
+    let invalidProposal: String
+
+    var testDescription: String { "\(raw) != \(invalidProposal)" }
+}
+
+private actor GeneratorCallCounter {
+    private var calls = 0
+
+    var callCount: Int { calls }
+
+    func recordCall() {
+        calls += 1
+    }
+}
+
+private func extraction(
+    summary: String,
+    memoryType: MemoryType = .fact
+) -> ExtractionResult {
     ExtractionResult(
         summary: summary,
-        memoryType: .fact,
+        memoryType: memoryType,
         persistenceScore: 0.5,
         confidence: 0.8,
         processingTier: .onDevice,

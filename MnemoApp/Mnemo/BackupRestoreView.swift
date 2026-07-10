@@ -3,6 +3,9 @@ import SwiftData
 import MnemoUI
 import MnemoSync
 import MnemoCore
+#if os(iOS)
+import UIKit
+#endif
 
 /// Backup and restore interface surfaced from SettingsView.
 struct BackupRestoreView: View {
@@ -61,6 +64,7 @@ struct BackupRestoreView: View {
                                 if isBackingUp {
                                     ProgressView()
                                         .tint(DS.Colours.accent)
+                                        .accessibilityHidden(true)
                                 } else {
                                     Image(systemName: "icloud.and.arrow.up")
                                         .font(DS.Typography.subheadline)
@@ -72,29 +76,25 @@ struct BackupRestoreView: View {
                             }
                         }
                         .disabled(isBackingUp || isRestoring)
+                        .accessibilityLabel("Back up now")
+                        .accessibilityValue(isBackingUp ? "In progress" : "Available")
                     }
                     .listRowBackground(DS.Colours.surfaceElevated)
 
                     if !availableBackups.isEmpty {
                         Section {
                             ForEach(availableBackups) { manifest in
-                                HStack(spacing: DS.Spacing.sm) {
-                                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                                        Text(manifest.createdAt.formatted(.dateTime.day().month().year().hour().minute()))
-                                            .font(DS.Typography.subheadline)
-                                            .foregroundStyle(DS.Colours.textPrimary)
-                                        Text("\(manifest.recordCount) memories")
-                                            .font(DS.Typography.caption1)
-                                            .foregroundStyle(DS.Colours.textSecondary)
+                                ViewThatFits(in: .horizontal) {
+                                    HStack(spacing: DS.Spacing.sm) {
+                                        backupDescription(for: manifest)
+                                        Spacer(minLength: DS.Spacing.sm)
+                                        restoreButton(for: manifest)
                                     }
-                                    Spacer()
-                                    Button("Restore") {
-                                        selectedManifest = manifest
-                                        showingRestoreConfirm = true
+
+                                    VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                                        backupDescription(for: manifest)
+                                        restoreButton(for: manifest)
                                     }
-                                    .font(DS.Typography.caption1)
-                                    .foregroundStyle(DS.Colours.accent)
-                                    .frame(minWidth: 44.0, minHeight: 44.0)
                                 }
                             }
                         } header: {
@@ -155,9 +155,18 @@ struct BackupRestoreView: View {
             .task {
                 await loadBackups()
             }
+            .onChange(of: errorMessage) { _, message in
+                guard let message else { return }
+                announceForAccessibility(message)
+            }
+            .onChange(of: successMessage) { _, message in
+                guard let message else { return }
+                announceForAccessibility(message)
+            }
     }
 
     private func performBackup() {
+        guard !isBackingUp, !isRestoring else { return }
         isBackingUp = true
         errorMessage = nil
         successMessage = nil
@@ -182,8 +191,10 @@ struct BackupRestoreView: View {
     }
 
     private func performRestore(from manifest: BackupManifest) {
+        guard !isBackingUp, !isRestoring else { return }
         isRestoring = true
         errorMessage = nil
+        successMessage = nil
 
         Task {
             do {
@@ -200,6 +211,52 @@ struct BackupRestoreView: View {
                 }
             }
         }
+    }
+
+    private func backupDescription(for manifest: BackupManifest) -> some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+            Text(manifest.createdAt.formatted(.dateTime.day().month().year().hour().minute()))
+                .font(DS.Typography.subheadline)
+                .foregroundStyle(DS.Colours.textPrimary)
+            Text("\(manifest.recordCount) memories")
+                .font(DS.Typography.caption1)
+                .foregroundStyle(DS.Colours.textSecondary)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func restoreButton(for manifest: BackupManifest) -> some View {
+        let isCurrentRestore = isRestoring && selectedManifest?.id == manifest.id
+
+        return Button {
+            guard !isBackingUp, !isRestoring else { return }
+            selectedManifest = manifest
+            showingRestoreConfirm = true
+        } label: {
+            HStack(spacing: DS.Spacing.xs) {
+                if isCurrentRestore {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(DS.Colours.accent)
+                        .accessibilityHidden(true)
+                }
+                Text(isCurrentRestore ? "Restoring..." : "Restore")
+                    .font(DS.Typography.caption1.weight(.semibold))
+                    .foregroundStyle(DS.Colours.accent)
+            }
+            .frame(minHeight: 44.0)
+        }
+        .disabled(isBackingUp || isRestoring)
+        .accessibilityLabel(
+            "Restore backup from \(manifest.createdAt.formatted(.dateTime.day().month().year().hour().minute()))"
+        )
+        .accessibilityValue(isCurrentRestore ? "In progress" : "Available")
+    }
+
+    private func announceForAccessibility(_ message: String) {
+        #if os(iOS)
+        UIAccessibility.post(notification: .announcement, argument: message)
+        #endif
     }
 
     private func loadBackups() async {

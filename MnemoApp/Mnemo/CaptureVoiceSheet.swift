@@ -21,13 +21,15 @@ struct CaptureVoiceSheet: View {
     @State private var permissionDenied = false
     @State private var isTranscribing = false
     @State private var isSaving = false
+    @State private var isCommitting = false
     @State private var errorMessage: String?
     @State private var savedSummary: String?
-    private let normalizer = MemoryTextNormalizer()
 
     #if DEBUG
+    private let normalizer = MemoryTextNormalizer(aiCoreFlags: .debugLocalFoundationModelsExtraction)
     private let engine = ExtractionEngine(aiCoreFlags: .debugLocalFoundationModelsExtraction)
     #else
+    private let normalizer = MemoryTextNormalizer()
     private let engine = ExtractionEngine()
     #endif
 
@@ -48,12 +50,15 @@ struct CaptureVoiceSheet: View {
                                 isSaving: isSaving,
                                 onSave: { summary in save(result: result, summary: summary) },
                                 onBack: {
-                                    guard !isSaving else { return }
+                                    guard !isCommitting else { return }
                                     extractionResult = nil
                                     reviewSummary = ""
                                     showingConfirm = true
                                 },
-                                onDiscard: { dismiss() }
+                                onDiscard: {
+                                    guard !isCommitting else { return }
+                                    dismiss()
+                                }
                             )
                         } else if showingConfirm {
                             VoiceConfirmView(
@@ -68,7 +73,10 @@ struct CaptureVoiceSheet: View {
                                     extractionResult = nil
                                     reviewSummary = ""
                                 },
-                                onDiscard: { dismiss() }
+                                onDiscard: {
+                                    guard !isSaving else { return }
+                                    dismiss()
+                                }
                             )
                         } else {
                             VoiceRecordingView(
@@ -102,12 +110,14 @@ struct CaptureVoiceSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
+                        guard !isCommitting else { return }
                         if voiceHandler.isRecording {
                             _ = voiceHandler.stopRecording()
                         }
                         dismiss()
                     }
                     .foregroundStyle(DS.Colours.textSecondary)
+                    .disabled(isCommitting)
                 }
             }
             .task {
@@ -138,6 +148,7 @@ struct CaptureVoiceSheet: View {
                 }
             }
         }
+        .interactiveDismissDisabled(isCommitting)
     }
 
     private func toggleRecording() {
@@ -259,6 +270,7 @@ struct CaptureVoiceSheet: View {
         guard !transcript.isEmpty, !approvedSummary.isEmpty else { return }
 
         isSaving = true
+        isCommitting = true
         errorMessage = nil
 
         Task {
@@ -283,6 +295,7 @@ struct CaptureVoiceSheet: View {
                 await MainActor.run {
                     errorMessage = "Could not save voice memory. Try again."
                     isSaving = false
+                    isCommitting = false
                     UIAccessibility.post(notification: .announcement, argument: errorMessage)
                 }
             }
@@ -502,6 +515,8 @@ struct VoiceConfirmView: View {
             }
             .disabled(transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
             .buttonStyle(.mnemoPrimary)
+            .accessibilityLabel(isSaving ? "Preparing memory" : "Review memory")
+            .accessibilityValue(isSaving ? "In progress" : "")
 
             Button(action: onRetry) {
                 Text("Record again")
@@ -509,6 +524,7 @@ struct VoiceConfirmView: View {
                     .foregroundStyle(DS.Colours.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 44.0)
             }
+            .disabled(isSaving)
             .buttonStyle(.mnemoPressable)
 
             Button(action: onDiscard) {
@@ -517,6 +533,7 @@ struct VoiceConfirmView: View {
                     .foregroundStyle(DS.Colours.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 44.0)
             }
+            .disabled(isSaving)
             .buttonStyle(.mnemoPressable)
         }
     }

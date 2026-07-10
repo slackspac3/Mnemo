@@ -46,7 +46,7 @@ The user approved the Sage & Olive direction and asked for the brief, all screen
 Remaining release review:
 
 1. Review N-A beside the comparison set at 29, 44, and 60 points.
-2. Validate the real Icon Composer Default, Dark, Tinted, and Clear outputs.
+2. Validate the real Icon Composer Default, Dark, Tinted, and Clear outputs. The asset-catalog Dark and Tinted fallbacks meet Apple's transparency and grayscale input requirements, but they do not replace this gate.
 3. Conduct formal trademark clearance if the product is prepared for public commercial release.
 
 Production AppIcon, shared `MnemoLogoMark`, SVG source, wordmark, and launch identity now use N-A on `ui-redesign-liquid-glass`. Clear/Icon Composer output and formal trademark clearance remain pre-release review items.

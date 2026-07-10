@@ -34,8 +34,15 @@ run_package_tests() {
 }
 
 run_hygiene_checks() {
-  echo "==> git diff --check"
+  echo "==> git diff --check (working tree)"
   (cd "${ROOT_DIR}" && git diff --check)
+
+  if git -C "${ROOT_DIR}" rev-parse --verify --quiet origin/main >/dev/null; then
+    local merge_base
+    merge_base="$(git -C "${ROOT_DIR}" merge-base HEAD origin/main)"
+    echo "==> git diff --check (origin/main merge-base to worktree)"
+    (cd "${ROOT_DIR}" && git diff --check "${merge_base}")
+  fi
 }
 
 run_efficiency() {
@@ -72,16 +79,41 @@ run_ui_smoke() {
     return 64
   fi
 
+  local build_run_arguments
+  build_run_arguments="$(printf \
+    '{"workspacePath":"%s","scheme":"Mnemo","simulatorId":"%s","launchArgs":["--ui-testing","--reset-data-on-launch","--skip-onboarding-if-needed"]}' \
+    "${ROOT_DIR}/MnemoApp/Mnemo.xcworkspace" \
+    "${MNEMO_SIMULATOR_ID}")"
+
   xcodebuildmcp simulator build-and-run \
-    --workspace-path "${ROOT_DIR}/MnemoApp/Mnemo.xcworkspace" \
-    --scheme Mnemo \
-    --simulator-id "${MNEMO_SIMULATOR_ID}" \
-    --launch-args '["--ui-testing","--reset-data-on-launch","--skip-onboarding-if-needed"]' \
+    --json "${build_run_arguments}" \
     --output json
 
-  xcodebuildmcp simulator snapshot-ui \
+  local snapshot_output
+  snapshot_output="$(xcodebuildmcp simulator snapshot-ui \
     --simulator-id "${MNEMO_SIMULATOR_ID}" \
-    --output json
+    --output json)"
+  printf '%s\n' "${snapshot_output}"
+
+  local required_target
+  for required_target in \
+    '"didError": false' \
+    'chat.input' \
+    'tab.settings' \
+    'capture.text.open' \
+    'capture.voice.open' \
+    'capture.camera.open' \
+    'capture.photo.open' \
+    '|tab|Recall|1|' \
+    '|tab|Memories|0|'; do
+    case "${snapshot_output}" in
+      *"${required_target}"*) ;;
+      *)
+        echo "UI smoke assertion failed: missing ${required_target}" >&2
+        return 1
+        ;;
+    esac
+  done
 }
 
 case "${MODE}" in

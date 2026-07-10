@@ -26,14 +26,16 @@ struct CaptureImageSheet: View {
     @State private var reviewRawInput = ""
     @State private var reviewSummary = ""
     @State private var isProcessing = false
+    @State private var isCommitting = false
     @State private var errorMessage: String?
     @State private var savedSummary: String?
 
     private let handler = ImageCaptureHandler()
-    private let normalizer = MemoryTextNormalizer()
     #if DEBUG
+    private let normalizer = MemoryTextNormalizer(aiCoreFlags: .debugLocalFoundationModelsExtraction)
     private let engine = ExtractionEngine(aiCoreFlags: .debugLocalFoundationModelsExtraction)
     #else
+    private let normalizer = MemoryTextNormalizer()
     private let engine = ExtractionEngine()
     #endif
 
@@ -52,12 +54,15 @@ struct CaptureImageSheet: View {
                                 isSaving: isProcessing,
                                 onSave: { summary in save(result: result, summary: summary) },
                                 onBack: {
-                                    guard !isProcessing else { return }
+                                    guard !isCommitting else { return }
                                     extractionResult = nil
                                     reviewRawInput = ""
                                     reviewSummary = ""
                                 },
-                                onDiscard: { dismiss() }
+                                onDiscard: {
+                                    guard !isCommitting else { return }
+                                    dismiss()
+                                }
                             )
                         } else if let payload {
                             ClarifyingQuestionView(
@@ -66,7 +71,10 @@ struct CaptureImageSheet: View {
                                 isSaving: isProcessing,
                                 onSave: { prepareReview(payload: payload) },
                                 onRetry: { resetSelection() },
-                                onDiscard: { dismiss() }
+                                onDiscard: {
+                                    guard !isProcessing else { return }
+                                    dismiss()
+                                }
                             )
                         } else {
                             ImageSelectionView(
@@ -94,9 +102,11 @@ struct CaptureImageSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
+                        guard !isCommitting else { return }
                         dismiss()
                     }
                     .foregroundStyle(DS.Colours.textSecondary)
+                    .disabled(isCommitting)
                 }
             }
             .onChange(of: selectedPhoto) { _, item in
@@ -125,6 +135,7 @@ struct CaptureImageSheet: View {
                 }
             }
         }
+        .interactiveDismissDisabled(isCommitting)
     }
 
     private func processPhoto(_ item: PhotosPickerItem) {
@@ -247,6 +258,7 @@ struct CaptureImageSheet: View {
         guard !rawInput.isEmpty, !approvedSummary.isEmpty else { return }
 
         isProcessing = true
+        isCommitting = true
         errorMessage = nil
 
         Task {
@@ -272,6 +284,7 @@ struct CaptureImageSheet: View {
                 await MainActor.run {
                     errorMessage = "Could not save memory. Try again."
                     isProcessing = false
+                    isCommitting = false
                     UIAccessibility.post(notification: .announcement, argument: errorMessage)
                 }
             }
@@ -445,6 +458,8 @@ struct ClarifyingQuestionView: View {
             }
             .disabled(isSaving)
             .buttonStyle(.mnemoPrimary)
+            .accessibilityLabel(isSaving ? "Preparing memory" : "Review memory")
+            .accessibilityValue(isSaving ? "In progress" : "")
 
             Button(action: onRetry) {
                 Label("Choose another image", systemImage: "arrow.counterclockwise")
@@ -461,6 +476,7 @@ struct ClarifyingQuestionView: View {
                     .foregroundStyle(DS.Colours.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 44.0)
             }
+            .disabled(isSaving)
             .buttonStyle(.mnemoPressable)
         }
     }

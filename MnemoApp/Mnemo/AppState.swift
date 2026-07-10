@@ -34,6 +34,30 @@ final class AppState {
         debugLog("App initialise debugDiagnostics=true localAIChatFirst=\(DebugAIChatSetting.usesLocalAIFirst)")
         #endif
 
+        await applyUITestingLaunchArgumentsIfNeeded()
+
+        let settings = await MainActor.run {
+            let context = MemoryStore.shared.container.mainContext
+            let descriptor = FetchDescriptor<UserModel>()
+            let userModel = (try? context.fetch(descriptor))?.first
+            return (
+                onboardingComplete: userModel?.onboardingComplete ?? false,
+                appLockEnabled: userModel?.appLockEnabled ?? false
+            )
+        }
+
+        // Resolve privacy state before revealing app content. Nonessential service
+        // warm-up continues afterward so a slow store cannot trap launch on branding.
+        await MainActor.run {
+            onboardingComplete = settings.onboardingComplete
+            appLockEnabled = settings.appLockEnabled && SecurityLayer.shared.canAuthenticateWithBiometrics()
+            isAppLocked = appLockPolicy.shouldLockOnLaunch(
+                appLockEnabled: appLockEnabled,
+                onboardingComplete: onboardingComplete
+            )
+            isInitialised = true
+        }
+
         // AI Core prototype flags default off for TestFlight. Do not start
         // Foundation Models sessions unless a future internal build explicitly
         // enables them.
@@ -90,31 +114,9 @@ final class AppState {
         }
         #endif
 
-        await applyUITestingLaunchArgumentsIfNeeded()
-
         #if DEBUG
         await backfillLocalAIChatIndexIfNeeded()
         #endif
-
-        let settings = await MainActor.run {
-            let context = MemoryStore.shared.container.mainContext
-            let descriptor = FetchDescriptor<UserModel>()
-            let userModel = (try? context.fetch(descriptor))?.first
-            return (
-                onboardingComplete: userModel?.onboardingComplete ?? false,
-                appLockEnabled: userModel?.appLockEnabled ?? false
-            )
-        }
-
-        await MainActor.run {
-            onboardingComplete = settings.onboardingComplete
-            appLockEnabled = settings.appLockEnabled && SecurityLayer.shared.canAuthenticateWithBiometrics()
-            isAppLocked = appLockPolicy.shouldLockOnLaunch(
-                appLockEnabled: appLockEnabled,
-                onboardingComplete: onboardingComplete
-            )
-            isInitialised = true
-        }
     }
 
     #if DEBUG
@@ -256,16 +258,14 @@ final class AppState {
     @MainActor
     private func backfillLocalAIChatIndexIfNeeded() async {
         guard DebugAIChatSetting.usesLocalAIFirst else { return }
-        guard !DebugLocalAIBackfillState.isComplete else {
-            debugLog("LocalAIChat launchBackfill skipped complete=true")
-            return
-        }
 
         let context = MemoryStore.shared.container.mainContext
+        let wasComplete = DebugLocalAIBackfillState.isComplete
         do {
-            try await MemoryCRUD.backfillSearchIndex(in: context)
-            DebugLocalAIBackfillState.isComplete = true
-            debugLog("LocalAIChat launchBackfill complete")
+            try await DebugLocalAIBackfillState.ensureComplete {
+                try await MemoryCRUD.backfillSearchIndex(in: context)
+            }
+            debugLog(wasComplete ? "LocalAIChat launchBackfill skipped complete=true" : "LocalAIChat launchBackfill complete")
         } catch {
             debugLog("LocalAIChat launchBackfill failed error=\(error.localizedDescription)")
         }

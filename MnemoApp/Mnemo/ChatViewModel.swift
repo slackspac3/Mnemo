@@ -56,10 +56,14 @@ final class ChatViewModel {
     var inputText = ""
     var isProcessing = false
     var errorMessage: String?
+    private var conversationGeneration: UInt = 0
 
+    @MainActor
     func resetConversation() {
+        conversationGeneration &+= 1
         messages = []
         inputText = ""
+        isProcessing = false
         errorMessage = nil
     }
 
@@ -68,6 +72,8 @@ final class ChatViewModel {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isProcessing else { return }
 
+        conversationGeneration &+= 1
+        let requestGeneration = conversationGeneration
         inputText = ""
         isProcessing = true
         errorMessage = nil
@@ -84,13 +90,20 @@ final class ChatViewModel {
             } else {
                 response = try await recall(query: text, context: context)
             }
+            try Task.checkCancellation()
+            guard conversationGeneration == requestGeneration else { return }
             messages.append(Message(
                 role: .assistant,
                 content: response.text,
                 citedMemoryIds: response.citedMemoryIds,
                 citations: response.citations
             ))
+        } catch is CancellationError {
+            // Cancellation is an intentional lifecycle event, not a user-facing error.
         } catch {
+            guard !Task.isCancelled,
+                  conversationGeneration == requestGeneration
+            else { return }
             errorMessage = "Something went wrong. Try again."
             messages.append(Message(
                 role: .assistant,
@@ -98,7 +111,9 @@ final class ChatViewModel {
             ))
         }
 
-        isProcessing = false
+        if conversationGeneration == requestGeneration {
+            isProcessing = false
+        }
     }
 
     @MainActor
@@ -164,6 +179,9 @@ final class ChatViewModel {
         }
         let sizeMemories = [sizeMemory]
 
+        await Task.yield()
+        try Task.checkCancellation()
+
         let normalisedSize = normaliseSize(requestedSize)
         let displaySize = displaySize(for: normalisedSize)
         let now = Date()
@@ -213,6 +231,9 @@ final class ChatViewModel {
                 citations: citations(for: citedMemories)
             )
         }
+
+        await Task.yield()
+        try Task.checkCancellation()
 
         let now = Date()
         for memory in memoriesToUpdate {

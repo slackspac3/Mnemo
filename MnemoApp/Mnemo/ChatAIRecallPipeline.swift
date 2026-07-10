@@ -334,14 +334,11 @@ enum ChatAIRecallPipeline {
 
     @MainActor
     private static func backfillSearchIndexIfNeeded(in context: ModelContext) async throws {
-        guard !DebugLocalAIBackfillState.isComplete else {
-            debugLog("LocalAIChat indexBackfill skipped complete=true")
-            return
+        let wasComplete = DebugLocalAIBackfillState.isComplete
+        try await DebugLocalAIBackfillState.ensureComplete {
+            try await MemoryCRUD.backfillSearchIndex(in: context)
         }
-
-        try await MemoryCRUD.backfillSearchIndex(in: context)
-        DebugLocalAIBackfillState.isComplete = true
-        debugLog("LocalAIChat indexBackfill complete")
+        debugLog(wasComplete ? "LocalAIChat indexBackfill skipped complete=true" : "LocalAIChat indexBackfill complete")
     }
 
     private struct AliasedMemorySource {
