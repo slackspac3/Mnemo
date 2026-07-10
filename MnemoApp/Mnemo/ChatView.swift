@@ -618,18 +618,14 @@ struct EmptyChatLanding: View {
 
                 Label("Private on this iPhone", systemImage: "lock.shield.fill")
                     .font(DS.Typography.caption1.weight(.semibold))
-                    .foregroundStyle(privateBadgeForeground)
+                    .foregroundStyle(DS.Colours.privateBadgeText)
                     .padding(.horizontal, DS.Spacing.sm)
                     .padding(.vertical, DS.Spacing.xs)
-                    .background {
+                    .background(DS.Colours.privateBadgeSurface, in: Capsule())
+                    .overlay {
                         Capsule()
-                            .fill(DS.Colours.privateBadgeSurface)
-                        if #available(iOS 26.0, *) {
-                            Capsule()
-                                .glassEffect(.regular.tint(DS.Colours.accent).interactive(), in: .capsule)
-                        }
+                            .stroke(DS.Colours.separator, lineWidth: 1.0)
                     }
-                    .clipShape(Capsule())
             }
             .padding(.horizontal, DS.Spacing.xs)
             .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
@@ -711,13 +707,6 @@ struct EmptyChatLanding: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var privateBadgeForeground: Color {
-        if #available(iOS 26.0, *) {
-            return DS.Colours.textOnAccent
-        }
-
-        return DS.Colours.privateBadgeText
-    }
 }
 
 struct EmptyMemoryRecoveryPanel: View {

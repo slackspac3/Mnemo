@@ -77,33 +77,16 @@ struct CaptureButton: View {
             } label: {
                 fabLabel
             }
-            .buttonStyle(.mnemoPressable)
+            .buttonStyle(.mnemoFloatingControl)
             .accessibilityLabel(expanded ? "Close capture menu" : "Add memory")
             .accessibilityHint("Choose how to save a memory")
             .accessibilityIdentifier(AccessibilityID.Main.capture)
         }
     }
 
-    @ViewBuilder
     private var fabLabel: some View {
-        let label = Image(systemName: expanded ? "xmark" : "plus")
+        Image(systemName: expanded ? "xmark" : "plus")
             .font(DS.Typography.title2)
-            .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-            .frame(width: DS.Spacing.xxxl, height: DS.Spacing.xxxl)
-            .background(DS.Colours.accent)
-            .clipShape(Circle())
-            .shadow(
-                color: DS.Colours.accent.opacity(0.35),
-                radius: DS.Shadows.medium.radius,
-                y: DS.Shadows.medium.y
-            )
-
-        if #available(iOS 26.0, *) {
-            label
-                .glassEffect(.regular.tint(DS.Colours.accent).interactive(), in: .circle)
-        } else {
-            label
-        }
     }
 }
 
