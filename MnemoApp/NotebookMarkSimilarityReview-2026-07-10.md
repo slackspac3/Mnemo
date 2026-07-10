@@ -1,6 +1,6 @@
 # Mnemo Notebook Mark Similarity Review
 
-Date: 2026-07-10  
+Date: 2026-07-10
 Scope: Pre-approval visual review of the N-A Notebook mark. This is a product-design comparison, not trademark or legal clearance.
 
 ## Mark under review
