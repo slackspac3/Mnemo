@@ -17,6 +17,7 @@ struct ChatView: View {
     @Query(sort: \MemoryRecord.createdAt, order: .reverse) private var records: [MemoryRecord]
     @State private var selectedSourceMemory: ChatSelectedMemory?
     @State private var sendTask: Task<Void, Never>?
+    @FocusState private var inputIsFocused: Bool
 
     private var activeRecords: [MemoryRecord] {
         records.filter { !$0.isArchived }
@@ -31,93 +32,104 @@ struct ChatView: View {
 
                 VStack(spacing: DS.Spacing.xs) {
                     ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(spacing: DS.Spacing.md) {
-                                if viewModel.messages.isEmpty && !viewModel.isProcessing {
-                                    EmptyChatLanding(
-                                        hasSavedMemories: !activeRecords.isEmpty,
-                                        onText: {
-                                            coordinator.present(.captureText)
-                                        },
-                                        onVoice: {
-                                            coordinator.present(.captureVoice)
-                                        },
-                                        onCamera: {
-                                            coordinator.present(.captureImage(.camera))
-                                        },
-                                        onPhoto: {
-                                            coordinator.present(.captureImage(.photoLibrary))
-                                        },
-                                        onExample: { example in
-                                            viewModel.inputText = example
-                                        }
-                                    )
-                                }
+                        GeometryReader { viewport in
+                            ScrollView {
+                                LazyVStack(spacing: DS.Spacing.md) {
+                                    if viewModel.messages.isEmpty && !viewModel.isProcessing {
+                                        EmptyChatLanding(
+                                            hasSavedMemories: !activeRecords.isEmpty,
+                                            minimumHeight: max(
+                                                viewport.size.height - DS.Spacing.md - DS.Spacing.xl,
+                                                0
+                                            ),
+                                            onText: {
+                                                coordinator.present(.captureText)
+                                            },
+                                            onVoice: {
+                                                coordinator.present(.captureVoice)
+                                            },
+                                            onCamera: {
+                                                coordinator.present(.captureImage(.camera))
+                                            },
+                                            onPhoto: {
+                                                coordinator.present(.captureImage(.photoLibrary))
+                                            },
+                                            onExample: { example in
+                                                HapticManager.impact(.light)
+                                                viewModel.inputText = example
+                                                inputIsFocused = true
+                                                announceForAccessibility("Question added to Recall field")
+                                            }
+                                        )
+                                    }
 
-                                ForEach(viewModel.messages) { message in
-                                    MessageBubble(
-                                        message: message,
-                                        onSourceTap: { id in
-                                            selectedSourceMemory = ChatSelectedMemory(id: id)
-                                        }
-                                    )
-                                        .id(message.id)
-                                }
+                                    ForEach(viewModel.messages) { message in
+                                        MessageBubble(
+                                            message: message,
+                                            onSourceTap: { id in
+                                                selectedSourceMemory = ChatSelectedMemory(id: id)
+                                            }
+                                        )
+                                            .id(message.id)
+                                    }
 
-                                if !viewModel.messages.isEmpty && activeRecords.isEmpty && !viewModel.isProcessing {
-                                    EmptyMemoryRecoveryPanel(
-                                        onText: {
-                                            coordinator.present(.captureText)
-                                        },
-                                        onVoice: {
-                                            coordinator.present(.captureVoice)
-                                        },
-                                        onCamera: {
-                                            coordinator.present(.captureImage(.camera))
-                                        },
-                                        onPhoto: {
-                                            coordinator.present(.captureImage(.photoLibrary))
-                                        },
-                                        onReset: {
-                                            resetConversation()
-                                        }
-                                    )
-                                }
+                                    if !viewModel.messages.isEmpty && activeRecords.isEmpty && !viewModel.isProcessing {
+                                        EmptyMemoryRecoveryPanel(
+                                            onText: {
+                                                coordinator.present(.captureText)
+                                            },
+                                            onVoice: {
+                                                coordinator.present(.captureVoice)
+                                            },
+                                            onCamera: {
+                                                coordinator.present(.captureImage(.camera))
+                                            },
+                                            onPhoto: {
+                                                coordinator.present(.captureImage(.photoLibrary))
+                                            },
+                                            onReset: {
+                                                resetConversation()
+                                            }
+                                        )
+                                    }
 
-                                if viewModel.isProcessing {
-                                    TypingIndicator()
-                                }
+                                    if viewModel.isProcessing {
+                                        TypingIndicator()
+                                    }
 
-                                Color.clear
-                                    .frame(height: 1.0)
-                                    .id(ChatScrollAnchor.bottom)
+                                    Color.clear
+                                        .frame(height: 1.0)
+                                        .id(ChatScrollAnchor.bottom)
+                                }
+                                .padding(.horizontal, DS.Spacing.md)
+                                .padding(.top, DS.Spacing.md)
+                                .padding(.bottom, DS.Spacing.xl)
                             }
-                            .padding(.horizontal, DS.Spacing.md)
-                            .padding(.top, DS.Spacing.md)
-                            .padding(.bottom, DS.Spacing.xl)
-                        }
-                        .scrollDismissesKeyboard(.interactively)
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 12.0)
-                                .onChanged { _ in
-                                    dismissKeyboard()
+                            .scrollDismissesKeyboard(.interactively)
+                            .onChange(of: viewModel.messages.count) {
+                                if viewModel.messages.last?.role == .assistant {
+                                    HapticManager.impact(.soft)
                                 }
-                        )
-                        .onChange(of: viewModel.messages.count) {
-                            if viewModel.messages.last?.role == .assistant {
-                                HapticManager.impact(.soft)
-                            }
-                            withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.standard) {
-                                proxy.scrollTo(ChatScrollAnchor.bottom, anchor: .bottom)
+                                if reduceMotion {
+                                    proxy.scrollTo(ChatScrollAnchor.bottom, anchor: .bottom)
+                                } else {
+                                    withAnimation(DS.Animation.standard) {
+                                        proxy.scrollTo(ChatScrollAnchor.bottom, anchor: .bottom)
+                                    }
+                                }
                             }
                         }
                     }
 
                     ChatInputBar(
                         text: $viewModel.inputText,
+                        focus: $inputIsFocused,
                         isProcessing: viewModel.isProcessing,
                         showsCaptureShortcuts: !viewModel.messages.isEmpty,
                         placeholder: activeRecords.isEmpty && viewModel.messages.isEmpty ? "Ask after saving a memory..." : "Ask about a saved memory...",
+                        inputAccessibilityHint: activeRecords.isEmpty
+                            ? "Save a memory before asking Mnemo"
+                            : "Ask Mnemo about a saved memory",
                         onText: {
                             coordinator.present(.captureText)
                         },
@@ -221,17 +233,6 @@ struct ChatView: View {
     @MainActor
     private func deleteSourceMemoryPermanently(id: UUID) async throws {
         try await MemoryCRUD.deletePermanently(id: id, in: modelContext)
-    }
-
-    private func dismissKeyboard() {
-        #if os(iOS)
-        UIApplication.shared.sendAction(
-            #selector(UIResponder.resignFirstResponder),
-            to: nil,
-            from: nil,
-            for: nil
-        )
-        #endif
     }
 
     private func announceForAccessibility(_ message: String) {
@@ -624,140 +625,168 @@ struct TypingIndicator: View {
 struct EmptyChatLanding: View {
 
     let hasSavedMemories: Bool
+    let minimumHeight: CGFloat
     let onText: () -> Void
     let onVoice: () -> Void
     let onCamera: () -> Void
     let onPhoto: () -> Void
     let onExample: (String) -> Void
 
-    private let compactColumns = [
-        GridItem(.flexible(), spacing: DS.Spacing.sm),
-        GridItem(.flexible(), spacing: DS.Spacing.sm),
-        GridItem(.flexible(), spacing: DS.Spacing.sm),
-    ]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    private var secondaryColumns: [GridItem] {
-        dynamicTypeSize.isAccessibilitySize
-            ? [GridItem(.flexible(), spacing: DS.Spacing.sm)]
-            : compactColumns
-    }
+    @AccessibilityFocusState private var headingIsFocused: Bool
+    @State private var requestedInitialFocus = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.lg) {
-            VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                HStack(alignment: .center, spacing: DS.Spacing.md) {
-                    MnemoLogoMark(size: 44.0, style: .filled)
-                        .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 0) {
+            landingHeader
 
-                    Text("What should Mnemo remember?")
-                        .font(DS.Typography.title2)
-                        .foregroundStyle(DS.Colours.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                }
-
-                Text("Save a detail, decision or reminder. Ask for it later and see the source.")
-                    .font(DS.Typography.subheadline)
-                    .foregroundStyle(DS.Colours.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier(AccessibilityID.Chat.landing)
-
-                Label("Private on this iPhone", systemImage: "lock.shield.fill")
-                    .font(DS.Typography.caption1.weight(.semibold))
-                    .foregroundStyle(DS.Colours.privateBadgeText)
-                    .padding(.horizontal, DS.Spacing.sm)
-                    .padding(.vertical, DS.Spacing.xs)
-                    .background(DS.Colours.privateBadgeSurface, in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .stroke(DS.Colours.separator, lineWidth: 1.0)
-                    }
-            }
-            .padding(.horizontal, DS.Spacing.xs)
-            .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
-
-            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                LandingActionButton(
-                    title: "Write memory",
-                    subtitle: "Type a detail, decision or reminder",
-                    icon: "square.and.pencil",
-                    tint: DS.Colours.accent,
-                    prominence: .primary,
-                    accessibilityIdentifier: AccessibilityID.CaptureText.open,
-                    action: onText
-                )
-
-                LazyVGrid(columns: secondaryColumns, spacing: DS.Spacing.sm) {
-                    LandingActionButton(
-                        title: "Voice",
-                        subtitle: "",
-                        icon: "mic.fill",
-                        tint: DS.Colours.accent,
-                        prominence: .compact,
-                        accessibilityIdentifier: "capture.voice.open",
-                        action: onVoice
-                    )
-                    LandingActionButton(
-                        title: "Camera",
-                        subtitle: "",
-                        icon: "camera.fill",
-                        tint: DS.Colours.accent,
-                        prominence: .compact,
-                        accessibilityIdentifier: "capture.camera.open",
-                        action: onCamera
-                    )
-                    LandingActionButton(
-                        title: "Photo",
-                        subtitle: "",
-                        icon: "photo.on.rectangle",
-                        tint: DS.Colours.accent,
-                        prominence: .compact,
-                        accessibilityIdentifier: "capture.photo.open",
-                        action: onPhoto
-                    )
-                }
-            }
+            Spacer(minLength: hasSavedMemories ? DS.Spacing.lg : DS.Spacing.xl)
 
             if hasSavedMemories {
-                VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                    Text("Ask Mnemo")
-                        .font(DS.Typography.headline)
-                        .foregroundStyle(DS.Colours.textPrimary)
-
-                    VStack(spacing: DS.Spacing.xs) {
-                        RecallExampleButton(
-                            text: "What did I save most recently?",
-                            action: { onExample("What did I save most recently?") }
-                        )
-                        RecallExampleButton(
-                            text: "What decision did I save?",
-                            action: { onExample("What decision did I save?") }
-                        )
-                        RecallExampleButton(
-                            text: "Where did I put it?",
-                            action: { onExample("Where did I put it?") }
-                        )
-                    }
-                }
+                recallFirstContent
             } else {
-                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Label {
-                        Text("Save your first memory, then ask naturally.")
-                            .foregroundStyle(DS.Colours.textSecondary)
-                    } icon: {
-                        Image(systemName: "arrow.turn.down.right")
-                            .foregroundStyle(DS.Colours.accent)
-                    }
-                    .font(DS.Typography.subheadline)
-                }
+                firstMemoryContent
             }
         }
-        .padding(.horizontal, DS.Spacing.xs)
-        .padding(.top, DS.Spacing.md)
-        .padding(.bottom, DS.Spacing.xl)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(
+            maxWidth: DS.ComponentTokens.EmptyState.maxWidth,
+            minHeight: minimumHeight,
+            alignment: .topLeading
+        )
+        .frame(maxWidth: .infinity, alignment: .center)
+        .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
+        .task {
+            guard !requestedInitialFocus else { return }
+            requestedInitialFocus = true
+
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+            headingIsFocused = true
+        }
+    }
+
+    private var landingHeader: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                    brandMark
+                    heading
+                }
+            } else {
+                HStack(alignment: .center, spacing: DS.Spacing.md) {
+                    brandMark
+                    heading
+                }
+            }
+
+            Text(
+                hasSavedMemories
+                    ? "Ask naturally. Mnemo answers from what you saved and shows the source."
+                    : "Save it privately. Ask naturally later, then open the source."
+            )
+                .font(DS.Typography.subheadline)
+                .foregroundStyle(DS.Colours.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier(AccessibilityID.Chat.landing)
+
+            Label("Private on this iPhone", systemImage: "lock.fill")
+                .font(DS.Typography.caption1.weight(.semibold))
+                .foregroundStyle(DS.Colours.privateBadgeText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var brandMark: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: DS.CornerRadius.medium, style: .continuous)
+                .fill(DS.Colours.accentSoft)
+
+            MnemoLogoMark(size: 36.0, style: .filled)
+        }
+        .frame(width: 52.0, height: 52.0)
+        .accessibilityHidden(true)
+    }
+
+    private var heading: some View {
+        Text(hasSavedMemories ? "What would you like to recall?" : "What should Mnemo remember?")
+            .font(DS.Typography.title2)
+            .foregroundStyle(DS.Colours.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityFocused($headingIsFocused)
+    }
+
+    private var firstMemoryContent: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            LandingPrimaryActionButton(
+                title: "Write memory",
+                subtitle: "Type a detail, decision, or reminder",
+                icon: "square.and.pencil",
+                accessibilityHint: "Open text capture",
+                accessibilityIdentifier: AccessibilityID.CaptureText.open,
+                action: onText
+            )
+
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                Text("Capture another way")
+                    .font(DS.Typography.caption1.weight(.semibold))
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .accessibilityAddTraits(.isHeader)
+
+                LandingCaptureGroup(
+                    includesText: false,
+                    onText: onText,
+                    onVoice: onVoice,
+                    onCamera: onCamera,
+                    onPhoto: onPhoto
+                )
+            }
+        }
+    }
+
+    private var recallFirstContent: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.lg) {
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                Text("Try asking")
+                    .font(DS.Typography.headline)
+                    .foregroundStyle(DS.Colours.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+
+                VStack(spacing: 0) {
+                    RecallExampleButton(
+                        text: "What did I save most recently?",
+                        action: { onExample("What did I save most recently?") }
+                    )
+                    Divider().padding(.leading, DS.Spacing.md)
+                    RecallExampleButton(
+                        text: "What decision did I save?",
+                        action: { onExample("What decision did I save?") }
+                    )
+                    Divider().padding(.leading, DS.Spacing.md)
+                    RecallExampleButton(
+                        text: "Where did I put it?",
+                        action: { onExample("Where did I put it?") }
+                    )
+                }
+                .mnemoSurface(.contentFallback, cornerRadius: DS.CornerRadius.medium)
+            }
+
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                Text("Add a memory")
+                    .font(DS.Typography.caption1.weight(.semibold))
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .accessibilityAddTraits(.isHeader)
+
+                LandingCaptureGroup(
+                    includesText: true,
+                    onText: onText,
+                    onVoice: onVoice,
+                    onCamera: onCamera,
+                    onPhoto: onPhoto
+                )
+            }
+        }
     }
 
 }
@@ -860,103 +889,268 @@ struct CompactCaptureButton: View {
     }
 }
 
-struct LandingActionButton: View {
-    enum Prominence {
-        case primary
-        case secondary
-        case compact
-    }
-
+struct LandingPrimaryActionButton: View {
     let title: String
     let subtitle: String
     let icon: String
-    let tint: Color
-    let prominence: Prominence
+    let accessibilityHint: String
     let accessibilityIdentifier: String
     let action: () -> Void
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var usesStackedLayout: Bool {
+        dynamicTypeSize >= .xxxLarge
+    }
 
     var body: some View {
-        Button(action: action) {
-            if prominence == .compact {
-                VStack(spacing: DS.Spacing.xs) {
-                    Image(systemName: icon)
-                        .font(DS.Typography.headline)
-                        .foregroundStyle(iconColor)
-                        .accessibilityHidden(true)
+        Button {
+            HapticManager.impact(.medium)
+            action()
+        } label: {
+            Group {
+                if usesStackedLayout {
+                    VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                        HStack(spacing: DS.Spacing.sm) {
+                            Image(systemName: icon)
+                                .font(DS.Typography.headline)
+                                .accessibilityHidden(true)
 
-                    Text(title)
-                        .font(DS.Typography.caption1)
-                        .foregroundStyle(titleColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                .frame(maxWidth: .infinity, minHeight: 52.0)
-                .padding(.horizontal, DS.Spacing.sm)
-                .padding(.vertical, DS.Spacing.xs)
-                .background(backgroundColor)
-                .overlay {
-                    RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                        .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-            } else {
-                HStack(spacing: DS.Spacing.sm) {
-                    Image(systemName: icon)
-                        .font(DS.Typography.title3)
-                        .foregroundStyle(iconColor)
-                        .frame(width: DS.Spacing.xl, alignment: .leading)
-                        .accessibilityHidden(true)
+                            Text(title)
+                                .font(DS.Typography.headline)
+                                .fixedSize(horizontal: false, vertical: true)
 
-                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                        Text(title)
-                            .font(DS.Typography.headline)
-                            .foregroundStyle(titleColor)
+                            Spacer(minLength: DS.Spacing.sm)
+
+                            Image(systemName: "chevron.right")
+                                .font(DS.Typography.caption1.weight(.semibold))
+                                .accessibilityHidden(true)
+                        }
+
                         Text(subtitle)
                             .font(DS.Typography.caption1)
-                            .foregroundStyle(subtitleColor)
-                            .lineLimit(2)
+                            .foregroundStyle(DS.Colours.textOnAccent.opacity(0.88))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                } else {
+                    HStack(spacing: DS.Spacing.sm) {
+                        Image(systemName: icon)
+                            .font(DS.Typography.title3)
+                            .frame(width: DS.Spacing.xl, alignment: .leading)
+                            .accessibilityHidden(true)
 
-                    Spacer(minLength: 0)
+                        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                            Text(title)
+                                .font(DS.Typography.headline)
+                                .fixedSize(horizontal: false, vertical: true)
 
-                    Image(systemName: "chevron.right")
-                        .font(DS.Typography.caption1.weight(.semibold))
-                        .foregroundStyle(iconColor.opacity(0.86))
-                        .accessibilityHidden(true)
+                            Text(subtitle)
+                                .font(DS.Typography.caption1)
+                                .foregroundStyle(DS.Colours.textOnAccent.opacity(0.88))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Spacer(minLength: DS.Spacing.sm)
+
+                        Image(systemName: "chevron.right")
+                            .font(DS.Typography.caption1.weight(.semibold))
+                            .accessibilityHidden(true)
+                    }
                 }
-                .frame(maxWidth: .infinity, minHeight: prominence == .primary ? 60.0 : 56.0, alignment: .leading)
-                .padding(.horizontal, DS.Spacing.md)
-                .padding(.vertical, DS.Spacing.sm)
-                .background(backgroundColor)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-                .shadow(
-                    color: prominence == .primary ? DS.Shadows.subtle.color : Color.clear,
-                    radius: prominence == .primary ? DS.Shadows.subtle.radius : 0.0,
-                    x: DS.Shadows.subtle.x,
-                    y: DS.Shadows.subtle.y
-                )
+            }
+            .foregroundStyle(DS.Colours.textOnAccent)
+            .padding(.horizontal, DS.Spacing.md)
+            .padding(.vertical, DS.Spacing.sm)
+            .frame(maxWidth: .infinity, minHeight: 56.0, alignment: .leading)
+            .background(
+                DS.Colours.controlAccent,
+                in: RoundedRectangle(cornerRadius: DS.CornerRadius.large, style: .continuous)
+            )
+            .overlay {
+                if colorSchemeContrast == .increased {
+                    RoundedRectangle(cornerRadius: DS.CornerRadius.large, style: .continuous)
+                        .stroke(DS.Colours.textOnAccent, lineWidth: 1.5)
+                }
             }
         }
         .buttonStyle(.mnemoPressable)
         .accessibilityLabel(title)
-        .accessibilityHint(subtitle.isEmpty ? "Save a \(title.lowercased()) memory" : subtitle)
+        .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
+}
 
-    private var backgroundColor: Color {
-        prominence == .primary ? DS.Colours.controlAccent : DS.Colours.surfaceElevated
+private struct LandingCaptureAction: Identifiable {
+    let id: String
+    let title: String
+    let icon: String
+    let accessibilityHint: String
+    let action: () -> Void
+}
+
+struct LandingCaptureGroup: View {
+    let includesText: Bool
+    let onText: () -> Void
+    let onVoice: () -> Void
+    let onCamera: () -> Void
+    let onPhoto: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var usesRows: Bool {
+        dynamicTypeSize >= .xxxLarge
     }
 
-    private var iconColor: Color {
-        prominence == .primary ? DS.Colours.textOnAccent : tint
+    private var actions: [LandingCaptureAction] {
+        var actions: [LandingCaptureAction] = []
+
+        if includesText {
+            actions.append(
+                LandingCaptureAction(
+                    id: AccessibilityID.CaptureText.open,
+                    title: "Write",
+                    icon: "square.and.pencil",
+                    accessibilityHint: "Open text capture",
+                    action: onText
+                )
+            )
+        }
+
+        actions.append(contentsOf: [
+            LandingCaptureAction(
+                id: "capture.voice.open",
+                title: "Voice",
+                icon: "mic.fill",
+                accessibilityHint: "Open voice capture",
+                action: onVoice
+            ),
+            LandingCaptureAction(
+                id: "capture.camera.open",
+                title: "Camera",
+                icon: "camera.fill",
+                accessibilityHint: "Take a photo for a new memory",
+                action: onCamera
+            ),
+            LandingCaptureAction(
+                id: "capture.photo.open",
+                title: "Photo",
+                icon: "photo.on.rectangle",
+                accessibilityHint: "Choose a photo for a new memory",
+                action: onPhoto
+            ),
+        ])
+
+        return actions
     }
 
-    private var titleColor: Color {
-        prominence == .primary ? DS.Colours.textOnAccent : DS.Colours.textPrimary
+    var body: some View {
+        Group {
+            if usesRows {
+                rowLayout
+            } else {
+                compactLayout
+            }
+        }
+        .padding(.vertical, DS.Spacing.xs)
+        .mnemoSurface(.compactControl, cornerRadius: DS.CornerRadius.medium)
     }
 
-    private var subtitleColor: Color {
-        prominence == .primary ? DS.Colours.textOnAccent.opacity(0.88) : DS.Colours.textSecondary
+    private var rowLayout: some View {
+        VStack(spacing: 0) {
+            ForEach(actions) { action in
+                captureChoice(for: action, layout: .row)
+
+                if action.id != actions.last?.id {
+                    horizontalDivider
+                }
+            }
+        }
+    }
+
+    private var compactLayout: some View {
+        HStack(spacing: 0) {
+            ForEach(actions) { action in
+                captureChoice(for: action, layout: .compact)
+
+                if action.id != actions.last?.id {
+                    verticalDivider
+                }
+            }
+        }
+    }
+
+    private var horizontalDivider: some View {
+        Divider()
+            .padding(.leading, DS.Spacing.xxl)
+    }
+
+    private var verticalDivider: some View {
+        Rectangle()
+            .fill(DS.Colours.separator)
+            .frame(width: 1.0, height: DS.Spacing.xl)
+    }
+
+    private func captureChoice(
+        for action: LandingCaptureAction,
+        layout: LandingCaptureChoice.Layout
+    ) -> some View {
+        LandingCaptureChoice(
+            title: action.title,
+            icon: action.icon,
+            accessibilityHint: action.accessibilityHint,
+            accessibilityIdentifier: action.id,
+            layout: layout,
+            action: action.action
+        )
+    }
+}
+
+struct LandingCaptureChoice: View {
+    enum Layout {
+        case compact
+        case row
+    }
+
+    let title: String
+    let icon: String
+    let accessibilityHint: String
+    let accessibilityIdentifier: String
+    let layout: Layout
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            HapticManager.impact(.light)
+            action()
+        } label: {
+            Group {
+                if layout == .row {
+                    HStack(spacing: DS.Spacing.md) {
+                        Image(systemName: icon)
+                            .font(DS.Typography.headline)
+                            .frame(minWidth: 44.0, alignment: .leading)
+                        Text(title)
+                            .font(DS.Typography.body.weight(.semibold))
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, DS.Spacing.md)
+                } else {
+                    VStack(spacing: DS.Spacing.xs) {
+                        Image(systemName: icon)
+                            .font(DS.Typography.headline)
+                        Text(title)
+                            .font(DS.Typography.caption1.weight(.medium))
+                    }
+                    .padding(.horizontal, DS.Spacing.xs)
+                }
+            }
+            .foregroundStyle(DS.Colours.accent)
+            .frame(maxWidth: .infinity, minHeight: layout == .row ? 48.0 : 56.0)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.mnemoPressable)
+        .accessibilityLabel(title)
+        .accessibilityHint(accessibilityHint)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 
@@ -967,31 +1161,38 @@ struct RecallExampleButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: DS.Spacing.sm) {
-                Image(systemName: "magnifyingglass")
-                    .font(DS.Typography.subheadline)
-                    .foregroundStyle(DS.Colours.accent)
                 Text(text)
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.textPrimary)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
                 Spacer(minLength: DS.Spacing.sm)
+
+                Image(systemName: "arrow.turn.down.left")
+                    .font(DS.Typography.caption1.weight(.semibold))
+                    .foregroundStyle(DS.Colours.accent)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, DS.Spacing.md)
-            .padding(.vertical, DS.Spacing.sm)
-            .frame(minHeight: 44.0)
-            .background(DS.Colours.surfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+            .padding(.vertical, DS.Spacing.sm + DS.Spacing.xs)
+            .frame(maxWidth: .infinity, minHeight: 48.0, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.mnemoPressable)
+        .accessibilityLabel(text)
+        .accessibilityHint("Place this question in the Recall field")
     }
 }
 
 struct ChatInputBar: View {
 
     @Binding var text: String
+    let focus: FocusState<Bool>.Binding
     let isProcessing: Bool
     let showsCaptureShortcuts: Bool
     let placeholder: String
+    let inputAccessibilityHint: String
     let onText: () -> Void
     let onCamera: () -> Void
     let onPhoto: () -> Void
@@ -1048,6 +1249,7 @@ struct ChatInputBar: View {
                 .lineLimit(1...4)
                 .padding(.horizontal, DS.Spacing.md)
                 .padding(.vertical, DS.Spacing.sm)
+                .frame(minHeight: 44.0)
                 .background(DS.Colours.controlFallback)
                 .overlay {
                     RoundedRectangle(cornerRadius: DS.CornerRadius.large)
@@ -1057,10 +1259,13 @@ struct ChatInputBar: View {
                         )
                 }
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
+                .focused(focus)
                 .onSubmit {
                     onSend()
                 }
                 .submitLabel(.send)
+                .accessibilityLabel("Recall question")
+                .accessibilityHint(inputAccessibilityHint)
                 .accessibilityIdentifier(AccessibilityID.Chat.input)
 
             Button(action: onSend) {
@@ -1100,3 +1305,59 @@ struct ChatInputBar: View {
         }
     }
 }
+
+#if DEBUG
+private struct EmptyChatLandingPreview: View {
+    let hasSavedMemories: Bool
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                DS.Colours.canvas.ignoresSafeArea()
+
+                ScrollView {
+                    EmptyChatLanding(
+                        hasSavedMemories: hasSavedMemories,
+                        minimumHeight: 620.0,
+                        onText: {},
+                        onVoice: {},
+                        onCamera: {},
+                        onPhoto: {},
+                        onExample: { _ in }
+                    )
+                    .padding(DS.Spacing.md)
+                }
+            }
+            .navigationTitle("Mnemo")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+#Preview("Landing - First Memory - Light") {
+    EmptyChatLandingPreview(hasSavedMemories: false)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Landing - First Memory - Dark") {
+    EmptyChatLandingPreview(hasSavedMemories: false)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Landing - Ready to Recall") {
+    EmptyChatLandingPreview(hasSavedMemories: true)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Landing - Accessibility Type") {
+    EmptyChatLandingPreview(hasSavedMemories: false)
+        .environment(\.dynamicTypeSize, .accessibility3)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Landing - Recall - Accessibility Type") {
+    EmptyChatLandingPreview(hasSavedMemories: true)
+        .environment(\.dynamicTypeSize, .accessibility3)
+        .preferredColorScheme(.light)
+}
+#endif
