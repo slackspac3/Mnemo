@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 import MnemoUI
 import MnemoCore
 import MnemoCapture
@@ -31,37 +32,41 @@ struct CaptureTextSheet: View {
             ZStack {
                 DS.Colours.backgroundGrouped.ignoresSafeArea()
 
-                VStack(spacing: DS.Spacing.lg) {
-                    if let result = extractionResult {
-                        ExtractionConfirmView(
-                            result: result,
-                            isSaving: isSaving,
-                            onConfirm: { save(result: result) },
-                            onEdit: {
-                                guard !isSaving else { return }
-                                extractionResult = nil
-                            },
-                            onDiscard: {
-                                guard !isSaving else { return }
-                                dismiss()
-                            }
-                        )
-                    } else {
-                        TextInputView(
-                            text: $inputText,
-                            isExtracting: isExtracting,
-                            onExtract: { extract() }
-                        )
-                    }
+                ScrollView {
+                    VStack(spacing: DS.Spacing.lg) {
+                        if let result = extractionResult {
+                            ExtractionConfirmView(
+                                result: result,
+                                isSaving: isSaving,
+                                onConfirm: { save(result: result) },
+                                onEdit: {
+                                    guard !isSaving else { return }
+                                    extractionResult = nil
+                                },
+                                onDiscard: {
+                                    guard !isSaving else { return }
+                                    dismiss()
+                                }
+                            )
+                        } else {
+                            TextInputView(
+                                text: $inputText,
+                                isExtracting: isExtracting,
+                                onExtract: { extract() }
+                            )
+                        }
 
-                    if let error = errorMessage {
-                        Text(error)
-                            .font(DS.Typography.footnote)
-                            .foregroundStyle(DS.Colours.destructive)
-                            .padding(.horizontal, DS.Spacing.md)
+                        if let error = errorMessage {
+                            Label(error, systemImage: "exclamationmark.circle")
+                                .font(DS.Typography.footnote)
+                                .foregroundStyle(DS.Colours.destructive)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityAddTraits(.isStaticText)
+                        }
                     }
+                    .padding(DS.Spacing.md)
                 }
-                .padding(DS.Spacing.md)
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("New Memory")
             .navigationBarTitleDisplayMode(.inline)
@@ -103,12 +108,14 @@ struct CaptureTextSheet: View {
                 await MainActor.run {
                     extractionResult = result
                     isExtracting = false
+                    UIAccessibility.post(notification: .screenChanged, argument: "Review memory")
                 }
             } catch {
                 await MainActor.run {
                     HapticManager.error()
                     errorMessage = "Could not extract memory. Try again."
                     isExtracting = false
+                    UIAccessibility.post(notification: .announcement, argument: errorMessage)
                 }
             }
         }
@@ -212,7 +219,6 @@ struct TextInputView: View {
             .accessibilityLabel("Review memory")
             .accessibilityIdentifier(AccessibilityID.CaptureText.extract)
 
-            Spacer()
         }
         .task {
             isFocused = true
@@ -338,11 +344,10 @@ struct ExtractionConfirmView: View {
                     Text("Discard")
                         .font(DS.Typography.body)
                         .foregroundStyle(DS.Colours.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: 44.0)
                 }
                 .disabled(isSaving)
             }
-
-            Spacer()
         }
     }
 

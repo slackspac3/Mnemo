@@ -33,46 +33,49 @@ struct CaptureVoiceSheet: View {
             ZStack {
                 DS.Colours.backgroundGrouped.ignoresSafeArea()
 
-                VStack(spacing: DS.Spacing.xl) {
-                    if permissionDenied {
-                        PermissionDeniedView()
-                    } else if showingConfirm {
-                        VoiceConfirmView(
-                            transcript: $editedTranscript,
-                            isSaving: isSaving,
-                            onSave: { saveTranscript() },
-                            onRetry: {
-                                showingConfirm = false
-                                editedTranscript = ""
-                                errorMessage = nil
-                                isSaving = false
-                            },
-                            onDiscard: { dismiss() }
-                        )
-                    } else {
-                        VoiceRecordingView(
-                            isRecording: voiceHandler.isRecording,
-                            isReceivingAudio: voiceHandler.isReceivingAudio,
-                            isTranscribing: isTranscribing,
-                            audioLevel: voiceHandler.audioLevel,
-                            transcript: voiceHandler.transcript,
-                            onToggle: { toggleRecording() },
-                            onDone: {
-                                editedTranscript = voiceHandler.transcript
-                                showingConfirm = true
-                            }
-                        )
-                    }
+                ScrollView {
+                    VStack(spacing: DS.Spacing.xl) {
+                        if permissionDenied {
+                            PermissionDeniedView()
+                        } else if showingConfirm {
+                            VoiceConfirmView(
+                                transcript: $editedTranscript,
+                                isSaving: isSaving,
+                                onSave: { saveTranscript() },
+                                onRetry: {
+                                    showingConfirm = false
+                                    editedTranscript = ""
+                                    errorMessage = nil
+                                    isSaving = false
+                                },
+                                onDiscard: { dismiss() }
+                            )
+                        } else {
+                            VoiceRecordingView(
+                                isRecording: voiceHandler.isRecording,
+                                isReceivingAudio: voiceHandler.isReceivingAudio,
+                                isTranscribing: isTranscribing,
+                                audioLevel: voiceHandler.audioLevel,
+                                transcript: voiceHandler.transcript,
+                                onToggle: { toggleRecording() },
+                                onDone: {
+                                    editedTranscript = voiceHandler.transcript
+                                    showingConfirm = true
+                                }
+                            )
+                        }
 
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(DS.Typography.footnote)
-                            .foregroundStyle(DS.Colours.destructive)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, DS.Spacing.md)
+                        if let errorMessage {
+                            Label(errorMessage, systemImage: "exclamationmark.circle")
+                                .font(DS.Typography.footnote)
+                                .foregroundStyle(DS.Colours.destructive)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
+                    .padding(DS.Spacing.md)
                 }
-                .padding(DS.Spacing.xl)
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("Voice Capture")
             .navigationBarTitleDisplayMode(.inline)
@@ -91,6 +94,7 @@ struct CaptureVoiceSheet: View {
                 let granted = await voiceHandler.requestPermission()
                 if !granted {
                     permissionDenied = true
+                    UIAccessibility.post(notification: .screenChanged, argument: "Microphone access required")
                 }
             }
             .onChange(of: voiceHandler.transcript) { _, transcript in
@@ -99,10 +103,12 @@ struct CaptureVoiceSheet: View {
                 editedTranscript = trimmed
                 isTranscribing = false
                 showingConfirm = true
+                UIAccessibility.post(notification: .screenChanged, argument: "Review transcript")
             }
             .onChange(of: voiceHandler.recognitionErrorMessage) { _, message in
                 guard let message, !message.isEmpty else { return }
                 errorMessage = recognitionFailureMessage(message)
+                UIAccessibility.post(notification: .announcement, argument: errorMessage)
             }
             .overlay {
                 if let savedSummary {
@@ -123,9 +129,11 @@ struct CaptureVoiceSheet: View {
             isTranscribing = false
             do {
                 try voiceHandler.startRecording()
-                HapticManager.impact(.heavy)
+                HapticManager.impact(.light)
+                UIAccessibility.post(notification: .announcement, argument: "Recording started")
             } catch {
-                errorMessage = "Could not start recording: \(error.localizedDescription)"
+                errorMessage = "Could not start recording. Check microphone access and try again."
+                UIAccessibility.post(notification: .announcement, argument: errorMessage)
             }
         }
     }
@@ -133,6 +141,7 @@ struct CaptureVoiceSheet: View {
     private func finishRecording() {
         isTranscribing = true
         HapticManager.impact(.medium)
+        UIAccessibility.post(notification: .announcement, argument: "Recording stopped. Finishing transcript.")
 
         Task {
             if let capture = await voiceHandler.stopRecordingAndTranscribe() {
@@ -141,6 +150,7 @@ struct CaptureVoiceSheet: View {
                     errorMessage = nil
                     isTranscribing = false
                     showingConfirm = true
+                    UIAccessibility.post(notification: .screenChanged, argument: "Review transcript")
                 }
             } else {
                 await MainActor.run {
@@ -165,23 +175,15 @@ struct CaptureVoiceSheet: View {
             return "Audio was received, but no words were recognized. Try again and speak clearly until you tap stop."
         }
 
-        #if targetEnvironment(simulator)
-        return "No microphone input reached the simulator. In Simulator, choose I/O > Audio Input > Mac Microphone, or test on a physical iPhone."
-        #else
         return "No microphone input reached Mnemo. Check microphone access and try speaking closer to the phone."
-        #endif
     }
 
     private func recognitionFailureMessage(_ message: String) -> String {
         if message.localizedCaseInsensitiveContains("initialize recognizer") {
-            #if targetEnvironment(simulator)
-            return "The simulator is receiving microphone input, but Apple speech recognition could not start. Type what you said below, or retry on a physical iPhone."
-            #else
             return "Apple speech recognition could not start. Type what you said below, or restart the app and try again."
-            #endif
         }
 
-        return "Speech recognition could not finish: \(message)"
+        return "Speech recognition could not finish. Type what you said below or record again."
     }
 
     private func showManualTranscriptFallback(message: String) {
@@ -245,24 +247,19 @@ struct VoiceRecordingView: View {
     let onDone: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var pulse = false
     @State private var displayedLevel = 0.0
+    @State private var elapsedSeconds = 0
 
     var body: some View {
         VStack(spacing: DS.Spacing.lg) {
-            Spacer()
-
             ZStack {
                 if isRecording {
                     Circle()
-                        .stroke(DS.Colours.destructive.opacity(0.28), lineWidth: DS.Spacing.xs / 2)
+                        .stroke(DS.Colours.destructive.opacity(0.55), lineWidth: 2.0)
                         .frame(
                             width: DS.Spacing.xxxl + DS.Spacing.xxxl,
                             height: DS.Spacing.xxxl + DS.Spacing.xxxl
                         )
-                        .scaleEffect(pulse ? 1.08 : 0.88)
-                        .opacity(pulse ? 0.24 : 0.72)
-                        .animation(reduceMotion ? nil : DS.Animation.slow.repeatForever(autoreverses: true), value: pulse)
                 }
 
                 Circle()
@@ -298,20 +295,36 @@ struct VoiceRecordingView: View {
                 .accessibilityHint(isRecording ? "Stop recording and finish the transcript" : "Start voice capture")
             }
             .onAppear {
-                pulse = isRecording
                 displayedLevel = audioLevel
             }
             .onChange(of: isRecording) { _, newValue in
-                pulse = newValue
+                if !newValue {
+                    elapsedSeconds = 0
+                }
             }
             .onChange(of: audioLevel) { _, newValue in
                 withAnimation(reduceMotion ? nil : DS.Animation.quick) {
                     displayedLevel = newValue
                 }
             }
+            .task(id: isRecording) {
+                guard isRecording else { return }
+                elapsedSeconds = 0
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(1))
+                    guard !Task.isCancelled else { return }
+                    elapsedSeconds += 1
+                }
+            }
 
             if isRecording {
                 RecordingWaveform(level: displayedLevel)
+
+                Text(formattedDuration)
+                    .font(DS.Typography.headline.monospacedDigit())
+                    .foregroundStyle(DS.Colours.textPrimary)
+                    .accessibilityLabel("Recording time")
+                    .accessibilityValue(formattedDuration)
             }
 
             Text(statusText)
@@ -342,11 +355,12 @@ struct VoiceRecordingView: View {
                 }
                 .font(DS.Typography.headline)
                 .foregroundStyle(DS.Colours.accent)
+                .frame(minHeight: 44.0)
                 .buttonStyle(.mnemoPressable)
             }
-
-            Spacer()
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DS.Spacing.xl)
     }
 
     private var statusText: String {
@@ -357,6 +371,10 @@ struct VoiceRecordingView: View {
             return "Finishing transcript..."
         }
         return "Tap the microphone to start"
+    }
+
+    private var formattedDuration: String {
+        String(format: "%d:%02d", elapsedSeconds / 60, elapsedSeconds % 60)
     }
 }
 
@@ -443,6 +461,7 @@ struct VoiceConfirmView: View {
                 Text("Record again")
                     .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 44.0)
             }
             .buttonStyle(.mnemoPressable)
 
@@ -450,10 +469,9 @@ struct VoiceConfirmView: View {
                 Text("Discard")
                     .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 44.0)
             }
             .buttonStyle(.mnemoPressable)
-
-            Spacer()
         }
     }
 }
@@ -478,6 +496,7 @@ struct PermissionDeniedView: View {
             }
             .font(DS.Typography.headline)
             .foregroundStyle(DS.Colours.accent)
+            .frame(minHeight: 44.0)
             .buttonStyle(.mnemoPressable)
         }
     }

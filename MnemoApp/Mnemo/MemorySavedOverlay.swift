@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import MnemoUI
 
 struct MemorySavedOverlay: View {
@@ -6,6 +7,7 @@ struct MemorySavedOverlay: View {
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AccessibilityFocusState private var isAccessibilityFocused: Bool
     @State private var isVisible = false
 
     var body: some View {
@@ -31,10 +33,12 @@ struct MemorySavedOverlay: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DS.Colours.backgroundGrouped)
         .opacity(isVisible ? 1.0 : 0.0)
-        .scaleEffect(reduceMotion ? 1.0 : (isVisible ? 1.0 : 0.7))
+        .scaleEffect(reduceMotion ? 1.0 : (isVisible ? 1.0 : 0.96))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Memory saved")
         .accessibilityValue(summary)
+        .accessibilityAddTraits(.isStaticText)
+        .accessibilityFocused($isAccessibilityFocused)
         .onAppear {
             showThenDismiss()
         }
@@ -44,9 +48,13 @@ struct MemorySavedOverlay: View {
         withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.emphasisSpring) {
             isVisible = true
         }
+        isAccessibilityFocused = true
 
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 900_000_000)
+            let visibleDuration: UInt64 = UIAccessibility.isVoiceOverRunning
+                ? 3_200_000_000
+                : 1_400_000_000
+            try? await Task.sleep(nanoseconds: visibleDuration)
             withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.emphasisSpring) {
                 isVisible = false
             }
