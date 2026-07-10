@@ -1,14 +1,15 @@
 import SwiftUI
+import UIKit
 import MnemoUI
 
 /// Shown while AppState initialises on launch.
 struct SplashView: View {
     var body: some View {
         ZStack {
-            DS.Colours.canvas.ignoresSafeArea()
+            // Match the generated system launch screen; the Sage canvas appears with real app content.
+            Color(uiColor: .systemBackground).ignoresSafeArea()
 
-            MnemoLogoMark(size: 72.0, style: .filled)
-                .accessibilityLabel("Mnemo")
+            MnemoBrandLockup(markSize: 52.0)
         }
     }
 }

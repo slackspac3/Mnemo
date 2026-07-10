@@ -41,6 +41,7 @@ struct ThreadsView: View {
 
 struct ThreadCard: View {
     let thread: MemoryThread
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
@@ -58,28 +59,24 @@ struct ThreadCard: View {
                 Text(thread.threadDescription)
                     .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textSecondary)
-                    .lineLimit(2)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
             }
 
-            HStack(spacing: DS.Spacing.xs) {
-                Text(thread.startDate.formatted(.dateTime.day().month().year()))
-                    .font(DS.Typography.caption1)
-                    .foregroundStyle(DS.Colours.textTertiary)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DS.Spacing.xs) {
+                    dateRangeStart
+                    Image(systemName: "arrow.right")
+                        .accessibilityHidden(true)
+                    dateRangeEnd
+                }
 
-                Image(systemName: "arrow.right")
-                    .font(DS.Typography.caption1)
-                    .foregroundStyle(DS.Colours.textTertiary)
-
-                if let endDate = thread.endDate {
-                    Text(endDate.formatted(.dateTime.day().month().year()))
-                        .font(DS.Typography.caption1)
-                        .foregroundStyle(DS.Colours.textTertiary)
-                } else {
-                    Text("ongoing")
-                        .font(DS.Typography.caption1)
-                        .foregroundStyle(DS.Colours.textTertiary)
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                    dateRangeStart
+                    dateRangeEnd
                 }
             }
+            .font(DS.Typography.caption1)
+            .foregroundStyle(DS.Colours.textTertiary)
         }
         .padding(DS.Spacing.md)
         .background(DS.Colours.memoryCardSurface)
@@ -88,12 +85,19 @@ struct ThreadCard: View {
                 .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
         }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-        .shadow(
-            color: DS.Shadows.subtle.color,
-            radius: DS.Shadows.subtle.radius,
-            x: DS.Shadows.subtle.x,
-            y: DS.Shadows.subtle.y
-        )
+    }
+
+    private var dateRangeStart: some View {
+        Text(thread.startDate.formatted(.dateTime.day().month().year()))
+    }
+
+    @ViewBuilder
+    private var dateRangeEnd: some View {
+        if let endDate = thread.endDate {
+            Text(endDate.formatted(.dateTime.day().month().year()))
+        } else {
+            Text("Ongoing")
+        }
     }
 }
 
@@ -103,6 +107,7 @@ struct EmptyThreadsView: View {
             Image(systemName: "link")
                 .font(DS.Typography.largeTitle)
                 .foregroundStyle(DS.Colours.textTertiary)
+                .accessibilityHidden(true)
             Text("No threads yet")
                 .font(DS.Typography.title3)
                 .foregroundStyle(DS.Colours.textPrimary)

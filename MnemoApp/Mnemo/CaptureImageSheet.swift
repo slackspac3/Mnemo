@@ -377,6 +377,7 @@ struct ClarifyingQuestionView: View {
     let onSave: () -> Void
     let onRetry: () -> Void
     let onDiscard: () -> Void
+    @FocusState private var isAnswerFocused: Bool
 
     var body: some View {
         VStack(spacing: DS.Spacing.lg) {
@@ -398,7 +399,7 @@ struct ClarifyingQuestionView: View {
 
                     Text(payload.extractedText)
                         .font(DS.Typography.body)
-                        .foregroundStyle(DS.Colours.textSecondary)
+                        .foregroundStyle(DS.Colours.textPrimary)
                         .textSelection(.enabled)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -416,7 +417,7 @@ struct ClarifyingQuestionView: View {
                     .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textPrimary)
                     .scrollContentBackground(.hidden)
-                    .padding(DS.Spacing.sm)
+                    .focused($isAnswerFocused)
                     .frame(minHeight: 96.0)
                     .background(alignment: .topLeading) {
                         if answer.isEmpty {
@@ -428,8 +429,7 @@ struct ClarifyingQuestionView: View {
                                 .accessibilityHidden(true)
                         }
                     }
-                    .background(DS.Colours.surfaceSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                    .mnemoInputSurface(isFocused: isAnswerFocused)
                     .accessibilityLabel("Memory context")
             }
 

@@ -52,9 +52,12 @@ struct MemorySavedOverlay: View {
         isAccessibilityFocused = true
 
         Task { @MainActor in
-            let visibleDuration: UInt64 = UIAccessibility.isVoiceOverRunning
-                ? 3_200_000_000
-                : 1_400_000_000
+            let needsExtendedConfirmation = UIAccessibility.isVoiceOverRunning
+                || UIAccessibility.isSwitchControlRunning
+                || dynamicTypeSize.isAccessibilitySize
+            let visibleDuration: UInt64 = needsExtendedConfirmation
+                ? 5_000_000_000
+                : 1_800_000_000
             try? await Task.sleep(nanoseconds: visibleDuration)
             withAnimation(reduceMotion ? DS.Animation.fade : DS.Animation.emphasisSpring) {
                 isVisible = false

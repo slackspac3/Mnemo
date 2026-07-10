@@ -35,111 +35,117 @@ public enum DS {
         #endif
 
         // MARK: Brand - fixed values, same in both modes
-        public static let brandInk: Color = Color(.sRGB, red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, opacity: 1.0)
+        public static let brandInk: Color = Color(.sRGB, red: 35.0 / 255.0, green: 40.0 / 255.0, blue: 32.0 / 255.0, opacity: 1.0)
         public static let brandIndigo: Color = Color(.sRGB, red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, opacity: 1.0)
         public static let brandIndigoLight: Color = Color(.sRGB, red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, opacity: 1.0)
-        public static let brandParchment: Color = Color(.sRGB, red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 238.0 / 255.0, opacity: 1.0)
+        public static let brandParchment: Color = Color(.sRGB, red: 245.0 / 255.0, green: 247.0 / 255.0, blue: 241.0 / 255.0, opacity: 1.0)
+        public static let brandOlive: Color = Color(.sRGB, red: 92.0 / 255.0, green: 104.0 / 255.0, blue: 56.0 / 255.0, opacity: 1.0)
         public static let brandViolet: Color = Color(.sRGB, red: 109.0 / 255.0, green: 40.0 / 255.0, blue: 217.0 / 255.0, opacity: 1.0)
         public static let brandVioletLight: Color = Color(.sRGB, red: 167.0 / 255.0, green: 139.0 / 255.0, blue: 250.0 / 255.0, opacity: 1.0)
 
         #if os(iOS)
         // MARK: Backgrounds
         public static let backgroundPrimary: Color = adaptive(
-            light: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 238.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 17.0 / 255.0, green: 19.0 / 255.0, blue: 22.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 245.0 / 255.0, green: 247.0 / 255.0, blue: 241.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 19.0 / 255.0, green: 23.0 / 255.0, blue: 17.0 / 255.0, alpha: 1.0)
         )
         public static let backgroundSecondary: Color = adaptive(
-            light: UIColor(red: 238.0 / 255.0, green: 236.0 / 255.0, blue: 232.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 22.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 236.0 / 255.0, green: 239.0 / 255.0, blue: 230.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 25.0 / 255.0, green: 30.0 / 255.0, blue: 21.0 / 255.0, alpha: 1.0)
         )
         public static let backgroundGrouped: Color = adaptive(
-            light: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 238.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 17.0 / 255.0, green: 19.0 / 255.0, blue: 22.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 245.0 / 255.0, green: 247.0 / 255.0, blue: 241.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 19.0 / 255.0, green: 23.0 / 255.0, blue: 17.0 / 255.0, alpha: 1.0)
         )
         public static let backgroundElevated: Color = adaptive(
-            light: UIColor(red: 252.0 / 255.0, green: 251.0 / 255.0, blue: 249.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 28.0 / 255.0, green: 30.0 / 255.0, blue: 35.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 36.0 / 255.0, green: 44.0 / 255.0, blue: 32.0 / 255.0, alpha: 1.0)
         )
 
         // MARK: Surfaces - stable content planes over the canvas
         public static let surfacePrimary: Color = adaptive(
-            light: UIColor(red: 252.0 / 255.0, green: 251.0 / 255.0, blue: 249.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 28.0 / 255.0, green: 30.0 / 255.0, blue: 35.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 252.0 / 255.0, green: 253.0 / 255.0, blue: 249.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 29.0 / 255.0, green: 35.0 / 255.0, blue: 26.0 / 255.0, alpha: 1.0)
         )
         public static let surfaceSecondary: Color = adaptive(
-            light: UIColor(red: 238.0 / 255.0, green: 236.0 / 255.0, blue: 232.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 35.0 / 255.0, green: 37.0 / 255.0, blue: 43.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 231.0 / 255.0, green: 236.0 / 255.0, blue: 221.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 42.0 / 255.0, green: 49.0 / 255.0, blue: 34.0 / 255.0, alpha: 1.0)
         )
         public static let surfaceElevated: Color = adaptive(
             light: UIColor(red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 34.0 / 255.0, green: 36.0 / 255.0, blue: 42.0 / 255.0, alpha: 1.0)
+            dark: UIColor(red: 36.0 / 255.0, green: 44.0 / 255.0, blue: 32.0 / 255.0, alpha: 1.0)
         )
         public static let surfacePressed: Color = adaptive(
-            light: UIColor(red: 228.0 / 255.0, green: 226.0 / 255.0, blue: 223.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 44.0 / 255.0, green: 46.0 / 255.0, blue: 53.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 221.0 / 255.0, green: 227.0 / 255.0, blue: 207.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 51.0 / 255.0, green: 59.0 / 255.0, blue: 40.0 / 255.0, alpha: 1.0)
         )
         public static let surfaceDisabled: Color = adaptive(
             light: UIColor(red: 213.0 / 255.0, green: 208.0 / 255.0, blue: 200.0 / 255.0, alpha: 0.5),
-            dark: UIColor(red: 40.0 / 255.0, green: 52.0 / 255.0, blue: 70.0 / 255.0, alpha: 0.5)
+            dark: UIColor(red: 40.0 / 255.0, green: 52.0 / 255.0, blue: 31.0 / 255.0, alpha: 0.5)
         )
 
         // MARK: Text
         public static let textPrimary: Color = adaptive(
-            light: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 1.0),
+            light: UIColor(red: 35.0 / 255.0, green: 40.0 / 255.0, blue: 32.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 242.0 / 255.0, green: 245.0 / 255.0, blue: 237.0 / 255.0, alpha: 1.0),
             highContrastLight: .black,
             highContrastDark: .white
         )
         public static let textSecondary: Color = adaptive(
-            light: UIColor(red: 93.0 / 255.0, green: 97.0 / 255.0, blue: 106.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 180.0 / 255.0, green: 177.0 / 255.0, blue: 172.0 / 255.0, alpha: 1.0),
-            highContrastLight: UIColor(red: 62.0 / 255.0, green: 65.0 / 255.0, blue: 72.0 / 255.0, alpha: 1.0),
-            highContrastDark: UIColor(red: 218.0 / 255.0, green: 215.0 / 255.0, blue: 209.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 102.0 / 255.0, green: 112.0 / 255.0, blue: 100.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 187.0 / 255.0, green: 195.0 / 255.0, blue: 179.0 / 255.0, alpha: 1.0),
+            highContrastLight: UIColor(red: 74.0 / 255.0, green: 82.0 / 255.0, blue: 72.0 / 255.0, alpha: 1.0),
+            highContrastDark: UIColor(red: 216.0 / 255.0, green: 222.0 / 255.0, blue: 207.0 / 255.0, alpha: 1.0)
         )
         public static let textTertiary: Color = adaptive(
-            light: UIColor(red: 112.0 / 255.0, green: 115.0 / 255.0, blue: 123.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 148.0 / 255.0, green: 146.0 / 255.0, blue: 142.0 / 255.0, alpha: 1.0),
-            highContrastLight: UIColor(red: 78.0 / 255.0, green: 81.0 / 255.0, blue: 88.0 / 255.0, alpha: 1.0),
-            highContrastDark: UIColor(red: 196.0 / 255.0, green: 193.0 / 255.0, blue: 188.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 108.0 / 255.0, green: 116.0 / 255.0, blue: 100.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 142.0 / 255.0, green: 150.0 / 255.0, blue: 132.0 / 255.0, alpha: 1.0),
+            highContrastLight: UIColor(red: 79.0 / 255.0, green: 87.0 / 255.0, blue: 73.0 / 255.0, alpha: 1.0),
+            highContrastDark: UIColor(red: 191.0 / 255.0, green: 199.0 / 255.0, blue: 182.0 / 255.0, alpha: 1.0)
         )
-        public static let textOnAccent: Color = Color.white
+        public static let textOnAccent: Color = adaptive(
+            light: .white,
+            dark: UIColor(red: 242.0 / 255.0, green: 245.0 / 255.0, blue: 237.0 / 255.0, alpha: 1.0)
+        )
+        public static let textOnDestructive: Color = adaptive(
+            light: .white,
+            dark: UIColor(red: 35.0 / 255.0, green: 40.0 / 255.0, blue: 32.0 / 255.0, alpha: 1.0)
+        )
 
-        // MARK: Accent - indigo, adaptive brightness
+        // MARK: Accent - olive, adaptive brightness
         public static let accent: Color = adaptive(
-            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0),
-            highContrastLight: UIColor(red: 51.0 / 255.0, green: 39.0 / 255.0, blue: 145.0 / 255.0, alpha: 1.0),
-            highContrastDark: UIColor(red: 184.0 / 255.0, green: 181.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 92.0 / 255.0, green: 104.0 / 255.0, blue: 56.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 184.0 / 255.0, green: 201.0 / 255.0, blue: 138.0 / 255.0, alpha: 1.0)
         )
         public static let accentSoft: Color = adaptive(
-            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 0.11),
-            dark: UIColor(red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, alpha: 0.16)
+            light: UIColor(red: 228.0 / 255.0, green: 234.0 / 255.0, blue: 214.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 48.0 / 255.0, green: 57.0 / 255.0, blue: 35.0 / 255.0, alpha: 1.0)
         )
         public static let accentPressed: Color = adaptive(
-            light: UIColor(red: 54.0 / 255.0, green: 43.0 / 255.0, blue: 143.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 130.0 / 255.0, green: 126.0 / 255.0, blue: 232.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 74.0 / 255.0, green: 84.0 / 255.0, blue: 48.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 158.0 / 255.0, green: 176.0 / 255.0, blue: 114.0 / 255.0, alpha: 1.0)
         )
         public static let accentDisabled: Color = adaptive(
-            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 0.28),
-            dark: UIColor(red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, alpha: 0.30)
+            light: UIColor(red: 92.0 / 255.0, green: 104.0 / 255.0, blue: 56.0 / 255.0, alpha: 0.28),
+            dark: UIColor(red: 184.0 / 255.0, green: 201.0 / 255.0, blue: 138.0 / 255.0, alpha: 0.30)
         )
 
         // MARK: Borders - visible structure, editorial feel
         public static let borderSubtle: Color = adaptive(
-            light: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 0.10),
-            dark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.12),
-            highContrastLight: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 0.28),
-            highContrastDark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.30)
+            light: UIColor(red: 35.0 / 255.0, green: 40.0 / 255.0, blue: 32.0 / 255.0, alpha: 0.10),
+            dark: UIColor(red: 242.0 / 255.0, green: 245.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.10),
+            highContrastLight: UIColor(red: 35.0 / 255.0, green: 40.0 / 255.0, blue: 32.0 / 255.0, alpha: 0.28),
+            highContrastDark: UIColor(red: 242.0 / 255.0, green: 245.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.30)
         )
         public static let borderStrong: Color = adaptive(
-            light: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 0.22),
-            dark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.24),
-            highContrastLight: UIColor(red: 23.0 / 255.0, green: 24.0 / 255.0, blue: 28.0 / 255.0, alpha: 0.48),
-            highContrastDark: UIColor(red: 244.0 / 255.0, green: 242.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.50)
+            light: UIColor(red: 35.0 / 255.0, green: 40.0 / 255.0, blue: 32.0 / 255.0, alpha: 0.22),
+            dark: UIColor(red: 242.0 / 255.0, green: 245.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.24),
+            highContrastLight: UIColor(red: 35.0 / 255.0, green: 40.0 / 255.0, blue: 32.0 / 255.0, alpha: 0.48),
+            highContrastDark: UIColor(red: 242.0 / 255.0, green: 245.0 / 255.0, blue: 237.0 / 255.0, alpha: 0.50)
         )
         public static let borderAccent: Color = adaptive(
-            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 0.24),
-            dark: UIColor(red: 154.0 / 255.0, green: 150.0 / 255.0, blue: 255.0 / 255.0, alpha: 0.28)
+            light: UIColor(red: 92.0 / 255.0, green: 104.0 / 255.0, blue: 56.0 / 255.0, alpha: 0.24),
+            dark: UIColor(red: 184.0 / 255.0, green: 201.0 / 255.0, blue: 138.0 / 255.0, alpha: 0.28)
         )
         public static let borderDestructive: Color = adaptive(
             light: UIColor(red: 220.0 / 255.0, green: 38.0 / 255.0, blue: 38.0 / 255.0, alpha: 0.30),
@@ -148,8 +154,8 @@ public enum DS {
 
         // MARK: Semantic states
         public static let success: Color = adaptive(
-            light: UIColor(red: 21.0 / 255.0, green: 128.0 / 255.0, blue: 61.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 52.0 / 255.0, green: 211.0 / 255.0, blue: 153.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 63.0 / 255.0, green: 122.0 / 255.0, blue: 78.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 127.0 / 255.0, green: 199.0 / 255.0, blue: 154.0 / 255.0, alpha: 1.0)
         )
         public static let warning: Color = adaptive(
             light: UIColor(red: 180.0 / 255.0, green: 83.0 / 255.0, blue: 9.0 / 255.0, alpha: 1.0),
@@ -160,8 +166,8 @@ public enum DS {
             dark: UIColor(red: 248.0 / 255.0, green: 113.0 / 255.0, blue: 113.0 / 255.0, alpha: 1.0)
         )
         public static let successSoft: Color = adaptive(
-            light: UIColor(red: 21.0 / 255.0, green: 128.0 / 255.0, blue: 61.0 / 255.0, alpha: 0.10),
-            dark: UIColor(red: 52.0 / 255.0, green: 211.0 / 255.0, blue: 153.0 / 255.0, alpha: 0.15)
+            light: UIColor(red: 63.0 / 255.0, green: 122.0 / 255.0, blue: 78.0 / 255.0, alpha: 0.10),
+            dark: UIColor(red: 127.0 / 255.0, green: 199.0 / 255.0, blue: 154.0 / 255.0, alpha: 0.15)
         )
         public static let warningSoft: Color = adaptive(
             light: UIColor(red: 180.0 / 255.0, green: 83.0 / 255.0, blue: 9.0 / 255.0, alpha: 0.10),
@@ -191,18 +197,25 @@ public enum DS {
         public static let glassTint: Color = accent.opacity(0.12)
         public static let glassBorder: Color = borderAccent
         public static let controlAccent: Color = adaptive(
-            light: UIColor(red: 68.0 / 255.0, green: 56.0 / 255.0, blue: 168.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 85.0 / 255.0, green: 74.0 / 255.0, blue: 179.0 / 255.0, alpha: 1.0),
-            highContrastLight: UIColor(red: 51.0 / 255.0, green: 39.0 / 255.0, blue: 145.0 / 255.0, alpha: 1.0),
-            highContrastDark: UIColor(red: 74.0 / 255.0, green: 63.0 / 255.0, blue: 161.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 92.0 / 255.0, green: 104.0 / 255.0, blue: 56.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 93.0 / 255.0, green: 105.0 / 255.0, blue: 59.0 / 255.0, alpha: 1.0)
         )
         public static let controlAccentPressed: Color = adaptive(
-            light: UIColor(red: 54.0 / 255.0, green: 43.0 / 255.0, blue: 143.0 / 255.0, alpha: 1.0),
-            dark: UIColor(red: 70.0 / 255.0, green: 59.0 / 255.0, blue: 154.0 / 255.0, alpha: 1.0)
+            light: UIColor(red: 74.0 / 255.0, green: 84.0 / 255.0, blue: 48.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 76.0 / 255.0, green: 86.0 / 255.0, blue: 47.0 / 255.0, alpha: 1.0)
         )
-        public static let sourceAccent: Color = accent
-        public static let sourceSurface: Color = accentSoft
-        public static let sourceBorder: Color = borderAccent
+        public static let sourceAccent: Color = adaptive(
+            light: UIColor(red: 125.0 / 255.0, green: 92.0 / 255.0, blue: 114.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 209.0 / 255.0, green: 162.0 / 255.0, blue: 188.0 / 255.0, alpha: 1.0)
+        )
+        public static let sourceSurface: Color = adaptive(
+            light: UIColor(red: 239.0 / 255.0, green: 227.0 / 255.0, blue: 234.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 64.0 / 255.0, green: 46.0 / 255.0, blue: 58.0 / 255.0, alpha: 1.0)
+        )
+        public static let sourceBorder: Color = adaptive(
+            light: UIColor(red: 125.0 / 255.0, green: 92.0 / 255.0, blue: 114.0 / 255.0, alpha: 0.32),
+            dark: UIColor(red: 209.0 / 255.0, green: 162.0 / 255.0, blue: 188.0 / 255.0, alpha: 0.35)
+        )
         public static let separator: Color = borderSubtle
         public static let focus: Color = accent
 
@@ -212,8 +225,14 @@ public enum DS {
         public static let sourceCardAccent: Color = sourceAccent
         public static let memoryCardSurface: Color = contentSurface
         public static let memoryCardBorder: Color = separator
-        public static let privateBadgeSurface: Color = accentSoft
-        public static let privateBadgeText: Color = accent
+        public static let privateBadgeSurface: Color = adaptive(
+            light: UIColor(red: 221.0 / 255.0, green: 232.0 / 255.0, blue: 231.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 38.0 / 255.0, green: 59.0 / 255.0, blue: 59.0 / 255.0, alpha: 1.0)
+        )
+        public static let privateBadgeText: Color = adaptive(
+            light: UIColor(red: 63.0 / 255.0, green: 86.0 / 255.0, blue: 90.0 / 255.0, alpha: 1.0),
+            dark: UIColor(red: 156.0 / 255.0, green: 197.0 / 255.0, blue: 196.0 / 255.0, alpha: 1.0)
+        )
         public static let appLockBackground: Color = backgroundGrouped
         public static let appLockSurface: Color = surfaceElevated
         public static let textDestructive: Color = destructive
@@ -230,7 +249,7 @@ public enum DS {
         public static let brandThread: Color = textOnAccent
         public static let brandThreadSoft: Color = textOnAccent.opacity(0.74)
         #else
-        // macOS fallbacks - keep existing macOS definitions unchanged
+        // macOS fallbacks use the same semantic roles with native system surfaces.
         public static let backgroundPrimary: Color = Color(nsColor: .windowBackgroundColor)
         public static let backgroundSecondary: Color = Color(nsColor: .underPageBackgroundColor)
         public static let backgroundGrouped: Color = Color(nsColor: .windowBackgroundColor)
@@ -250,14 +269,15 @@ public enum DS {
         public static let textSecondary: Color = .secondary
         public static let textTertiary: Color = .secondary.opacity(0.82)
         public static let textOnAccent: Color = .white
+        public static let textOnDestructive: Color = .white
         public static let textDestructive: Color = .red
-        public static let accent: Color = brandIndigo
-        public static let accentSoft: Color = brandIndigo.opacity(0.10)
-        public static let accentPressed: Color = brandIndigo.opacity(0.80)
-        public static let accentDisabled: Color = brandIndigo.opacity(0.28)
+        public static let accent: Color = brandOlive
+        public static let accentSoft: Color = brandOlive.opacity(0.10)
+        public static let accentPressed: Color = brandOlive.opacity(0.80)
+        public static let accentDisabled: Color = brandOlive.opacity(0.28)
         public static let borderSubtle: Color = Color.primary.opacity(0.09)
         public static let borderStrong: Color = Color.primary.opacity(0.16)
-        public static let borderAccent: Color = brandIndigo.opacity(0.22)
+        public static let borderAccent: Color = brandOlive.opacity(0.22)
         public static let borderDestructive: Color = Color.red.opacity(0.30)
         public static let sense: Color = brandViolet
         public static let senseLight: Color = brandViolet.opacity(0.10)
@@ -270,18 +290,18 @@ public enum DS {
         public static let glassBorder: Color = borderAccent
         public static let controlAccent: Color = accent
         public static let controlAccentPressed: Color = accentPressed
-        public static let sourceAccent: Color = accent
-        public static let sourceSurface: Color = accentSoft
-        public static let sourceBorder: Color = borderAccent
+        public static let sourceAccent: Color = Color(.sRGB, red: 125.0 / 255.0, green: 92.0 / 255.0, blue: 114.0 / 255.0, opacity: 1.0)
+        public static let sourceSurface: Color = Color(.sRGB, red: 239.0 / 255.0, green: 227.0 / 255.0, blue: 234.0 / 255.0, opacity: 1.0)
+        public static let sourceBorder: Color = sourceAccent.opacity(0.32)
         public static let separator: Color = borderSubtle
         public static let focus: Color = accent
-        public static let sourceCardSurface: Color = brandIndigo.opacity(0.10)
-        public static let sourceCardBorder: Color = brandIndigo.opacity(0.22)
-        public static let sourceCardAccent: Color = brandIndigo
+        public static let sourceCardSurface: Color = sourceSurface
+        public static let sourceCardBorder: Color = sourceBorder
+        public static let sourceCardAccent: Color = sourceAccent
         public static let memoryCardSurface: Color = Color(nsColor: .controlBackgroundColor)
         public static let memoryCardBorder: Color = Color.primary.opacity(0.09)
-        public static let privateBadgeSurface: Color = brandIndigo.opacity(0.10)
-        public static let privateBadgeText: Color = brandIndigo
+        public static let privateBadgeSurface: Color = Color(.sRGB, red: 221.0 / 255.0, green: 232.0 / 255.0, blue: 231.0 / 255.0, opacity: 1.0)
+        public static let privateBadgeText: Color = Color(.sRGB, red: 63.0 / 255.0, green: 86.0 / 255.0, blue: 90.0 / 255.0, opacity: 1.0)
         public static let appLockBackground: Color = Color(nsColor: .windowBackgroundColor)
         public static let appLockSurface: Color = Color(nsColor: .controlBackgroundColor)
         public static let primary: Color = brandInk
@@ -290,8 +310,8 @@ public enum DS {
         public static let successLight: Color = .green.opacity(0.12)
         public static let warningLight: Color = .orange.opacity(0.12)
         public static let destructiveLight: Color = .red.opacity(0.12)
-        public static let brandSage: Color = brandIndigo
-        public static let brandSageSoft: Color = brandIndigo.opacity(0.10)
+        public static let brandSage: Color = accent
+        public static let brandSageSoft: Color = accentSoft
         public static let brandThread: Color = .white
         public static let brandThreadSoft: Color = Color.white.opacity(0.74)
         #endif
@@ -442,7 +462,7 @@ public enum DS {
 
         public enum DestructiveButton {
             public static let background: Color = DS.Colours.destructive
-            public static let foreground: Color = DS.Colours.textOnAccent
+            public static let foreground: Color = DS.Colours.textOnDestructive
             public static let cornerRadius: CGFloat = DS.CornerRadius.medium
             public static let height: CGFloat = 52.0
         }
@@ -476,7 +496,7 @@ public enum DS {
 
         public enum LockState {
             public static let iconBackground: Color = DS.Colours.privateBadgeSurface
-            public static let iconForeground: Color = DS.Colours.accent
+            public static let iconForeground: Color = DS.Colours.privateBadgeText
             public static let cardPadding: CGFloat = DS.Spacing.lg
         }
     }

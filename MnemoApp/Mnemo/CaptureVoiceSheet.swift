@@ -466,6 +466,7 @@ struct VoiceConfirmView: View {
     let onSave: () -> Void
     let onRetry: () -> Void
     let onDiscard: () -> Void
+    @FocusState private var isTranscriptFocused: Bool
 
     var body: some View {
         VStack(spacing: DS.Spacing.lg) {
@@ -477,7 +478,7 @@ struct VoiceConfirmView: View {
                 .font(DS.Typography.body)
                 .foregroundStyle(DS.Colours.textPrimary)
                 .scrollContentBackground(.hidden)
-                .padding(DS.Spacing.sm)
+                .focused($isTranscriptFocused)
                 .frame(minHeight: DS.Spacing.xxxl + DS.Spacing.xxl)
                 .background(alignment: .topLeading) {
                     if transcript.isEmpty {
@@ -487,8 +488,7 @@ struct VoiceConfirmView: View {
                             .padding(DS.Spacing.md)
                     }
                 }
-                .background(DS.Colours.surfaceSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                .mnemoInputSurface(isFocused: isTranscriptFocused)
 
             Button(action: onSave) {
                 HStack {

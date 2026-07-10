@@ -94,6 +94,7 @@ struct BackupRestoreView: View {
                                     }
                                     .font(DS.Typography.caption1)
                                     .foregroundStyle(DS.Colours.accent)
+                                    .frame(minWidth: 44.0, minHeight: 44.0)
                                 }
                             }
                         } header: {
@@ -106,7 +107,7 @@ struct BackupRestoreView: View {
                         HStack(alignment: .top, spacing: DS.Spacing.sm) {
                             Image(systemName: "lock.shield")
                                 .font(DS.Typography.subheadline)
-                                .foregroundStyle(DS.Colours.success)
+                                .foregroundStyle(DS.Colours.privateBadgeText)
                             Text("Backups are encrypted before being stored in your iCloud account. Mnemo does not operate a backup server. Restore currently requires this iPhone's local Keychain backup key, so restore on a new or replacement iPhone is not available in this build.")
                                 .font(DS.Typography.footnote)
                                 .foregroundStyle(DS.Colours.textSecondary)

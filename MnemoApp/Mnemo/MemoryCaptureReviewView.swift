@@ -13,6 +13,7 @@ struct MemoryCaptureReviewView: View {
     let onDiscard: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @FocusState private var isSummaryFocused: Bool
 
     private var proposal: MemoryNormalizationProposal? {
         result.normalizationProposal
@@ -37,10 +38,14 @@ struct MemoryCaptureReviewView: View {
                    proposal?.requiresClarification == true {
                     Label(question, systemImage: "questionmark.bubble")
                         .font(DS.Typography.subheadline)
-                        .foregroundStyle(DS.Colours.warning)
+                        .foregroundStyle(DS.Colours.textPrimary)
                         .padding(DS.Spacing.md)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(DS.Colours.warningSoft)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                                .stroke(DS.Colours.warning, lineWidth: 1.0)
+                        }
                         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                         .accessibilityLabel("Check before saving. \(question)")
                 }
@@ -54,14 +59,9 @@ struct MemoryCaptureReviewView: View {
                         .font(DS.Typography.body)
                         .foregroundStyle(DS.Colours.textPrimary)
                         .scrollContentBackground(.hidden)
+                        .focused($isSummaryFocused)
                         .frame(minHeight: 112.0)
-                        .padding(DS.Spacing.sm)
-                        .background(DS.Colours.memoryCardSurface)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
+                        .mnemoInputSurface(isFocused: isSummaryFocused)
                         .accessibilityLabel("Memory summary")
                         .accessibilityHint("Edit the exact summary Mnemo will save")
                 }
@@ -75,7 +75,7 @@ struct MemoryCaptureReviewView: View {
 
                     Text(confidenceLabel)
                         .font(DS.Typography.caption1.weight(.semibold))
-                        .foregroundStyle(result.confidence > 0.70 ? DS.Colours.success : DS.Colours.warning)
+                        .foregroundStyle(DS.Colours.textPrimary)
                         .padding(.horizontal, DS.Spacing.sm)
                         .padding(.vertical, DS.Spacing.xs)
                         .background(result.confidence > 0.70 ? DS.Colours.successSoft : DS.Colours.warningSoft)
@@ -184,7 +184,7 @@ struct MemoryCaptureReviewView: View {
 
                     Text(correction.reason)
                         .font(DS.Typography.caption1)
-                        .foregroundStyle(DS.Colours.textSecondary)
+                        .foregroundStyle(DS.Colours.textPrimary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
@@ -194,10 +194,10 @@ struct MemoryCaptureReviewView: View {
             }
         }
         .padding(DS.Spacing.md)
-        .background(DS.Colours.sourceSurface)
+        .background(DS.Colours.accentSoft)
         .overlay {
             RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                .stroke(DS.Colours.sourceBorder, lineWidth: 1.0)
+                .stroke(DS.Colours.borderAccent, lineWidth: 1.0)
         }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
     }

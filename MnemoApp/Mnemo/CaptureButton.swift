@@ -29,7 +29,7 @@ struct CaptureButton: View {
                     CaptureOptionButton(
                         icon: "camera.fill",
                         label: "Camera",
-                        color: DS.Colours.success
+                        color: DS.Colours.controlAccent
                     ) {
                         HapticManager.impact(.light)
                         expanded = false
@@ -39,7 +39,7 @@ struct CaptureButton: View {
                     CaptureOptionButton(
                         icon: "photo.on.rectangle",
                         label: "Photo",
-                        color: DS.Colours.warning
+                        color: DS.Colours.controlAccent
                     ) {
                         HapticManager.impact(.light)
                         expanded = false
@@ -49,7 +49,7 @@ struct CaptureButton: View {
                     CaptureOptionButton(
                         icon: "mic.fill",
                         label: "Voice",
-                        color: DS.Colours.accent
+                        color: DS.Colours.controlAccent
                     ) {
                         HapticManager.impact(.light)
                         expanded = false
@@ -59,7 +59,7 @@ struct CaptureButton: View {
                     CaptureOptionButton(
                         icon: "square.and.pencil",
                         label: "Text",
-                        color: DS.Colours.brandInk
+                        color: DS.Colours.controlAccent
                     ) {
                         HapticManager.impact(.light)
                         expanded = false

@@ -1,13 +1,15 @@
-# App Icon Notes - 2026-07-07
+# App Icon Notes
 
-This pass did not replace the production `AppIcon.appiconset`.
+Updated: 2026-07-10
+
+The production `AppIcon.appiconset` now uses the user-approved Notebook N-A identity.
 
 ## Direction
 
-Use the Mnemonic Thread mark:
+Use the closed Notebook N-A mark:
 
-- Deep ink rounded-square tile.
-- White continuous thread mark.
+- Soft Sage tile with the single-color Olive notebook mark.
+- Dark and tinted catalog variants preserve the same geometry.
 - No text.
 - No transparency.
 - No lock, brain, robot, chat bubble, sparkle, or cloud symbol.
@@ -21,14 +23,13 @@ Source reference:
 
 Before replacing the production AppIcon:
 
-1. Export a 1024 x 1024 PNG with no alpha channel.
-2. Preview at homescreen size and App Store size.
-3. Check on light and dark wallpapers.
-4. Check the iOS rounded-square mask.
-5. Confirm the thread remains recognisable at small sizes.
-6. Confirm the icon does not look like a generic security/vault app.
-7. Commit only the final asset set, not intermediate experiments.
+1. Default, Dark, and Tinted 1024 x 1024 catalog PNGs are opaque RGB.
+2. Editable Default, Dark, Tinted, and Monochrome SVG masters live in `Design/AppIcon`.
+3. Validate the complete icon at 180, 120, 60, 44, and 29 points.
+4. Confirm the notebook, elastic, and ribbon remain legible on light and dark wallpapers.
+5. Confirm the icon does not resemble a generic notes, journal, or security app.
+6. Import the editable masters into Icon Composer for final Clear/system-rendered validation when GUI automation or human review is available.
 
-## Reason Deferred
+## Current limitation
 
-Generating a full icon set inside this pass would risk committing low-quality raster experiments. The safer launch path is to use the new in-app `MnemoLogoMark` immediately and export the production AppIcon from the documented vector source after visual QA.
+Icon Composer 1.6 is installed and `ictool` was inspected. `ictool` exports existing `.icon` documents but does not create them. This environment does not grant assistive access to automate the GUI, so a canonical `.icon` and Clear-mode renders remain a human-tooling review item. The app uses the validated opaque catalog variants in the meantime; no fabricated `.icon` file is committed.

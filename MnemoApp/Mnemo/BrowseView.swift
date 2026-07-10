@@ -16,6 +16,10 @@ struct BrowseView: View {
     @State private var selectedStatusFilter: StatusFilter = .all
     @State private var selectedMemory: SelectedMemory?
 
+    private var hasBrowsableMemories: Bool {
+        records.contains { !$0.isArchived }
+    }
+
     enum TypeFilter: String, CaseIterable {
         case all
         case preference
@@ -93,10 +97,12 @@ struct BrowseView: View {
                 DS.Colours.backgroundGrouped.ignoresSafeArea()
 
                 VStack(spacing: DS.Spacing.xs) {
-                    BrowseFilterBar(
-                        selectedType: $selectedTypeFilter,
-                        selectedStatus: $selectedStatusFilter
-                    )
+                    if hasBrowsableMemories {
+                        BrowseFilterBar(
+                            selectedType: $selectedTypeFilter,
+                            selectedStatus: $selectedStatusFilter
+                        )
+                    }
 
                     if filteredRecords.isEmpty {
                         EmptyBrowseView(
@@ -256,74 +262,95 @@ private struct BrowseFilterBar: View {
         selectedType != .all || selectedStatus != .all
     }
 
+    private var activeFilterCount: Int {
+        (selectedType == .all ? 0 : 1) + (selectedStatus == .all ? 0 : 1)
+    }
+
+    private var filterSummary: String {
+        guard hasActiveFilter else { return "All memories" }
+        return [
+            selectedType == .all ? nil : selectedType.title,
+            selectedStatus == .all ? nil : selectedStatus.title,
+        ]
+        .compactMap { $0 }
+        .joined(separator: ", ")
+    }
+
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(spacing: DS.Spacing.sm) {
-                    typeMenu
-                    statusMenu
-                    clearButton
-                }
-            } else {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: DS.Spacing.sm) {
+                filterSummaryLabel
+                Spacer(minLength: DS.Spacing.sm)
+                filterMenu
+                clearButton
+            }
+
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                filterSummaryLabel
                 HStack(spacing: DS.Spacing.sm) {
-                    typeMenu
-                    statusMenu
+                    filterMenu
                     clearButton
                 }
             }
         }
         .padding(.horizontal, DS.Spacing.md)
-        .padding(.vertical, DS.Spacing.sm)
+        .padding(.top, DS.Spacing.xs)
+        .padding(.bottom, DS.Spacing.sm)
     }
 
-    private var typeMenu: some View {
+    private var filterSummaryLabel: some View {
+        Text(filterSummary)
+            .font(DS.Typography.subheadline)
+            .foregroundStyle(hasActiveFilter ? DS.Colours.textPrimary : DS.Colours.textSecondary)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var filterMenu: some View {
         Menu {
-            ForEach(BrowseView.TypeFilter.allCases, id: \.self) { filter in
-                Button {
-                    guard selectedType != filter else { return }
-                    selectedType = filter
-                    HapticManager.selection()
-                } label: {
-                    if selectedType == filter {
-                        Label(filter.title, systemImage: "checkmark")
-                    } else {
-                        Text(filter.title)
+            Section("Type") {
+                ForEach(BrowseView.TypeFilter.allCases, id: \.self) { filter in
+                    Button {
+                        guard selectedType != filter else { return }
+                        selectedType = filter
+                        HapticManager.selection()
+                    } label: {
+                        if selectedType == filter {
+                            Label(filter.title, systemImage: "checkmark")
+                        } else {
+                            Text(filter.title)
+                        }
+                    }
+                }
+            }
+
+            Section("Status") {
+                ForEach(BrowseView.StatusFilter.allCases, id: \.self) { filter in
+                    Button {
+                        guard selectedStatus != filter else { return }
+                        selectedStatus = filter
+                        HapticManager.selection()
+                    } label: {
+                        if selectedStatus == filter {
+                            Label(filter.title, systemImage: "checkmark")
+                        } else {
+                            Text(filter.title)
+                        }
                     }
                 }
             }
         } label: {
-            filterLabel(
-                title: selectedType.title,
-                systemImage: "square.grid.2x2"
-            )
-        }
-        .accessibilityLabel("Memory type")
-        .accessibilityValue(selectedType.title)
-    }
-
-    private var statusMenu: some View {
-        Menu {
-            ForEach(BrowseView.StatusFilter.allCases, id: \.self) { filter in
-                Button {
-                    guard selectedStatus != filter else { return }
-                    selectedStatus = filter
-                    HapticManager.selection()
-                } label: {
-                    if selectedStatus == filter {
-                        Label(filter.title, systemImage: "checkmark")
-                    } else {
-                        Text(filter.title)
-                    }
-                }
-            }
-        } label: {
-            filterLabel(
-                title: selectedStatus.title,
+            Label(
+                activeFilterCount == 0 ? "Filter" : "Filter (\(activeFilterCount))",
                 systemImage: "line.3.horizontal.decrease"
             )
+            .font(DS.Typography.subheadline.weight(.semibold))
+            .frame(minHeight: 44.0)
         }
-        .accessibilityLabel("Memory status")
-        .accessibilityValue(selectedStatus.title)
+        .buttonStyle(.bordered)
+        .tint(DS.Colours.accent)
+        .accessibilityLabel("Filter memories")
+        .accessibilityValue(filterSummary)
     }
 
     @ViewBuilder
@@ -336,8 +363,7 @@ private struct BrowseFilterBar: View {
             } label: {
                 Group {
                     if dynamicTypeSize.isAccessibilitySize {
-                        Label("Clear filters", systemImage: "xmark")
-                            .frame(maxWidth: .infinity)
+                        Label("Clear", systemImage: "xmark")
                     } else {
                         Image(systemName: "xmark")
                             .frame(width: 44.0)
@@ -345,49 +371,11 @@ private struct BrowseFilterBar: View {
                 }
                 .font(DS.Typography.body.weight(.semibold))
                 .frame(minHeight: 44.0)
-                .background(DS.Colours.surfaceSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
             }
-            .foregroundStyle(DS.Colours.textSecondary)
-            .buttonStyle(.mnemoPressable)
+            .buttonStyle(.bordered)
+            .tint(DS.Colours.textSecondary)
             .accessibilityLabel("Clear filters")
         }
-    }
-
-    private func filterLabel(title: String, systemImage: String) -> some View {
-        HStack(spacing: DS.Spacing.sm) {
-            Label(title, systemImage: systemImage)
-                .font(DS.Typography.subheadline)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(DS.Typography.caption2)
-                .accessibilityHidden(true)
-        }
-        .foregroundStyle(DS.Colours.textPrimary)
-        .padding(.horizontal, DS.Spacing.sm)
-        .frame(maxWidth: .infinity, minHeight: 44.0)
-        .background(DS.Colours.surfaceSecondary)
-        .overlay {
-            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-    }
-}
-
-private func typeAccentColour(for type: MemoryType) -> Color {
-    switch type {
-    case .preference, .intention:
-        return DS.Colours.sense.opacity(0.8)
-    case .list:
-        return DS.Colours.success.opacity(0.8)
-    case .credential:
-        return DS.Colours.warning.opacity(0.8)
-    case .event:
-        return DS.Colours.accent.opacity(0.8)
-    case .fact, .instruction:
-        return DS.Colours.brandSage.opacity(0.6)
     }
 }
 
@@ -399,15 +387,17 @@ struct MemoryCard: View {
 
     var body: some View {
         let memoryType = record.memoryTypeEnum ?? .fact
-        let accent = typeAccentColour(for: memoryType)
 
         HStack(alignment: .top, spacing: DS.Spacing.sm) {
             MemoryTypeIcon(type: memoryType)
                 .frame(width: 36.0, height: 36.0)
-                .background(differentiateWithoutColor ? DS.Colours.surfaceSecondary : accent.opacity(0.12))
+                .background(DS.Colours.surfaceSecondary)
                 .overlay {
                     RoundedRectangle(cornerRadius: DS.CornerRadius.small)
-                        .stroke(DS.Colours.borderSubtle, lineWidth: differentiateWithoutColor ? 1.0 : 0.0)
+                        .stroke(
+                            differentiateWithoutColor ? DS.Colours.borderStrong : DS.Colours.borderSubtle,
+                            lineWidth: 1.0
+                        )
                 }
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.small))
                 .accessibilityHidden(true)
@@ -429,7 +419,7 @@ struct MemoryCard: View {
                 Text(record.summary)
                     .font(DS.Typography.body)
                     .foregroundStyle(DS.Colours.textPrimary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 6 : 3)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
                     .multilineTextAlignment(.leading)
 
                 ViewThatFits(in: .horizontal) {
@@ -474,9 +464,14 @@ struct MemoryCard: View {
     }
 
     private var statusMetadata: some View {
-        Label(statusLabel, systemImage: statusIcon)
-            .font(DS.Typography.caption1)
-            .foregroundStyle(DS.Colours.textSecondary)
+        Label {
+            Text(statusLabel)
+                .foregroundStyle(DS.Colours.textSecondary)
+        } icon: {
+            Image(systemName: statusIcon)
+                .foregroundStyle(isActive ? DS.Colours.accent : DS.Colours.textSecondary)
+        }
+        .font(DS.Typography.caption1)
     }
 
     private var capturedMetadata: some View {
@@ -514,6 +509,10 @@ struct MemoryCard: View {
         case .review: return "exclamationmark.circle"
         case .none: return "bookmark"
         }
+    }
+
+    private var isActive: Bool {
+        !record.isDone && record.persistenceStateEnum == .active
     }
 
     private var sourceLabel: String {
@@ -565,25 +564,10 @@ struct MemoryTypeIcon: View {
         }
     }
 
-    var color: Color {
-        switch type {
-        case .preference, .intention:
-            return DS.Colours.sense
-        case .list:
-            return DS.Colours.success
-        case .credential:
-            return DS.Colours.warning
-        case .event, .instruction:
-            return DS.Colours.accent
-        case .fact:
-            return DS.Colours.accent
-        }
-    }
-
     var body: some View {
         Image(systemName: icon)
             .font(DS.Typography.caption1)
-            .foregroundStyle(color)
+            .foregroundStyle(DS.Colours.textSecondary)
     }
 }
 
@@ -593,7 +577,7 @@ struct ProcessingTierBadge: View {
     var body: some View {
         Image(systemName: tier == .onDevice ? "lock.shield.fill" : "cloud.fill")
             .font(DS.Typography.caption2)
-            .foregroundStyle(tier == .onDevice ? DS.Colours.success : DS.Colours.accent)
+            .foregroundStyle(tier == .onDevice ? DS.Colours.privateBadgeText : DS.Colours.accent)
     }
 }
 
@@ -604,39 +588,19 @@ struct EmptyBrowseView: View {
     let onWriteMemory: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: DS.Spacing.lg) {
-            Spacer()
-            ZStack {
-                MnemoThreadMotif(style: .hero, lineWidth: 2.0)
-                    .frame(width: 150.0, height: 112.0)
-                MnemoLogoMark(size: 72.0, style: .subtle)
-                    .accessibilityHidden(true)
-            }
-            Text(title)
-                .font(DS.Typography.title3)
-                .foregroundStyle(DS.Colours.textPrimary)
-                .multilineTextAlignment(.center)
-                .accessibilityAddTraits(.isHeader)
+        ContentUnavailableView {
+            Label(title, systemImage: emptyStateIcon)
+        } description: {
             Text(subtitle)
-                .font(DS.Typography.body)
-                .foregroundStyle(DS.Colours.textSecondary)
-                .multilineTextAlignment(.center)
-
-            if let onWriteMemory {
+        } actions: {
+            if let onWriteMemory, shouldOfferCapture {
                 Button(action: onWriteMemory) {
                     Label("Write memory", systemImage: "square.and.pencil")
-                        .font(DS.Typography.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: DS.ComponentTokens.PrimaryButton.height)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .background(DS.ComponentTokens.PrimaryButton.background)
-                        .foregroundStyle(DS.ComponentTokens.PrimaryButton.foreground)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 }
-                .buttonStyle(.mnemoPressable)
+                .buttonStyle(.borderedProminent)
+                .tint(DS.Colours.controlAccent)
                 .accessibilityIdentifier(AccessibilityID.CaptureText.open)
             }
-            Spacer()
         }
         .padding(DS.Spacing.xl)
         .frame(maxWidth: DS.ComponentTokens.EmptyState.maxWidth)
@@ -644,7 +608,7 @@ struct EmptyBrowseView: View {
     }
 
     private var title: String {
-        if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if !trimmedSearchText.isEmpty {
             return "No matching memories"
         }
 
@@ -656,13 +620,36 @@ struct EmptyBrowseView: View {
     }
 
     private var subtitle: String {
-        if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Try a name, place, item, or decision you saved."
+        if !trimmedSearchText.isEmpty {
+            return "Nothing matched \"\(displayedSearchText)\". Check the spelling or try a broader search."
         }
 
         return typeFilter == .all && statusFilter == .all
             ? "Save a memory and it will appear here."
             : "Change or clear the filters to see other saved memories."
+    }
+
+    private var trimmedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var displayedSearchText: String {
+        guard trimmedSearchText.count > 48 else { return trimmedSearchText }
+        return String(trimmedSearchText.prefix(48)) + "..."
+    }
+
+    private var shouldOfferCapture: Bool {
+        trimmedSearchText.isEmpty && typeFilter == .all && statusFilter == .all
+    }
+
+    private var emptyStateIcon: String {
+        if !trimmedSearchText.isEmpty {
+            return "magnifyingglass"
+        }
+        if typeFilter != .all || statusFilter != .all {
+            return "line.3.horizontal.decrease"
+        }
+        return "tray"
     }
 }
 

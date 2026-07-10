@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Status: Gate B proposal for human approval. This document selects a recommended direction but does not authorize production UI, navigation, logo, or app-icon replacement.
+Status: Historical Gate B proposal. The navigation and interaction direction remains current. The palette and identity sections were superseded by the user-approved `MnemoBrandBrief-2026-07-10.md`: Sage & Olive, Notebook N-A, and the outlined Newsreader wordmark.
 
 ## Product position
 
@@ -48,7 +48,7 @@ Each component is designed first for Dynamic Type, VoiceOver, Reduce Transparenc
 
 ### 10. Distinctive, not alien
 
-Mnemo keeps a recognizable mnemonic-thread identity while using current Apple conventions. Brand appears through the mark, source treatment, language, and restrained accent rather than custom replacements for familiar system controls.
+Mnemo uses the closed Notebook N-A mark while keeping current Apple conventions. Brand appears through the mark, source treatment, language, and restrained accent rather than custom replacements for familiar system controls.
 
 ## Platform and Liquid Glass policy
 
@@ -444,13 +444,14 @@ Haptics remain short and causal for save, success, warning, archive, and destruc
 
 Business logic, retrieval, Foundation Models integration, citations, fidelity validation, persistence, source mapping, archive/delete semantics, Core Spotlight privacy, App Lock semantics, and capture processing remain outside redesign scope.
 
-## Approval requested
+## Final approved supersession
 
-Before production SwiftUI changes, approve or revise:
+The user subsequently approved:
 
 1. Navigation Alternative A: retain two native tabs and consolidate capture.
-2. Palette A: Refined Current Identity.
-3. Mark approach: refine the existing Mnemonic Thread in DEBUG only; no production icon replacement yet.
-4. Launch approach: no blocking reveal in the first implementation phase.
+2. Sage & Olive semantic palette from `MnemoBrandBrief-2026-07-10.md`.
+3. Notebook N-A production mark and AppIcon direction.
+4. Outlined Newsreader wordmark for brand lockups only; SF remains the functional UI font.
+5. A static, nonanimated in-app initialization frame with no sound, spinner, or cinematic delay.
 
-These choices deliberately preserve Mnemo's behavior and identity while addressing the evidence found in the audit.
+The earlier palette and mnemonic-thread sections above remain as historical exploration, not the implemented direction.

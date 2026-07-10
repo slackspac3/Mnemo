@@ -13,7 +13,6 @@ struct MemoryDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
 
     @State private var showingArchiveConfirm = false
@@ -34,226 +33,166 @@ struct MemoryDetailView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                DS.Colours.backgroundGrouped.ignoresSafeArea()
+            List {
+                Section {
+                    VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                        Label("Saved summary", systemImage: "bookmark.fill")
+                            .font(DS.Typography.subheadline.weight(.semibold))
+                            .foregroundStyle(
+                                differentiateWithoutColor
+                                    ? DS.Colours.textPrimary
+                                    : DS.Colours.accent
+                            )
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: DS.Spacing.lg) {
-                        VStack(alignment: .leading, spacing: DS.Spacing.lg) {
-                            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                                Label("Saved summary", systemImage: "bookmark.fill")
-                                    .font(DS.Typography.subheadline.weight(.semibold))
-                                    .foregroundStyle(
-                                        differentiateWithoutColor
-                                            ? DS.Colours.textPrimary
-                                            : DS.Colours.sourceCardAccent
-                                    )
-
-                                Text(snapshot.summary)
-                                    .font(DS.Typography.title3)
-                                    .lineSpacing(3.0)
-                                    .foregroundStyle(DS.Colours.textPrimary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .accessibilityIdentifier(AccessibilityID.MemoryDetail.title)
-
-                            Divider()
-                                .overlay(detailBorder)
-
-                            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                                Label("Original capture", systemImage: originalCaptureIcon)
-                                    .font(DS.Typography.subheadline.weight(.semibold))
-                                    .foregroundStyle(DS.Colours.textSecondary)
-
-                                Text(snapshot.rawInput)
-                                    .font(DS.Typography.body)
-                                    .foregroundStyle(DS.Colours.textPrimary)
-                                    .textSelection(.enabled)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-
-                            Divider()
-                                .overlay(detailBorder)
-
-                            VStack(spacing: DS.Spacing.sm) {
-                                MetadataRow(
-                                    label: "Source",
-                                    value: snapshot.inputSource.capitalized,
-                                    icon: "arrow.down.circle"
-                                )
-                                MetadataRow(
-                                    label: "Captured",
-                                    value: snapshot.createdAt.formatted(
-                                        .dateTime.day().month().year().hour().minute()
-                                    ),
-                                    icon: "calendar"
-                                )
-                            }
-
-                            Divider()
-                                .overlay(detailBorder)
-
-                            VStack(spacing: DS.Spacing.sm) {
-                                MetadataRow(label: "Type", value: snapshot.memoryType.capitalized, icon: "tag")
-                                MetadataRow(label: "Status", value: statusLabel, icon: statusIcon)
-
-                                if !snapshot.tags.isEmpty {
-                                    MetadataRow(
-                                        label: "Tags",
-                                        value: snapshot.tags.joined(separator: ", "),
-                                        icon: "number"
-                                    )
-                                }
-                            }
-                        }
-                        .padding(DS.Spacing.md)
-                        .background(DS.Colours.surfacePrimary)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                .stroke(detailBorder, lineWidth: 1.0)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-
-                        DisclosureGroup {
-                            VStack(spacing: DS.Spacing.sm) {
-                                MetadataRow(
-                                    label: "Processing",
-                                    value: processingLabel,
-                                    icon: "cpu",
-                                    isSecondary: true
-                                )
-                                MetadataRow(
-                                    label: "Recall priority",
-                                    value: recallPriorityLabel,
-                                    icon: "chart.bar",
-                                    isSecondary: true
-                                )
-                                MetadataRow(
-                                    label: "Review status",
-                                    value: reviewStatusLabel,
-                                    icon: "checkmark.seal",
-                                    isSecondary: true
-                                )
-
-                                if snapshot.corroboratingEvidenceCount > 0 {
-                                    MetadataRow(
-                                        label: "Evidence",
-                                        value: corroborationText(for: snapshot.corroboratingEvidenceCount),
-                                        icon: "link.badge.plus",
-                                        isSecondary: true
-                                    )
-                                }
-                            }
-                            .padding(.top, DS.Spacing.md)
-                        } label: {
-                            Label("Provenance and review", systemImage: "checkmark.shield")
-                                .font(DS.Typography.headline)
-                                .foregroundStyle(DS.Colours.textPrimary)
-                        }
-                        .padding(DS.Spacing.md)
-                        .background(DS.Colours.surfaceSecondary)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                .stroke(detailBorder, lineWidth: 1.0)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-                        .tint(DS.Colours.accent)
-
-                        if let errorMessage {
-                            Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                                .font(DS.Typography.footnote)
-                                .foregroundStyle(DS.Colours.destructive)
-                        }
-
-                        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                            Text("Memory controls")
-                                .font(DS.Typography.headline)
-                                .foregroundStyle(DS.Colours.textPrimary)
-
-                            Button {
-                                showingArchiveConfirm = true
-                            } label: {
-                                HStack(spacing: DS.Spacing.sm) {
-                                    if isArchiving {
-                                        ProgressView()
-                                    } else {
-                                        Image(systemName: "archivebox")
-                                    }
-                                    Text(isArchiving ? "Archiving..." : "Archive Memory")
-                                }
-                                .font(DS.Typography.body.weight(.semibold))
-                                .foregroundStyle(DS.Colours.textPrimary)
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: DS.ComponentTokens.SecondaryButton.height)
-                                .background(DS.Colours.surfaceSecondary)
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                        .stroke(DS.Colours.borderSubtle, lineWidth: 1.0)
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-                            }
-                            .disabled(isArchiving || isDeleting)
-                            .buttonStyle(.mnemoPressable)
-                            .accessibilityIdentifier(AccessibilityID.MemoryDetail.archive)
-
-                            Button {
-                                showingDeleteConfirm = true
-                            } label: {
-                                HStack(spacing: DS.Spacing.sm) {
-                                    if isDeleting {
-                                        ProgressView()
-                                    } else {
-                                        Image(systemName: "trash")
-                                    }
-                                    Text(isDeleting ? "Deleting..." : "Delete Permanently")
-                                }
-                                .font(DS.Typography.body.weight(.semibold))
-                                .foregroundStyle(DS.Colours.destructive)
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: DS.ComponentTokens.DestructiveButton.height)
-                                .background(DS.Colours.destructiveSoft)
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
-                                        .stroke(DS.Colours.borderDestructive, lineWidth: 1.0)
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
-                            }
-                            .disabled(isArchiving || isDeleting)
-                            .buttonStyle(.mnemoPressable)
-                            .accessibilityIdentifier(AccessibilityID.MemoryDetail.delete)
-                        }
-                        .confirmationDialog(
-                            "Archive this memory?",
-                            isPresented: $showingArchiveConfirm,
-                            titleVisibility: .visible
-                        ) {
-                            Button("Archive") {
-                                Task {
-                                    await archiveMemory()
-                                }
-                            }
-                            Button("Cancel", role: .cancel) {}
-                        } message: {
-                            Text("Archive hides this memory from Browse and Chat recall, but keeps it in your local store.")
-                        }
-                        .confirmationDialog(
-                            "Delete this memory permanently?",
-                            isPresented: $showingDeleteConfirm,
-                            titleVisibility: .visible
-                        ) {
-                            Button("Delete Permanently", role: .destructive) {
-                                Task {
-                                    await deleteMemory()
-                                }
-                            }
-                            Button("Cancel", role: .cancel) {}
-                        } message: {
-                            Text("This removes the memory from Mnemo and deletes its local search index entry. This cannot be undone.")
-                        }
+                        Text(snapshot.summary)
+                            .font(DS.Typography.body)
+                            .lineSpacing(2.0)
+                            .foregroundStyle(DS.Colours.textPrimary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(DS.Spacing.md)
-                    .padding(.bottom, DS.Spacing.xxxl)
+                    .padding(.vertical, DS.Spacing.xs)
+                    .accessibilityIdentifier(AccessibilityID.MemoryDetail.title)
                 }
+
+                Section {
+                    Text(snapshot.rawInput)
+                        .font(DS.Typography.body)
+                        .foregroundStyle(DS.Colours.textPrimary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, DS.Spacing.xs)
+                } header: {
+                    Label("Original capture", systemImage: originalCaptureIcon)
+                }
+
+                Section("Details") {
+                    MetadataRow(
+                        label: "Source",
+                        value: snapshot.inputSource.capitalized,
+                        icon: "arrow.down.circle"
+                    )
+                    MetadataRow(
+                        label: "Captured",
+                        value: snapshot.createdAt.formatted(
+                            .dateTime.day().month().year().hour().minute()
+                        ),
+                        icon: "calendar"
+                    )
+                    MetadataRow(label: "Type", value: snapshot.memoryType.capitalized, icon: "tag")
+                    MetadataRow(label: "Status", value: statusLabel, icon: statusIcon)
+
+                    if !snapshot.tags.isEmpty {
+                        MetadataRow(
+                            label: "Tags",
+                            value: snapshot.tags.joined(separator: ", "),
+                            icon: "number"
+                        )
+                    }
+                }
+
+                Section {
+                    DisclosureGroup {
+                        VStack(spacing: DS.Spacing.md) {
+                            MetadataRow(
+                                label: "Processing",
+                                value: processingLabel,
+                                icon: "cpu",
+                                isSecondary: true
+                            )
+                            MetadataRow(
+                                label: "Recall priority",
+                                value: recallPriorityLabel,
+                                icon: "chart.bar",
+                                isSecondary: true
+                            )
+                            MetadataRow(
+                                label: "Review status",
+                                value: reviewStatusLabel,
+                                icon: "checkmark.seal",
+                                isSecondary: true
+                            )
+
+                            if snapshot.corroboratingEvidenceCount > 0 {
+                                MetadataRow(
+                                    label: "Evidence",
+                                    value: corroborationText(for: snapshot.corroboratingEvidenceCount),
+                                    icon: "link.badge.plus",
+                                    isSecondary: true
+                                )
+                            }
+                        }
+                        .padding(.top, DS.Spacing.md)
+                    } label: {
+                        Label("Provenance and review", systemImage: "checkmark.shield")
+                            .foregroundStyle(DS.Colours.textPrimary)
+                    }
+                    .tint(DS.Colours.accent)
+                }
+
+                if let errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                            .font(DS.Typography.footnote)
+                            .foregroundStyle(DS.Colours.destructive)
+                    }
+                }
+
+                Section("Memory controls") {
+                    Button {
+                        showingArchiveConfirm = true
+                    } label: {
+                        actionLabel(
+                            title: isArchiving ? "Archiving..." : "Archive Memory",
+                            systemImage: "archivebox",
+                            isWorking: isArchiving
+                        )
+                    }
+                    .disabled(isArchiving || isDeleting)
+                    .accessibilityIdentifier(AccessibilityID.MemoryDetail.archive)
+
+                    Button(role: .destructive) {
+                        showingDeleteConfirm = true
+                    } label: {
+                        actionLabel(
+                            title: isDeleting ? "Deleting..." : "Delete Permanently",
+                            systemImage: "trash",
+                            isWorking: isDeleting
+                        )
+                    }
+                    .disabled(isArchiving || isDeleting)
+                    .accessibilityIdentifier(AccessibilityID.MemoryDetail.delete)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(DS.Colours.backgroundGrouped)
+            .confirmationDialog(
+                "Archive this memory?",
+                isPresented: $showingArchiveConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Archive") {
+                    Task {
+                        await archiveMemory()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Archive hides this memory from Browse and Chat recall, but keeps it in your local store.")
+            }
+            .confirmationDialog(
+                "Delete this memory permanently?",
+                isPresented: $showingDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Delete Permanently", role: .destructive) {
+                    Task {
+                        await deleteMemory()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This removes the memory from Mnemo and deletes its local search index entry. This cannot be undone.")
             }
             .navigationTitle("Memory")
             .navigationBarTitleDisplayMode(.inline)
@@ -267,8 +206,20 @@ struct MemoryDetailView: View {
         }
     }
 
-    private var detailBorder: Color {
-        colorSchemeContrast == .increased ? DS.Colours.borderStrong : DS.Colours.borderSubtle
+    private func actionLabel(title: String, systemImage: String, isWorking: Bool) -> some View {
+        HStack(spacing: DS.Spacing.sm) {
+            if isWorking {
+                ProgressView()
+            } else {
+                Image(systemName: systemImage)
+                    .accessibilityHidden(true)
+            }
+
+            Text(title)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .font(DS.Typography.body)
+        .frame(minHeight: 44)
     }
 
     private var originalCaptureIcon: String {

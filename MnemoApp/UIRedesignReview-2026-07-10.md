@@ -38,20 +38,22 @@ Selected: approved Alternative A.
 
 ## Palette and typography
 
-Selected: approved Palette A, Refined Current Identity.
+Selected: user-approved Sage & Olive.
 
 Key roles:
 
-- light canvas `#F4F2EE`
-- light content `#FCFBF9`
-- light memory accent `#4438A8`
-- dark canvas `#111316`
-- dark content `#1C1E23`
-- dark memory accent `#9A96FF`
+- light canvas `#F5F7F1`
+- light content `#FCFDF9`
+- light action/focus `#5C6838`
+- dark canvas `#131711`
+- dark content `#1D231A`
+- dark action/focus `#B8C98A`
+- source evidence only: plum `#7D5C72` light / `#D1A2BC` dark
+- privacy only: blue-gray `#3F565A` light / `#9CC5C4` dark
 
-Filled controls use a separate darker `controlAccent` role so white labels remain legible in dark appearance. Unfilled toolbar, source, and navigation symbols use the brighter memory accent. Semantic state colors remain reserved for success, warning, and destructive meaning.
+Filled controls use a separate darker `controlAccent` role so white labels remain legible in dark appearance. Foreground-only actions use adaptive `accent`; using the filled-control color there failed dark-mode contrast. Semantic green, amber, and red remain reserved for success, warning, and destructive meaning. Light `textTertiary` deliberately uses `#6C7464` rather than the brief's `#8A917F`, raising canvas contrast from about 3.0:1 to 4.5:1.
 
-Typography remains SF system typography with Dynamic Type. Compact titles use restrained weight; memory answers, original captures, and source excerpts use body styles; caption styles are reserved for secondary metadata.
+Typography remains SF system typography with Dynamic Type. The `Mnemo` wordmark is an outlined Newsreader Regular brand asset only; no custom font is loaded or bundled. Its editable SVG, generator, source hash, copyright, and OFL text live under `Design/Wordmark`.
 
 ## Liquid Glass and fallbacks
 
@@ -115,24 +117,28 @@ It supports Back navigation, a correctly initialized progress value, a labeled p
 
 App Lock removes the oversized security card, retains native biometric/passcode wording, keeps retry behavior, and focuses errors for VoiceOver without duplicate announcements.
 
-Settings remains a native List. Privacy, on-device behavior, App Lock, Memory, Backup, Internal DEBUG diagnostics, and Data Management have clearer grouping. Existing Mnemo Sense placeholder rows remain present because their removal was not separately approved. Nested Backup navigation was removed.
+Settings remains a native List. Privacy, on-device behavior, App Lock, Memory, Backup, Internal DEBUG diagnostics, and Data Management have clearer grouping. Settings and Privacy & Processing now use the Sage grouped canvas consistently with Backup and Memory Detail. Nested Backup navigation was removed.
 
 ## Brand, icon, and launch
 
 Concepts considered:
 
-1. Refined Mnemonic Thread.
-2. Recall Loops.
-3. Memory Aperture.
+1. N-A: band and ribbon.
+2. N-B: ribbon only.
+3. N-C: evidence-plum ribbon for in-content brand moments.
 
-Selected for exploration: Refined Mnemonic Thread. A DEBUG-only Design Exploration screen shows palette, shared controls, source treatment, and the refined thread at 24, 32, 60, monochrome, and tinted presentations.
+Selected and installed on the redesign branch: Notebook N-A, a flat closed pocket-notebook cover with an elastic band and ribbon marker. The DEBUG Design Preview shows N-A/N-B/N-C, production N-A at small sizes, simulated Default/Dark/Monochrome/Tinted presentations, the shared production lockup, context previews, accessibility status, and a 1024-point master.
 
-- Production `MnemoLogoMark`: unchanged.
-- Production `AppIcon`: unchanged; the catalog still has no approved artwork filenames.
-- No generated raster icon was fabricated.
+- Production `MnemoLogoMark`: replaced with exact N-A geometry and reused by Recall, onboarding, App Lock, privacy shield, splash, and the DEBUG gallery.
+- Production wordmark: outlined Newsreader Regular with one shared `MnemoBrandLockup` ratio; the wordmark uses the primary ink/text role rather than olive in the approved lockup.
+- Redesign-branch `AppIcon`: opaque 1024 RGB Default, Dark, and Tinted catalog variants generated from editable SVG masters. A monochrome SVG master is retained. These are installed pre-release artwork, not a substitute for final Icon Composer/Clear validation.
+- Production `AccentColor`: adaptive Olive values for light and dark.
+- Similarity review covers Apple Notes, Goodnotes, Notability, Zoho Notebook, Bear, Day One, Agenda, and Notebooks.
 - Static system launch behavior remains unchanged.
-- The in-app initialization frame is now static, minimal, and nonanimated.
+- The in-app initialization frame is static, nonanimated, and uses the shared mark/wordmark lockup.
 - No blocking brand reveal, sound, spinner, or cinematic launch animation was added.
+
+Icon Composer 1.6 is installed, but its CLI only exports existing `.icon` documents and GUI automation is unavailable without macOS assistive access. Editable SVGs are therefore the current source of truth; a canonical `.icon` and real Clear renders remain a human pre-release task.
 
 ## Motion and haptics
 
@@ -161,11 +167,12 @@ Selected for exploration: Refined Mnemonic Thread. A DEBUG-only Design Explorati
 
 ### Transparency, contrast, and color differentiation
 
-- Reduce Transparency opaque fallbacks are implemented and compile-checked.
-- Increased Contrast border roles use the installed `colorSchemeContrast` API.
+- Reduce Transparency opaque fallbacks are implemented and were enabled in the iOS 26.5 simulator.
+- Increased Contrast was enabled in the simulator; borders use the installed `colorSchemeContrast` API.
 - Browse/Detail status uses icons and labels as well as color.
-- Palette contrast was reviewed against light and dark canvases.
-- XcodeBuildMCP does not expose Reduce Transparency or Increased Contrast simulator toggles, so those system-setting runtime passes remain pending.
+- Palette contrast was reviewed against light and dark canvases. Required headline pairs pass AA in both appearances.
+- Capture editors now expose a visible focus border and stronger Increased Contrast boundary.
+- Foreground-only composer and floating actions use adaptive accent after dark-mode contrast review.
 
 ## Screenshot review
 
@@ -173,26 +180,24 @@ Before, local and uncommitted:
 
 `/private/tmp/Mnemo-UIBaseline-2026-07-10`
 
-After, local and uncommitted:
+Current identity review, local and uncommitted:
 
-`/private/tmp/Mnemo-UIAfter-2026-07-10`
+`/private/tmp/MnemoSageOliveReview-2026-07-10`
 
 After captures include:
 
-- Recall empty, light
-- Memories empty, light and dark
-- Onboarding, light and dark
-- DEBUG design-system exploration
-- DEBUG refined brand concept
+- Recall, Memories, Memory Detail, text/voice/image capture, Settings, Design Preview, and Home Screen AppIcon
+- light and dark representatives
+- dark Increased Contrast plus Reduce Transparency representatives
 
-The baseline store contained no deterministic fixtures for populated Chat, citations, missing sources, App Lock, memory detail, or large collections. Those paths were source/build verified but not represented as fabricated screenshots.
+The review directory includes existing local populated Memories and Memory Detail data. No deterministic fixture was fabricated for populated Chat citations, missing sources, App Lock, or large collections; those paths remain source/build verified.
 
 ## Validation
 
 - `git diff --check`: passed throughout implementation
 - `MnemoUI`: 3 tests passed
 - `MnemoMemory`: 91 tests passed
-- `MnemoIntelligence`: 55 tests passed
+- `MnemoIntelligence`: 62 tests passed
 - `Scripts/run_local_checks.sh fast`: passed
 - `Scripts/run_local_checks.sh efficiency`: passed
 - Debug iOS 26.5 simulator build: passed
@@ -207,19 +212,18 @@ The baseline store contained no deterministic fixtures for populated Chat, citat
 - Browse row entrance staggering was removed.
 - No continuously animated gradients, blur stacks, or per-cell GeometryReader/Canvas work was added.
 - Recording animation exists only during active capture and becomes stable under Reduce Motion.
-- Efficiency baseline passed. Representative recall p95: about 10.4 ms at 30 records, 34.9 ms at 100, 176.6 ms at 500, and 356.2 ms at 1,000.
-- Representative vector search average: about 0.23 ms at 30 records, 0.66 ms at 100, 3.01 ms at 500, and 5.93 ms at 1,000.
+- Efficiency baseline passed. Representative recall p95: about 10.1 ms at 30 records, 34.8 ms at 100, 179.4 ms at 500, and 358.3 ms at 1,000.
+- Representative vector search average: about 0.23 ms at 30 records, 0.65 ms at 100, 3.08 ms at 500, and 6.04 ms at 1,000.
 - No Instruments SwiftUI trace was captured in this pass. Large populated-list scrolling and first-frame timing remain physical-device review items.
 
 ## Known compromises and human review
 
-1. Production icon replacement remains unapproved and was not performed.
-2. The refined mnemonic-thread concept requires human small-size/similarity review.
+1. A canonical Icon Composer `.icon` and real Clear/system-tinted exports require human GUI access; flattened catalog variants and editable SVG masters are present.
+2. The notebook metaphor has moderate category-level similarity risk even though the rendering review found low direct-rendering overlap; formal trademark clearance is outside this engineering pass.
 3. iOS 18 fallback is compile-checked through the deployment target but no iOS 18 simulator runtime is installed.
-4. Accessibility-size, Reduce Transparency, and Increased Contrast runtime screenshots remain pending because the available simulator wrapper does not expose those settings.
+4. Accessibility Dynamic Type runtime screenshots still require system text-size setup; layouts and previews compile and critical content line limits are removed at accessibility sizes.
 5. Real Face ID/Touch ID/passcode, microphone, camera, OCR quality, and physical-device haptics remain device-only validation.
-6. Populated Chat/source/detail and large-memory screenshots require deterministic DEBUG fixtures or human test data in a follow-up review pass.
-7. No production app icon can be shipped until approved artwork is provided through the official Icon Composer workflow.
+6. Generated system launch background cannot be color-matched without a project/build-setting change, which is explicitly excluded from this branch. The in-app initialization frame is static and nonanimated.
 
 ## Safety confirmation
 

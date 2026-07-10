@@ -350,7 +350,7 @@ private struct AILabRunButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Spacing.sm)
             .padding(.horizontal, DS.Spacing.md)
-            .background(DS.Colours.accent)
+            .background(DS.Colours.controlAccent)
             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
         }
         .buttonStyle(.mnemoPressable)

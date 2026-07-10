@@ -11,25 +11,22 @@ struct OnboardingStepView: View {
     var body: some View {
         onboardingContent
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .onAppear {
-            revealContent()
-        }
-        .onChange(of: step.rawValue) {
-            contentAppeared = false
-            revealContent()
-        }
-        .onDisappear {
-            contentAppeared = false
-        }
+            .onAppear {
+                revealContent()
+            }
+            .onChange(of: step.rawValue) {
+                contentAppeared = false
+                revealContent()
+            }
+            .onDisappear {
+                contentAppeared = false
+            }
     }
 
     private var onboardingContent: some View {
         VStack(spacing: DS.Spacing.lg) {
-            ZStack {
-                MnemoThreadMotif(style: .hero, lineWidth: 2.0)
-                    .frame(width: 128.0, height: 96.0)
-                stepMark
-            }
+            stepMark
+                .frame(width: step == .remember ? 224.0 : 96.0, height: 96.0)
             .onboardingStaggered(appeared: contentAppeared, delay: 0.0, reduceMotion: reduceMotion)
 
             VStack(spacing: DS.Spacing.xs) {
@@ -81,14 +78,14 @@ struct OnboardingStepView: View {
     private var stepMark: some View {
         switch step {
         case .remember:
-            MnemoLogoMark(size: 80.0, style: .filled)
+            MnemoBrandLockup(markSize: 44.0)
         case .ask, .verify:
             Image(systemName: step.icon)
                 .font(DS.Typography.title1)
                 .foregroundStyle(iconColor)
                 .symbolRenderingMode(.hierarchical)
                 .frame(width: 76.0, height: 76.0)
-                .background(DS.Colours.privateBadgeSurface)
+                .background(DS.Colours.accentSoft)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.xlarge, style: .continuous))
                 .accessibilityHidden(true)
         }
@@ -105,17 +102,17 @@ struct WelcomeStepContent: View {
     private let features: [(icon: String, color: Color, text: String)] = [
         (
             icon: "lock.shield.fill",
-            color: DS.Colours.accent,
+            color: DS.Colours.privateBadgeText,
             text: "Saved memories stay on this iPhone unless you choose iCloud backup"
         ),
         (
             icon: "person.crop.circle.badge.xmark",
-            color: DS.Colours.sense,
+            color: DS.Colours.privateBadgeText,
             text: "No Mnemo account, email, or sign-in required"
         ),
         (
             icon: "lock.open.fill",
-            color: DS.Colours.accent,
+            color: DS.Colours.privateBadgeText,
             text: "Optional App Lock uses Face ID, Touch ID, or your passcode"
         ),
     ]
@@ -128,15 +125,14 @@ struct WelcomeStepContent: View {
                     color: feature.color,
                     text: feature.text
                 )
+
+                if feature.text != features.last?.text {
+                    Divider()
+                        .padding(.leading, 60.0)
+                }
             }
         }
-        .padding(DS.Spacing.md)
-        .background(DS.Colours.memoryCardSurface)
-        .overlay {
-            RoundedRectangle(cornerRadius: DS.CornerRadius.large)
-                .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
+        .padding(.vertical, DS.Spacing.xs)
     }
 }
 
@@ -151,7 +147,7 @@ struct FeatureRow: View {
                 .font(DS.Typography.title2)
                 .foregroundStyle(color)
                 .frame(width: 44.0, height: 44.0)
-                .background(color.opacity(0.14))
+                .background(DS.Colours.privateBadgeSurface)
                 .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
                 .accessibilityHidden(true)
             Text(text)
@@ -176,7 +172,7 @@ struct RecallStepContent: View {
                 icon: "bookmark.fill",
                 title: "Sources stay visible",
                 description: "Source cards show the memory behind an answer.",
-                color: DS.Colours.success
+                color: DS.Colours.sourceAccent
             )
         }
     }
@@ -189,13 +185,13 @@ struct VerificationStepContent: View {
                 icon: "bookmark.fill",
                 title: "Source cards",
                 description: "Open the saved memory behind an answer.",
-                color: DS.Colours.accent
+                color: DS.Colours.sourceAccent
             )
             OnboardingInfoCard(
                 icon: "lock.shield.fill",
                 title: "You stay in control",
                 description: "Use optional App Lock, archive memories, or delete them permanently.",
-                color: DS.Colours.success
+                color: DS.Colours.privateBadgeText
             )
         }
     }

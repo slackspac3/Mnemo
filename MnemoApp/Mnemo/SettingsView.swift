@@ -28,238 +28,120 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                DS.Colours.backgroundGrouped.ignoresSafeArea()
-
-                List {
-                    Section {
-                        SettingsBrandHeader()
-                            .listRowInsets(EdgeInsets(
-                                top: DS.Spacing.md,
-                                leading: DS.Spacing.md,
-                                bottom: DS.Spacing.md,
-                                trailing: DS.Spacing.md
-                            ))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                    }
-
-                    Section {
-                        DeviceTierRow(capability: appState.deviceCapability)
-                            .listRowBackground(DS.Colours.surfaceElevated)
-                    } header: {
-                        SettingsSectionHeader("Privacy & Security")
-                    }
-
-                    Section {
-                        if userModel != nil {
-                            HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                                Image(systemName: "checkmark.shield.fill")
-                                    .font(DS.Typography.subheadline)
-                                    .foregroundStyle(DS.Colours.accent)
-                                    .accessibilityHidden(true)
-
-                                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                                    Text("Local Capture & Recall")
-                                        .font(DS.Typography.body)
-                                        .foregroundStyle(DS.Colours.textPrimary)
-                                    Text("Capture and recall stay on this iPhone. Optional iCloud Backup stores encrypted backups in your iCloud account; no cloud AI is enabled in this build.")
-                                        .font(DS.Typography.footnote)
-                                        .foregroundStyle(DS.Colours.textSecondary)
-                                }
-                            }
-                            .accessibilityElement(children: .combine)
-
-                            HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                                Image(systemName: "person.crop.circle.badge.xmark")
-                                    .font(DS.Typography.subheadline)
-                                    .foregroundStyle(DS.Colours.accent)
-                                    .accessibilityHidden(true)
-                                Text("Mnemo works without an account, email, or sign-in.")
-                                    .font(DS.Typography.footnote)
-                                    .foregroundStyle(DS.Colours.textSecondary)
-                            }
-                        } else {
-                            Text("Privacy settings will appear after onboarding.")
-                                .font(DS.Typography.footnote)
-                                .foregroundStyle(DS.Colours.textSecondary)
-                        }
-                    } header: {
-                        SettingsSectionHeader("On This iPhone")
-                    }
-                    .listRowBackground(DS.Colours.surfaceElevated)
-
-                    Section {
-                        if let model = userModel {
-                            Toggle(isOn: Binding(
-                                get: { model.appLockEnabled },
-                                set: { enabled in
-                                    Task {
-                                        await updateAppLock(enabled, model: model)
-                                    }
-                                }
-                            )) {
-                                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                                    Text("Require App Lock to Open Mnemo")
-                                        .font(DS.Typography.body)
-                                        .foregroundStyle(DS.Colours.textPrimary)
-                                    Text("When enabled, Mnemo asks for Face ID, Touch ID or your device passcode when you reopen the app.")
-                                        .font(DS.Typography.caption1)
-                                        .foregroundStyle(DS.Colours.textSecondary)
-                                }
-                            }
-                            .tint(DS.Colours.accent)
-                            .disabled((!canUseAppLock && !model.appLockEnabled) || isChangingAppLock)
-                            .accessibilityIdentifier(AccessibilityID.Settings.appLockToggle)
-
-                            if isChangingAppLock {
-                                Text("Waiting for device authentication...")
-                                    .font(DS.Typography.footnote)
-                                    .foregroundStyle(DS.Colours.textSecondary)
-                            }
-
-                            if let appLockUnavailableMessage {
-                                Text(appLockUnavailableMessage)
-                                    .font(DS.Typography.footnote)
-                                    .foregroundStyle(DS.Colours.textSecondary)
-                            }
-
-                            if let appLockErrorMessage {
-                                Text(appLockErrorMessage)
-                                    .font(DS.Typography.footnote)
-                                    .foregroundStyle(DS.Colours.destructive)
-                            }
-                        } else {
-                            Text("App Lock settings will appear after onboarding.")
-                                .font(DS.Typography.footnote)
-                                .foregroundStyle(DS.Colours.textSecondary)
-                        }
-                    } header: {
-                        SettingsSectionHeader("App Lock")
-                    }
-                    .listRowBackground(DS.Colours.surfaceElevated)
-                    .accessibilityIdentifier(AccessibilityID.Settings.securitySection)
-
-                    Section {
-                        SenseComingSoonRow(
-                            title: "Memory Moments",
-                            detail: "Coming soon"
-                        )
-                        SenseComingSoonRow(
-                            title: "Pattern Insights",
-                            detail: "Coming soon"
-                        )
-                        SenseComingSoonRow(
-                            title: "Thread Suggestions",
-                            detail: "Coming soon"
-                        )
-                    } header: {
-                        SettingsSectionHeader("Mnemo Sense")
-                    }
-                    .listRowBackground(DS.Colours.surfaceElevated)
-
+            List {
+                Section {
                     if let model = userModel {
-                        Section {
-                            PersonalisationIndexRow(userModel: model)
-                        } header: {
-                            SettingsSectionHeader("Memory")
-                        }
-                        .listRowBackground(DS.Colours.surfaceElevated)
-                    }
-
-                    Section {
-                        NavigationLink {
-                            BackupRestoreView()
-                        } label: {
-                            HStack(spacing: DS.Spacing.sm) {
-                                Image(systemName: "icloud")
-                                    .font(DS.Typography.subheadline)
-                                    .foregroundStyle(DS.Colours.accent)
-                                Text("iCloud Backup")
-                                    .font(DS.Typography.body)
-                                    .foregroundStyle(DS.Colours.textPrimary)
-                            }
-                        }
-                    } header: {
-                        SettingsSectionHeader("Backup")
-                    }
-                    .listRowBackground(DS.Colours.surfaceElevated)
-
-                    #if DEBUG
-                    Section {
-                        NavigationLink {
-                            DesignExplorationView()
-                        } label: {
-                            Label("Design Exploration", systemImage: "paintpalette")
-                        }
-
-                        NavigationLink {
-                            AILabView()
-                        } label: {
-                            HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                                Image(systemName: "apple.intelligence")
-                                    .font(DS.Typography.subheadline)
-                                    .foregroundStyle(DS.Colours.sense)
-                                    .accessibilityHidden(true)
-
-                                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                                    Text("AI Lab")
-                                        .font(DS.Typography.body)
-                                        .foregroundStyle(DS.Colours.textPrimary)
-                                    Text("Internal DEBUG diagnostics. Chat tries Local AI first, with deterministic recall as fallback.")
-                                        .font(DS.Typography.caption1)
-                                        .foregroundStyle(DS.Colours.textSecondary)
+                        Toggle("App Lock", isOn: Binding(
+                            get: { model.appLockEnabled },
+                            set: { enabled in
+                                Task {
+                                    await updateAppLock(enabled, model: model)
                                 }
                             }
-                        }
-                    } header: {
-                        SettingsSectionHeader("Internal")
-                    }
-                    .listRowBackground(DS.Colours.surfaceElevated)
-                    #endif
+                        ))
+                        .tint(DS.Colours.accent)
+                        .disabled((!canUseAppLock && !model.appLockEnabled) || isChangingAppLock)
+                        .accessibilityIdentifier(AccessibilityID.Settings.appLockToggle)
 
-                    Section {
-                        if let destructiveErrorMessage {
-                            Text(destructiveErrorMessage)
-                                .font(DS.Typography.footnote)
+                        if isChangingAppLock {
+                            Label("Waiting for device authentication", systemImage: "faceid")
+                                .foregroundStyle(DS.Colours.textSecondary)
+                        }
+
+                        if let appLockUnavailableMessage {
+                            Label(appLockUnavailableMessage, systemImage: "exclamationmark.shield")
+                                .foregroundStyle(DS.Colours.textSecondary)
+                        }
+
+                        if let appLockErrorMessage {
+                            Label(appLockErrorMessage, systemImage: "exclamationmark.circle")
                                 .foregroundStyle(DS.Colours.destructive)
                         }
-
-                        Button {
-                            showingDeleteAllConfirm = true
-                        } label: {
-                            HStack(spacing: DS.Spacing.sm) {
-                                Image(systemName: "trash")
-                                    .font(DS.Typography.subheadline)
-                                    .foregroundStyle(DS.Colours.destructive)
-                                Text("Delete All Data")
-                                    .font(DS.Typography.body)
-                                    .foregroundStyle(DS.Colours.destructive)
-                            }
-                        }
-                        .accessibilityIdentifier(AccessibilityID.Settings.deleteAllData)
-                        .confirmationDialog(
-                            "Delete all data?",
-                            isPresented: $showingDeleteAllConfirm,
-                            titleVisibility: .visible
-                        ) {
-                            Button("Delete Everything", role: .destructive) {
-                                Task {
-                                    await deleteAllData()
-                                }
-                            }
-                            Button("Cancel", role: .cancel) {}
-                        } message: {
-                            Text("This permanently deletes all your memories, threads, and settings. This cannot be undone.")
-                        }
-                    } header: {
-                        SettingsSectionHeader("Data Management")
+                    } else {
+                        Text("App Lock is available after onboarding.")
+                            .foregroundStyle(DS.Colours.textSecondary)
                     }
-                    .listRowBackground(DS.Colours.surfaceElevated)
+
+                    NavigationLink {
+                        PrivacyAndProcessingView(capability: appState.deviceCapability)
+                    } label: {
+                        Label("Privacy & Processing", systemImage: "hand.raised")
+                    }
+                } header: {
+                    Text("Privacy & Security")
+                } footer: {
+                    Text("App Lock requires Face ID, Touch ID, or your device passcode when Mnemo opens.")
                 }
-                .scrollContentBackground(.hidden)
-                .background(DS.Colours.backgroundGrouped)
+                .accessibilityIdentifier(AccessibilityID.Settings.securitySection)
+
+                if let model = userModel {
+                    Section {
+                        PersonalisationIndexRow(userModel: model)
+                    } header: {
+                        Text("Memory")
+                    }
+                }
+
+                Section {
+                    NavigationLink {
+                        BackupRestoreView()
+                    } label: {
+                        Label("iCloud Backup", systemImage: "icloud")
+                    }
+                } header: {
+                    Text("Backup")
+                }
+
+                #if DEBUG
+                Section {
+                    NavigationLink {
+                        DesignExplorationView()
+                    } label: {
+                        Label("Design Preview", systemImage: "paintpalette")
+                    }
+
+                    NavigationLink {
+                        AILabView()
+                    } label: {
+                        Label("AI Lab", systemImage: "apple.intelligence")
+                    }
+                } header: {
+                    Text("Developer")
+                }
+                #endif
+
+                Section {
+                    if let destructiveErrorMessage {
+                        Label(destructiveErrorMessage, systemImage: "exclamationmark.circle")
+                            .foregroundStyle(DS.Colours.destructive)
+                    }
+
+                    Button(role: .destructive) {
+                        showingDeleteAllConfirm = true
+                    } label: {
+                        Label("Delete All Data", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier(AccessibilityID.Settings.deleteAllData)
+                    .confirmationDialog(
+                        "Delete all data?",
+                        isPresented: $showingDeleteAllConfirm,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Delete Everything", role: .destructive) {
+                            Task {
+                                await deleteAllData()
+                            }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("This permanently deletes all your memories, threads, and settings. This cannot be undone.")
+                    }
+                } header: {
+                    Text("Data")
+                }
             }
+            .scrollContentBackground(.hidden)
+            .background(DS.Colours.backgroundGrouped)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -267,8 +149,6 @@ struct SettingsView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .font(DS.Typography.body)
-                    .foregroundStyle(DS.Colours.accent)
                 }
             }
         }
@@ -395,27 +275,6 @@ struct SettingsView: View {
     }
 }
 
-struct SettingsBrandHeader: View {
-    var body: some View {
-        HStack(alignment: .center, spacing: DS.Spacing.md) {
-            MnemoLogoMark(size: 52.0, style: .subtle)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                Text("Mnemo")
-                    .font(DS.Typography.headline)
-                    .foregroundStyle(DS.Colours.textPrimary)
-                Text("Private memory on this iPhone.")
-                    .font(DS.Typography.caption1)
-                    .foregroundStyle(DS.Colours.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Mnemo. Private memory on this iPhone.")
-    }
-}
-
 struct SettingsSectionHeader: View {
     let title: String
 
@@ -430,36 +289,46 @@ struct SettingsSectionHeader: View {
     }
 }
 
-struct SenseComingSoonRow: View {
-    let title: String
-    let detail: String
+private struct PrivacyAndProcessingView: View {
+    let capability: DeviceCapability
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack {
-                titleView
-                Spacer()
-                statusView
+        List {
+            Section {
+                DeviceTierRow(capability: capability)
+
+                Label {
+                    Text("Mnemo works without an account, email, or sign-in.")
+                } icon: {
+                    Image(systemName: "person.crop.circle.badge.xmark")
+                        .foregroundStyle(DS.Colours.privateBadgeText)
+                }
+            } header: {
+                Text("On This iPhone")
+            } footer: {
+                Text("Capture and recall stay on this iPhone. No cloud AI is enabled in this build.")
             }
 
-            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                titleView
-                statusView
+            Section {
+                Label {
+                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                        Text("iCloud Backup")
+                        Text("Optional encrypted backups are stored in your iCloud account.")
+                            .font(DS.Typography.caption1)
+                            .foregroundStyle(DS.Colours.textSecondary)
+                    }
+                } icon: {
+                    Image(systemName: "icloud")
+                        .foregroundStyle(DS.Colours.accent)
+                }
+            } header: {
+                Text("Backup")
             }
         }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var titleView: some View {
-        Text(title)
-            .font(DS.Typography.body)
-            .foregroundStyle(DS.Colours.textPrimary)
-    }
-
-    private var statusView: some View {
-        Label(detail, systemImage: "clock")
-            .font(DS.Typography.caption1)
-            .foregroundStyle(DS.Colours.textSecondary)
+        .scrollContentBackground(.hidden)
+        .background(DS.Colours.backgroundGrouped)
+        .navigationTitle("Privacy & Processing")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -498,7 +367,11 @@ struct DeviceTierRow: View {
         HStack(alignment: .top, spacing: DS.Spacing.sm) {
             Image(systemName: tierIcon)
                 .font(DS.Typography.subheadline)
-                .foregroundStyle(DS.Colours.accent)
+                .foregroundStyle(
+                    capability.tier == .unsupported
+                        ? DS.Colours.warning
+                        : DS.Colours.privateBadgeText
+                )
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                 Text(tierLabel)
@@ -535,7 +408,7 @@ struct PersonalisationIndexRow: View {
             }
 
             ProgressView(value: index.overall)
-                .tint(DS.Colours.sense)
+                .tint(DS.Colours.accent)
 
             Text("\(Int(index.overall * 100))% tuned from saved memories")
                 .font(DS.Typography.caption1)
@@ -569,13 +442,9 @@ struct PersonalisationIndexRow: View {
     }
 
     private var statusView: some View {
-        Label(statusLabel, systemImage: "waveform.path.ecg")
-            .font(DS.ComponentTokens.SenseBadge.font)
-            .foregroundStyle(DS.Colours.sense)
+        Text(statusLabel)
+            .font(DS.Typography.subheadline)
+            .foregroundStyle(DS.Colours.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, DS.Spacing.sm)
-            .padding(.vertical, DS.Spacing.xs)
-            .background(DS.Colours.senseLight)
-            .clipShape(Capsule())
     }
 }

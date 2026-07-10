@@ -71,7 +71,7 @@ struct AppLockView: View {
 
                     Label("Protected on this device", systemImage: "lock.shield")
                         .font(DS.Typography.footnote)
-                        .foregroundStyle(DS.Colours.textSecondary)
+                        .foregroundStyle(DS.Colours.privateBadgeText)
                 }
                 .padding(.horizontal, DS.Spacing.xl)
                 .padding(.vertical, DS.Spacing.xxl)

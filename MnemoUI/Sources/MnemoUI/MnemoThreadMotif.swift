@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// A reusable mnemonic-thread motif for calm, non-interactive brand moments.
+/// A compatibility wrapper for calm, non-interactive Notebook brand moments.
+@available(*, deprecated, message: "Use MnemoLogoMark for Notebook brand moments.")
 public struct MnemoThreadMotif: View {
     public enum Style: Equatable {
         case hero
@@ -11,7 +12,6 @@ public struct MnemoThreadMotif: View {
 
     private let style: Style
     private let tint: Color
-    private let lineWidth: CGFloat
 
     public init(
         style: Style = .watermark,
@@ -20,7 +20,7 @@ public struct MnemoThreadMotif: View {
     ) {
         self.style = style
         self.tint = tint
-        self.lineWidth = lineWidth
+        _ = lineWidth
     }
 
     public var body: some View {
@@ -29,21 +29,19 @@ public struct MnemoThreadMotif: View {
 
             ZStack {
                 if style == .hero || style == .lock {
-                    MnemonicThreadShape()
-                        .stroke(
-                            tint.opacity(0.10),
-                            style: StrokeStyle(lineWidth: lineWidth * 2.8, lineCap: .round, lineJoin: .round)
-                        )
-                        .frame(width: side * 0.88, height: side * 0.88)
+                    MnemoLogoMark(
+                        size: side * 0.88,
+                        style: .filled,
+                        tint: tint.opacity(0.10)
+                    )
                         .scaleEffect(1.18)
                 }
 
-                MnemonicThreadShape()
-                    .stroke(
-                        strokeTint,
-                        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
-                    )
-                    .frame(width: side * 0.78, height: side * 0.78)
+                MnemoLogoMark(
+                    size: side * 0.78,
+                    style: .filled,
+                    tint: strokeTint
+                )
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
         }

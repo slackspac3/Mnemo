@@ -3,7 +3,7 @@ import Testing
 
 @Suite("MnemoUI")
 struct MnemoUITests {
-    @Test("DesignSystem colours are accessible")
+    @Test("DesignSystem colours are available")
     func designSystemColours() {
         let _ = DS.Colours.brandInk
         let _ = DS.Colours.brandSage
@@ -82,8 +82,11 @@ struct MnemoUITests {
         let _ = MnemoInputSurfaceModifier()
     }
 
-    @Test("Logo mark is available to app surfaces")
-    func logoMark() {
+    @Test("Production identity components are available to app surfaces")
+    func productionIdentity() {
         let _ = MnemoLogoMark(size: 48.0, style: .subtle)
+        let _ = MnemoLogoMark(size: 48.0, style: .filled, tint: DS.Colours.sourceAccent)
+        let _ = MnemoWordmark()
+        let _ = MnemoBrandLockup()
     }
 }

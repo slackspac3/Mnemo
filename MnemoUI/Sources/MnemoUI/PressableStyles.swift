@@ -111,6 +111,7 @@ public struct MnemoPrimaryButtonStyle: ButtonStyle {
 /// Opaque secondary action for text-heavy layouts and Reduce Transparency-safe controls.
 public struct MnemoSecondaryButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.isEnabled) private var isEnabled
 
     public init() {}
@@ -127,7 +128,10 @@ public struct MnemoSecondaryButtonStyle: ButtonStyle {
             )
             .overlay {
                 RoundedRectangle(cornerRadius: DS.CornerRadius.medium, style: .continuous)
-                    .stroke(DS.Colours.separator, lineWidth: 1.0)
+                    .stroke(
+                        colorSchemeContrast == .increased ? DS.Colours.borderStrong : DS.Colours.separator,
+                        lineWidth: colorSchemeContrast == .increased ? 1.5 : 1.0
+                    )
             }
             .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? DS.Animation.scalePress : 1.0))
             .opacity(isEnabled ? 1.0 : 0.72)
@@ -143,7 +147,7 @@ public struct MnemoFloatingControlButtonStyle: ButtonStyle {
 
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(DS.Colours.controlAccent)
+            .foregroundStyle(DS.Colours.accent)
             .frame(minWidth: 44.0, minHeight: 44.0)
             .padding(.horizontal, DS.Spacing.sm)
             .mnemoSurface(.floatingControl, cornerRadius: DS.CornerRadius.full)
@@ -211,8 +215,11 @@ public struct MnemoSourceCardModifier: ViewModifier {
 
 public struct MnemoInputSurfaceModifier: ViewModifier {
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    private let isFocused: Bool
 
-    public init() {}
+    public init(isFocused: Bool = false) {
+        self.isFocused = isFocused
+    }
 
     public func body(content: Content) -> some View {
         content
@@ -230,8 +237,10 @@ public struct MnemoInputSurfaceModifier: ViewModifier {
                     style: .continuous
                 )
                 .stroke(
-                    colorSchemeContrast == .increased ? DS.Colours.borderStrong : DS.Colours.separator,
-                    lineWidth: colorSchemeContrast == .increased ? 1.5 : 1.0
+                    isFocused
+                        ? DS.Colours.focus
+                        : (colorSchemeContrast == .increased ? DS.Colours.borderStrong : DS.Colours.separator),
+                    lineWidth: isFocused || colorSchemeContrast == .increased ? 1.5 : 1.0
                 )
             }
     }
@@ -246,7 +255,7 @@ public extension View {
         modifier(MnemoSourceCardModifier())
     }
 
-    func mnemoInputSurface() -> some View {
-        modifier(MnemoInputSurfaceModifier())
+    func mnemoInputSurface(isFocused: Bool = false) -> some View {
+        modifier(MnemoInputSurfaceModifier(isFocused: isFocused))
     }
 }

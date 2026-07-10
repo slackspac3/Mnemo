@@ -381,6 +381,7 @@ private struct SourceCitationButton: View {
     let isPrimary: Bool
     let increasedContrast: Bool
     let onSourceTap: (UUID) -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Button {
@@ -413,8 +414,8 @@ private struct SourceCitationButton: View {
 
                     Text(citation.summary)
                         .font(DS.Typography.footnote)
-                        .foregroundStyle(DS.Colours.textSecondary)
-                        .lineLimit(4)
+                        .foregroundStyle(DS.Colours.textPrimary)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 4)
                         .multilineTextAlignment(.leading)
                 }
 
@@ -432,7 +433,9 @@ private struct SourceCitationButton: View {
             .overlay {
                 RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius)
                     .stroke(
-                        isPrimary || increasedContrast ? DS.ComponentTokens.SourceCard.border : DS.Colours.memoryCardBorder,
+                        increasedContrast
+                            ? DS.Colours.sourceAccent
+                            : (isPrimary ? DS.ComponentTokens.SourceCard.border : DS.Colours.memoryCardBorder),
                         lineWidth: increasedContrast ? 1.5 : 1.0
                     )
             }
@@ -495,7 +498,10 @@ private struct SourceFallbackButton: View {
             .background(DS.Colours.sourceSurface)
             .overlay {
                 RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius)
-                    .stroke(DS.Colours.sourceBorder, lineWidth: colorSchemeContrast == .increased ? 1.5 : 1.0)
+                    .stroke(
+                        colorSchemeContrast == .increased ? DS.Colours.sourceAccent : DS.Colours.sourceBorder,
+                        lineWidth: colorSchemeContrast == .increased ? 1.5 : 1.0
+                    )
             }
             .clipShape(RoundedRectangle(cornerRadius: DS.ComponentTokens.SourceCard.cornerRadius))
         }
@@ -593,28 +599,22 @@ struct EmptyChatLanding: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.lg) {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                HStack(alignment: .top, spacing: DS.Spacing.md) {
-                    ZStack {
-                        MnemoThreadMotif(style: .watermark, lineWidth: 1.5)
-                            .frame(width: 64.0, height: 52.0)
-                        MnemoLogoMark(size: 42.0, style: .subtle)
-                    }
-                    .accessibilityHidden(true)
+                HStack(alignment: .center, spacing: DS.Spacing.md) {
+                    MnemoLogoMark(size: 44.0, style: .filled)
+                        .accessibilityHidden(true)
 
-                    VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                        Text("What should Mnemo remember?")
-                            .font(DS.Typography.title2)
-                            .foregroundStyle(DS.Colours.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityAddTraits(.isHeader)
-
-                        Text("Save a detail, decision or reminder. Ask for it later and see the source.")
-                            .font(DS.Typography.subheadline)
-                            .foregroundStyle(DS.Colours.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier(AccessibilityID.Chat.landing)
-                    }
+                    Text("What should Mnemo remember?")
+                        .font(DS.Typography.title2)
+                        .foregroundStyle(DS.Colours.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
                 }
+
+                Text("Save a detail, decision or reminder. Ask for it later and see the source.")
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(DS.Colours.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier(AccessibilityID.Chat.landing)
 
                 Label("Private on this iPhone", systemImage: "lock.shield.fill")
                     .font(DS.Typography.caption1.weight(.semibold))
@@ -695,9 +695,14 @@ struct EmptyChatLanding: View {
                 }
             } else {
                 VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Label("Save your first memory, then ask naturally.", systemImage: "arrow.turn.down.right")
-                        .font(DS.Typography.subheadline)
-                        .foregroundStyle(DS.Colours.textSecondary)
+                    Label {
+                        Text("Save your first memory, then ask naturally.")
+                            .foregroundStyle(DS.Colours.textSecondary)
+                    } icon: {
+                        Image(systemName: "arrow.turn.down.right")
+                            .foregroundStyle(DS.Colours.accent)
+                    }
+                    .font(DS.Typography.subheadline)
                 }
             }
         }
@@ -716,6 +721,16 @@ struct EmptyMemoryRecoveryPanel: View {
     let onPhoto: () -> Void
     let onReset: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var captureColumns: [GridItem] {
+        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 4
+        return Array(
+            repeating: GridItem(.flexible(), spacing: DS.Spacing.sm),
+            count: count
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
             VStack(alignment: .leading, spacing: DS.Spacing.xs) {
@@ -729,7 +744,7 @@ struct EmptyMemoryRecoveryPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            HStack(spacing: DS.Spacing.sm) {
+            LazyVGrid(columns: captureColumns, spacing: DS.Spacing.sm) {
                 CompactCaptureButton(title: "Write", icon: "square.and.pencil", action: onText)
                 CompactCaptureButton(title: "Voice", icon: "mic.fill", action: onVoice)
                 CompactCaptureButton(title: "Camera", icon: "camera.fill", action: onCamera)
@@ -740,6 +755,7 @@ struct EmptyMemoryRecoveryPanel: View {
                 Label("New conversation", systemImage: "square.and.pencil")
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(DS.Colours.accent)
+                    .frame(minHeight: 44.0)
             }
             .buttonStyle(.mnemoPressable)
             .accessibilityHint("Clear this conversation and return to Recall")
@@ -752,12 +768,6 @@ struct EmptyMemoryRecoveryPanel: View {
                 .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
         }
         .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-        .shadow(
-            color: DS.Shadows.subtle.color,
-            radius: DS.Shadows.subtle.radius,
-            x: DS.Shadows.subtle.x,
-            y: DS.Shadows.subtle.y
-        )
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -767,18 +777,34 @@ struct CompactCaptureButton: View {
     let icon: String
     let action: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         Button(action: action) {
-            VStack(spacing: DS.Spacing.xs) {
-                Image(systemName: icon)
-                    .font(DS.Typography.headline)
-                Text(title)
-                    .font(DS.Typography.caption1)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
+                    HStack(spacing: DS.Spacing.sm) {
+                        Image(systemName: icon)
+                            .font(DS.Typography.headline)
+                            .frame(width: DS.Spacing.xl)
+                        Text(title)
+                            .font(DS.Typography.body.weight(.semibold))
+                        Spacer(minLength: 0)
+                    }
+                } else {
+                    VStack(spacing: DS.Spacing.xs) {
+                        Image(systemName: icon)
+                            .font(DS.Typography.headline)
+                        Text(title)
+                            .font(DS.Typography.caption1)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                }
             }
             .foregroundStyle(DS.Colours.accent)
             .frame(maxWidth: .infinity, minHeight: 52.0)
+            .padding(.horizontal, dynamicTypeSize.isAccessibilitySize ? DS.Spacing.md : 0)
             .background(DS.Colours.surfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
         }
@@ -870,7 +896,7 @@ struct LandingActionButton: View {
     }
 
     private var backgroundColor: Color {
-        prominence == .primary ? DS.Colours.accent : DS.Colours.surfaceElevated
+        prominence == .primary ? DS.Colours.controlAccent : DS.Colours.surfaceElevated
     }
 
     private var iconColor: Color {
@@ -904,6 +930,7 @@ struct RecallExampleButton: View {
             }
             .padding(.horizontal, DS.Spacing.md)
             .padding(.vertical, DS.Spacing.sm)
+            .frame(minHeight: 44.0)
             .background(DS.Colours.surfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.medium))
         }
@@ -953,7 +980,7 @@ struct ChatInputBar: View {
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 24.0, weight: .semibold))
-                        .foregroundStyle(DS.Colours.controlAccent)
+                        .foregroundStyle(DS.Colours.accent)
                         .frame(width: 44.0, height: 44.0)
                 }
                 .buttonStyle(.mnemoPressable)
@@ -986,7 +1013,7 @@ struct ChatInputBar: View {
             Button(action: onSend) {
                 Image(systemName: isProcessing ? "ellipsis" : "arrow.up.circle.fill")
                     .font(.system(size: 32.0, weight: .semibold))
-                    .foregroundStyle(sendIsActive ? DS.Colours.controlAccent : DS.Colours.textTertiary)
+                    .foregroundStyle(sendIsActive ? DS.Colours.accent : DS.Colours.accentDisabled)
                     .frame(width: 44.0, height: 44.0)
             }
             .disabled(!canSend)
