@@ -156,7 +156,8 @@ public final class ExtractionEngine: Sendable {
             confidence: result.confidence,
             processingTier: result.processingTier,
             modalityThresholdUsed: result.modalityThresholdUsed,
-            tags: tags
+            tags: tags,
+            normalizationProposal: result.normalizationProposal
         )
     }
 

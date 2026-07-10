@@ -22,11 +22,15 @@ struct CaptureImageSheet: View {
     @State private var hasAutoOpenedCamera = false
     @State private var payload: ClarifyingQuestionPayload?
     @State private var clarifyingAnswer = ""
+    @State private var extractionResult: ExtractionResult?
+    @State private var reviewRawInput = ""
+    @State private var reviewSummary = ""
     @State private var isProcessing = false
     @State private var errorMessage: String?
     @State private var savedSummary: String?
 
     private let handler = ImageCaptureHandler()
+    private let normalizer = MemoryTextNormalizer()
     #if DEBUG
     private let engine = ExtractionEngine(aiCoreFlags: .debugLocalFoundationModelsExtraction)
     #else
@@ -40,12 +44,27 @@ struct CaptureImageSheet: View {
 
                 ScrollView {
                     VStack(spacing: DS.Spacing.lg) {
-                        if let payload {
+                        if let result = extractionResult {
+                            MemoryCaptureReviewView(
+                                result: result,
+                                rawInput: reviewRawInput,
+                                summary: $reviewSummary,
+                                isSaving: isProcessing,
+                                onSave: { summary in save(result: result, summary: summary) },
+                                onBack: {
+                                    guard !isProcessing else { return }
+                                    extractionResult = nil
+                                    reviewRawInput = ""
+                                    reviewSummary = ""
+                                },
+                                onDiscard: { dismiss() }
+                            )
+                        } else if let payload {
                             ClarifyingQuestionView(
                                 payload: payload,
                                 answer: $clarifyingAnswer,
                                 isSaving: isProcessing,
-                                onSave: { saveCapture(payload: payload) },
+                                onSave: { prepareReview(payload: payload) },
                                 onRetry: { resetSelection() },
                                 onDiscard: { dismiss() }
                             )
@@ -171,12 +190,15 @@ struct CaptureImageSheet: View {
         cameraImage = nil
         payload = nil
         clarifyingAnswer = ""
+        extractionResult = nil
+        reviewRawInput = ""
+        reviewSummary = ""
         errorMessage = nil
         isProcessing = false
         UIAccessibility.post(notification: .screenChanged, argument: "Choose another image")
     }
 
-    private func saveCapture(payload: ClarifyingQuestionPayload) {
+    private func prepareReview(payload: ClarifyingQuestionPayload) {
         let userContext = clarifyingAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
         let extractedText = payload.extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !userContext.isEmpty || !extractedText.isEmpty else {
@@ -196,9 +218,42 @@ struct CaptureImageSheet: View {
                     userContext: capture.userContext,
                     threshold: 0.90
                 )
-                let record = MemoryRecord(
+                let normalizedResult = await normalizer.normalize(
                     rawInput: capture.text,
-                    summary: result.summary,
+                    extractionResult: result
+                )
+
+                await MainActor.run {
+                    reviewRawInput = capture.text
+                    extractionResult = normalizedResult
+                    reviewSummary = normalizedResult.summary
+                    isProcessing = false
+                    UIAccessibility.post(notification: .screenChanged, argument: "Review memory")
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Could not prepare memory. Try again."
+                    isProcessing = false
+                    UIAccessibility.post(notification: .announcement, argument: errorMessage)
+                }
+            }
+        }
+    }
+
+    private func save(result: ExtractionResult, summary: String) {
+        guard !isProcessing else { return }
+        let rawInput = reviewRawInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let approvedSummary = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !rawInput.isEmpty, !approvedSummary.isEmpty else { return }
+
+        isProcessing = true
+        errorMessage = nil
+
+        Task {
+            do {
+                let record = MemoryRecord(
+                    rawInput: rawInput,
+                    summary: approvedSummary,
                     memoryType: result.memoryType,
                     persistenceScore: result.persistenceScore,
                     inputSource: .image,
@@ -211,7 +266,7 @@ struct CaptureImageSheet: View {
                 try await MemoryCRUD.insertAndIndex(record, into: modelContext)
                 await MainActor.run {
                     HapticManager.success()
-                    savedSummary = result.summary
+                    savedSummary = approvedSummary
                 }
             } catch {
                 await MainActor.run {
@@ -384,7 +439,7 @@ struct ClarifyingQuestionView: View {
                         ProgressView()
                             .tint(DS.ComponentTokens.PrimaryButton.foreground)
                     } else {
-                        Text("Save Memory")
+                        Text("Review Memory")
                     }
                 }
             }

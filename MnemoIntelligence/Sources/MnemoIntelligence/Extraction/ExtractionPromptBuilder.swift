@@ -31,6 +31,11 @@ public struct ExtractionPromptBuilder: Sendable {
 
         Rules:
         - summary: one sentence, plain English, what the user should remember
+        - preserve a complete first-person subject such as I, I'm, I've, my, we, or our; do not turn a valid sentence into a fragment
+        - preserve the input's exact spelling and capitalization for people, places, restaurants, venues, brands, organisations, products, acronyms, identifiers and other proper names
+        - never lowercase a capitalized proper name from the input
+        - correct an obvious typo or lowercase proper name only when context makes the intended form clear; otherwise preserve it for user review
+        - never alter numbers, dates, times, units, prices, URLs, email addresses, handles, credentials, model numbers or reference codes
         - memoryType: exactly one of the enum values shown
         - persistenceScore: 0.0 to 1.0. Preferences/credentials = 0.8+. Lists/events = 0.5. Sessions = 0.2
         - suggestedExpiryDays: integer days until expiry, or null for persistent memories

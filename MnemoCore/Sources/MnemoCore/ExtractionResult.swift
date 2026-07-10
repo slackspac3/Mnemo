@@ -9,6 +9,7 @@ public struct ExtractionResult: Sendable {
     public let processingTier: ProcessingTier
     public let modalityThresholdUsed: Double
     public let tags: [String]
+    public let normalizationProposal: MemoryNormalizationProposal?
 
     public init(
         summary: String,
@@ -18,7 +19,8 @@ public struct ExtractionResult: Sendable {
         confidence: Double,
         processingTier: ProcessingTier,
         modalityThresholdUsed: Double,
-        tags: [String] = []
+        tags: [String] = [],
+        normalizationProposal: MemoryNormalizationProposal? = nil
     ) {
         self.summary = summary
         self.memoryType = memoryType
@@ -28,5 +30,6 @@ public struct ExtractionResult: Sendable {
         self.processingTier = processingTier
         self.modalityThresholdUsed = modalityThresholdUsed
         self.tags = tags
+        self.normalizationProposal = normalizationProposal
     }
 }

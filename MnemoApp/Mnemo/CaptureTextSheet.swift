@@ -15,12 +15,14 @@ struct CaptureTextSheet: View {
 
     @State private var inputText = ""
     @State private var extractionResult: ExtractionResult?
+    @State private var reviewSummary = ""
     @State private var isExtracting = false
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var savedSummary: String?
 
     private let handler = TextCaptureHandler()
+    private let normalizer = MemoryTextNormalizer()
     #if DEBUG
     private let engine = ExtractionEngine(aiCoreFlags: .debugLocalFoundationModelsExtraction)
     #else
@@ -35,13 +37,16 @@ struct CaptureTextSheet: View {
                 ScrollView {
                     VStack(spacing: DS.Spacing.lg) {
                         if let result = extractionResult {
-                            ExtractionConfirmView(
+                            MemoryCaptureReviewView(
                                 result: result,
+                                rawInput: inputText.trimmingCharacters(in: .whitespacesAndNewlines),
+                                summary: $reviewSummary,
                                 isSaving: isSaving,
-                                onConfirm: { save(result: result) },
-                                onEdit: {
+                                onSave: { summary in save(result: result, summary: summary) },
+                                onBack: {
                                     guard !isSaving else { return }
                                     extractionResult = nil
+                                    reviewSummary = ""
                                 },
                                 onDiscard: {
                                     guard !isSaving else { return }
@@ -104,9 +109,14 @@ struct CaptureTextSheet: View {
                     source: .text,
                     threshold: 0.90
                 )
+                let normalizedResult = await normalizer.normalize(
+                    rawInput: capture.text,
+                    extractionResult: result
+                )
 
                 await MainActor.run {
-                    extractionResult = result
+                    extractionResult = normalizedResult
+                    reviewSummary = normalizedResult.summary
                     isExtracting = false
                     UIAccessibility.post(notification: .screenChanged, argument: "Review memory")
                 }
@@ -121,15 +131,17 @@ struct CaptureTextSheet: View {
         }
     }
 
-    private func save(result: ExtractionResult) {
+    private func save(result: ExtractionResult, summary: String) {
         guard !isSaving else { return }
+        let approvedSummary = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !approvedSummary.isEmpty else { return }
         isSaving = true
         errorMessage = nil
         let rawInput = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let record = MemoryRecord(
             rawInput: rawInput,
-            summary: result.summary,
+            summary: approvedSummary,
             memoryType: result.memoryType,
             persistenceScore: result.persistenceScore,
             inputSource: .text,
@@ -144,7 +156,7 @@ struct CaptureTextSheet: View {
                 try await MemoryCRUD.insertAndIndex(record, into: modelContext)
                 await MainActor.run {
                     HapticManager.success()
-                    savedSummary = result.summary
+                    savedSummary = approvedSummary
                 }
             } catch {
                 await MainActor.run {
@@ -217,121 +229,5 @@ struct TextInputView: View {
         .task {
             isFocused = true
         }
-    }
-}
-
-struct ExtractionConfirmView: View {
-    let result: ExtractionResult
-    let isSaving: Bool
-    let onConfirm: () -> Void
-    let onEdit: () -> Void
-    let onDiscard: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        VStack(spacing: DS.Spacing.lg) {
-            VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("Review memory")
-                    .font(DS.Typography.subheadline)
-                    .foregroundStyle(DS.Colours.textSecondary)
-
-                ZStack(alignment: .bottomTrailing) {
-                    MnemoThreadMotif(style: .watermark, lineWidth: 1.8)
-                        .frame(width: 120.0, height: 92.0)
-                        .padding(.trailing, DS.Spacing.xs)
-
-                    Text(result.summary)
-                        .font(DS.Typography.body)
-                        .foregroundStyle(DS.Colours.textPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(DS.Spacing.md)
-                        .padding(.trailing, DS.Spacing.sm)
-                }
-                .background(DS.Colours.memoryCardSurface)
-                .overlay {
-                    RoundedRectangle(cornerRadius: DS.CornerRadius.large)
-                        .stroke(DS.Colours.memoryCardBorder, lineWidth: 1.0)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: DS.CornerRadius.large))
-                .shadow(
-                    color: DS.Shadows.subtle.color,
-                    radius: DS.Shadows.subtle.radius,
-                    x: DS.Shadows.subtle.x,
-                    y: DS.Shadows.subtle.y
-                )
-                .transition(DS.Animation.cardAppearTransition(reduceMotion: reduceMotion))
-                .accessibilityIdentifier(AccessibilityID.CaptureText.review)
-
-                HStack(spacing: DS.Spacing.sm) {
-                    Label(result.memoryType.rawValue.capitalized, systemImage: "tag")
-                        .font(DS.Typography.caption1)
-                        .foregroundStyle(DS.Colours.textSecondary)
-
-                    Spacer()
-
-                    Text(confidenceLabel)
-                        .font(DS.Typography.caption1.weight(.semibold))
-                        .foregroundStyle(result.confidence > 0.70 ? DS.Colours.success : DS.Colours.warning)
-                        .padding(.horizontal, DS.Spacing.sm)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .background(result.confidence > 0.70 ? DS.Colours.successSoft : DS.Colours.warningSoft)
-                        .clipShape(Capsule())
-                    }
-
-                if !result.tags.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: DS.Spacing.xs) {
-                            ForEach(result.tags, id: \.self) { tag in
-                                Text(tag)
-                                    .font(DS.Typography.caption1)
-                                    .foregroundStyle(DS.Colours.accent)
-                                    .padding(.horizontal, DS.Spacing.sm)
-                                    .padding(.vertical, DS.Spacing.xs)
-                                    .background(DS.Colours.surfaceSecondary)
-                                    .clipShape(Capsule())
-                            }
-                        }
-                    }
-                }
-            }
-
-            VStack(spacing: DS.Spacing.sm) {
-                Button(action: onConfirm) {
-                    HStack {
-                        if isSaving {
-                            ProgressView()
-                                .tint(DS.ComponentTokens.PrimaryButton.foreground)
-                        } else {
-                            Text("Save Memory")
-                        }
-                    }
-                }
-                .disabled(isSaving)
-                .buttonStyle(.mnemoPrimary)
-                .accessibilityIdentifier(AccessibilityID.CaptureText.save)
-
-                Button(action: onEdit) {
-                    Text("Edit")
-                }
-                .disabled(isSaving)
-                .buttonStyle(.mnemoSecondary)
-
-                Button(action: onDiscard) {
-                    Text("Discard")
-                        .font(DS.Typography.body)
-                        .foregroundStyle(DS.Colours.textSecondary)
-                        .frame(maxWidth: .infinity, minHeight: 44.0)
-                }
-                .disabled(isSaving)
-            }
-        }
-    }
-
-    private var confidenceLabel: String {
-        if result.confidence < 0.50 {
-            return "Review suggested"
-        }
-
-        return result.confidence > 0.70 ? "Looks ready" : "Check before saving"
     }
 }

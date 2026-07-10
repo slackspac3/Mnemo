@@ -16,11 +16,14 @@ struct CaptureVoiceSheet: View {
     @StateObject private var voiceHandler = VoiceCaptureHandler()
     @State private var editedTranscript = ""
     @State private var showingConfirm = false
+    @State private var extractionResult: ExtractionResult?
+    @State private var reviewSummary = ""
     @State private var permissionDenied = false
     @State private var isTranscribing = false
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var savedSummary: String?
+    private let normalizer = MemoryTextNormalizer()
 
     #if DEBUG
     private let engine = ExtractionEngine(aiCoreFlags: .debugLocalFoundationModelsExtraction)
@@ -37,16 +40,33 @@ struct CaptureVoiceSheet: View {
                     VStack(spacing: DS.Spacing.xl) {
                         if permissionDenied {
                             PermissionDeniedView()
+                        } else if let result = extractionResult {
+                            MemoryCaptureReviewView(
+                                result: result,
+                                rawInput: editedTranscript.trimmingCharacters(in: .whitespacesAndNewlines),
+                                summary: $reviewSummary,
+                                isSaving: isSaving,
+                                onSave: { summary in save(result: result, summary: summary) },
+                                onBack: {
+                                    guard !isSaving else { return }
+                                    extractionResult = nil
+                                    reviewSummary = ""
+                                    showingConfirm = true
+                                },
+                                onDiscard: { dismiss() }
+                            )
                         } else if showingConfirm {
                             VoiceConfirmView(
                                 transcript: $editedTranscript,
                                 isSaving: isSaving,
-                                onSave: { saveTranscript() },
+                                onSave: { prepareReview() },
                                 onRetry: {
                                     showingConfirm = false
                                     editedTranscript = ""
                                     errorMessage = nil
                                     isSaving = false
+                                    extractionResult = nil
+                                    reviewSummary = ""
                                 },
                                 onDiscard: { dismiss() }
                             )
@@ -193,7 +213,7 @@ struct CaptureVoiceSheet: View {
         showingConfirm = true
     }
 
-    private func saveTranscript() {
+    private func prepareReview() {
         let transcript = editedTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !transcript.isEmpty else {
             dismiss()
@@ -210,10 +230,42 @@ struct CaptureVoiceSheet: View {
                     source: .voice,
                     threshold: 0.90
                 )
+                let normalizedResult = await normalizer.normalize(
+                    rawInput: transcript,
+                    extractionResult: result
+                )
 
+                await MainActor.run {
+                    extractionResult = normalizedResult
+                    reviewSummary = normalizedResult.summary
+                    showingConfirm = false
+                    isSaving = false
+                    UIAccessibility.post(notification: .screenChanged, argument: "Review memory")
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Could not prepare voice memory. Try again."
+                    isSaving = false
+                    UIAccessibility.post(notification: .announcement, argument: errorMessage)
+                }
+            }
+        }
+    }
+
+    private func save(result: ExtractionResult, summary: String) {
+        guard !isSaving else { return }
+        let transcript = editedTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let approvedSummary = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !transcript.isEmpty, !approvedSummary.isEmpty else { return }
+
+        isSaving = true
+        errorMessage = nil
+
+        Task {
+            do {
                 let record = MemoryRecord(
                     rawInput: transcript,
-                    summary: result.summary,
+                    summary: approvedSummary,
                     memoryType: result.memoryType,
                     persistenceScore: result.persistenceScore,
                     inputSource: .voice,
@@ -225,7 +277,7 @@ struct CaptureVoiceSheet: View {
                 try await MemoryCRUD.insertAndIndex(record, into: modelContext)
                 await MainActor.run {
                     HapticManager.success()
-                    savedSummary = result.summary
+                    savedSummary = approvedSummary
                 }
             } catch {
                 await MainActor.run {
@@ -444,7 +496,7 @@ struct VoiceConfirmView: View {
                         ProgressView()
                             .tint(DS.ComponentTokens.PrimaryButton.foreground)
                     } else {
-                        Text("Save Memory")
+                        Text("Review Memory")
                     }
                 }
             }
